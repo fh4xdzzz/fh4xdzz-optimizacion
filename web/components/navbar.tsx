@@ -30,9 +30,6 @@ export default function Navbar() {
             <Link href="/contacto" className="text-foreground/80 hover:text-foreground transition-colors">
               Contacto
             </Link>
-            <Link href="/auth/login" className="text-foreground/80 hover:text-foreground transition-colors">
-              Login
-            </Link>
             <Button variant="primary" href="/contacto">
               Solicitar Servicio
             </Button>

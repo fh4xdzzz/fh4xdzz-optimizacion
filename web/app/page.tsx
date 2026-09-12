@@ -2,7 +2,6 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -183,7 +182,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted mb-4">
-                  "La optimización de OBS mejoró mucho mi stream, ahora tengo calidad profesional sin lag. ¡Muy recomendado!"
+                  &ldquo;La optimización de OBS mejoró mucho mi stream, ahora tengo calidad profesional sin lag. ¡Muy recomendado!&rdquo;
                 </p>
                 <div className="flex text-primary">★★★★★</div>
               </CardContent>
@@ -203,7 +202,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted mb-4">
-                  "Me ayudaron con todo el setup de streaming desde cero. El soporte fue increíble y muy paciente."
+                  &ldquo;Me ayudaron con todo el setup de streaming desde cero. El soporte fue increíble y muy paciente.&rdquo;
                 </p>
                 <div className="flex text-secondary">★★★★★</div>
               </CardContent>
