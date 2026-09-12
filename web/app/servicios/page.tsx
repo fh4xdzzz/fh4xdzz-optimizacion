@@ -186,9 +186,14 @@ export default function ServicesPage() {
                         <div className="text-2xl font-bold">${service.price}</div>
                         <div className="text-xs text-muted">{service.duration}</div>
                       </div>
-                      <Button variant="primary" size="sm" href="/contacto">
-                        Solicitar
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" href={`/servicios/${service.slug}`}>
+                          Ver detalles
+                        </Button>
+                        <Button variant="primary" size="sm" href="/contacto">
+                          Solicitar
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

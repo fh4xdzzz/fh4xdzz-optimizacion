@@ -5,6 +5,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { saveOrder, getServiceByName, getServices } from '@/lib/orders'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -16,24 +17,66 @@ export default function ContactPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [orderNumber, setOrderNumber] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const services = [
-    'Optimización de OBS',
-    'Configuración de Streaming',
-    'Optimización de PC/Windows',
-    'Configuración Gaming',
-    'Diseño de Overlays y Alertas',
-    'Soporte Técnico',
-    'Servicios Personalizados'
-  ]
+  const services = getServices()
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'El nombre es requerido'
+    } else if (formData.name.length < 2) {
+      newErrors.name = 'El nombre debe tener al menos 2 caracteres'
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'El email es requerido'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Email inválido'
+    }
+
+    if (!formData.service) {
+      newErrors.service = 'Debes seleccionar un servicio'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'La descripción es requerida'
+    } else if (formData.description.length < 10) {
+      newErrors.description = 'La descripción debe tener al menos 10 caracteres'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
     setIsSubmitting(true)
 
-    // Simular envío del formulario
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      const service = getServiceByName(formData.service)
+      if (!service) {
+        throw new Error('Servicio no encontrado')
+      }
+
+      const order = saveOrder({
+        service: formData.service,
+        clientName: formData.name,
+        clientEmail: formData.email,
+        clientDiscord: formData.discord || undefined,
+        description: formData.description,
+        price: service.price,
+        status: 'pending',
+      })
+
+      setOrderNumber(order.orderNumber)
       setSubmitSuccess(true)
       setFormData({
         name: '',
@@ -42,7 +85,12 @@ export default function ContactPage() {
         service: '',
         description: ''
       })
-    }, 1500)
+    } catch (error) {
+      console.error('Error al crear pedido:', error)
+      setErrors({ general: 'Error al crear el pedido. Inténtalo de nuevo.' })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -50,6 +98,13 @@ export default function ContactPage() {
       ...formData,
       [e.target.name]: e.target.value
     })
+    // Limpiar error del campo cuando el usuario empieza a escribir
+    if (errors[e.target.name]) {
+      setErrors({
+        ...errors,
+        [e.target.name]: ''
+      })
+    }
   }
 
   if (submitSuccess) {
@@ -66,23 +121,38 @@ export default function ContactPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <CardTitle className="text-2xl">¡Solicitud Enviada!</CardTitle>
+                  <CardTitle className="text-2xl">¡Solicitud Creada!</CardTitle>
                   <CardDescription className="mt-2">
-                    Hemos recibido tu solicitud. Te contactaremos pronto para coordinar el servicio.
+                    Tu pedido ha sido creado exitosamente
                   </CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center space-y-4">
-                  <p className="text-muted">
-                    También puedes unirte a nuestro servidor de Discord para soporte inmediato:
-                  </p>
-                  <Button variant="primary" href="https://discord.gg/your_invite_link" target="_blank" rel="noopener noreferrer">
-                    Unirse a Discord
-                  </Button>
-                  <Button variant="outline" onClick={() => setSubmitSuccess(false)}>
-                    Enviar otra solicitud
-                  </Button>
+                <div className="space-y-4">
+                  <div className="bg-card p-4 rounded-lg border border-border">
+                    <div className="text-sm text-muted mb-1">Número de pedido</div>
+                    <div className="text-2xl font-bold text-primary">{orderNumber}</div>
+                  </div>
+
+                  <div className="bg-card p-4 rounded-lg border border-border">
+                    <div className="text-sm text-muted mb-1">Estado actual</div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <span className="font-medium">Pendiente</span>
+                    </div>
+                  </div>
+
+                  <div className="text-center space-y-4 pt-4">
+                    <p className="text-muted">
+                      Te contactaremos pronto por email o Discord para coordinar tu servicio.
+                    </p>
+                    <Button variant="primary" href="https://discord.gg/your_invite_link" target="_blank" rel="noopener noreferrer">
+                      Unirse a Discord
+                    </Button>
+                    <Button variant="outline" onClick={() => setSubmitSuccess(false)}>
+                      Crear otra solicitud
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -100,9 +170,9 @@ export default function ContactPage() {
       {/* Header */}
       <section className="pt-32 pb-12 px-4">
         <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Contacto</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Solicitar Servicio</h1>
           <p className="text-xl text-muted max-w-2xl mx-auto">
-            Solicita tu servicio o contáctanos para cualquier consulta. Responderemos en 24-48 horas.
+            Completa el formulario para crear tu pedido. Te contactaremos pronto para coordinar el servicio.
           </p>
         </div>
       </section>
@@ -112,13 +182,19 @@ export default function ContactPage() {
         <div className="container mx-auto max-w-2xl">
           <Card>
             <CardHeader>
-              <CardTitle>Solicitar Servicio</CardTitle>
+              <CardTitle>Formulario de Solicitud</CardTitle>
               <CardDescription>
-                Completa el formulario y te contactaremos para coordinar tu optimización
+                Completa todos los campos requeridos marcados con *
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {errors.general && (
+                  <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm">
+                    {errors.general}
+                  </div>
+                )}
+
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium mb-2">
                     Nombre completo *
@@ -130,9 +206,12 @@ export default function ContactPage() {
                     required
                     value={formData.name}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={`w-full px-4 py-2 rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 ${
+                      errors.name ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
+                    }`}
                     placeholder="Tu nombre"
                   />
+                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
                 <div>
@@ -146,14 +225,17 @@ export default function ContactPage() {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={`w-full px-4 py-2 rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 ${
+                      errors.email ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
+                    }`}
                     placeholder="tu@email.com"
                   />
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
                   <label htmlFor="discord" className="block text-sm font-medium mb-2">
-                    Usuario de Discord
+                    Usuario de Discord (opcional)
                   </label>
                   <input
                     type="text"
@@ -176,20 +258,23 @@ export default function ContactPage() {
                     required
                     value={formData.service}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={`w-full px-4 py-2 rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 ${
+                      errors.service ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
+                    }`}
                   >
                     <option value="">Selecciona un servicio</option>
                     {services.map((service) => (
-                      <option key={service} value={service}>
-                        {service}
+                      <option key={service.id} value={service.name}>
+                        {service.name} - ${service.price}
                       </option>
                     ))}
                   </select>
+                  {errors.service && <p className="text-red-500 text-sm mt-1">{errors.service}</p>}
                 </div>
 
                 <div>
                   <label htmlFor="description" className="block text-sm font-medium mb-2">
-                    Descripción del problema o requerimiento *
+                    Descripción del requerimiento *
                   </label>
                   <textarea
                     id="description"
@@ -198,9 +283,12 @@ export default function ContactPage() {
                     value={formData.description}
                     onChange={handleChange}
                     rows={5}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                    placeholder="Describe detalladamente lo que necesitas..."
+                    className={`w-full px-4 py-2 rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 resize-none ${
+                      errors.description ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
+                    }`}
+                    placeholder="Describe detalladamente lo que necesitas, tu hardware actual, problemas que tienes, etc..."
                   />
+                  {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
                 </div>
 
                 <Button
@@ -210,7 +298,7 @@ export default function ContactPage() {
                   className="w-full"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+                  {isSubmitting ? 'Creando pedido...' : 'Crear Pedido'}
                 </Button>
               </form>
             </CardContent>

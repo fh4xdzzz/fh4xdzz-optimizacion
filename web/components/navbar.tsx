@@ -27,6 +27,9 @@ export default function Navbar() {
             <Link href="/servicios" className="text-foreground/80 hover:text-foreground transition-colors">
               Servicios
             </Link>
+            <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors">
+              Mis Pedidos
+            </Link>
             <Link href="/contacto" className="text-foreground/80 hover:text-foreground transition-colors">
               Contacto
             </Link>
@@ -83,11 +86,11 @@ export default function Navbar() {
               Contacto
             </Link>
             <Link
-              href="/auth/login"
+              href="/pedidos"
               className="block text-foreground/80 hover:text-foreground transition-colors"
               onClick={() => setIsOpen(false)}
             >
-              Login
+              Mis Pedidos
             </Link>
             <Button variant="primary" href="/contacto" className="w-full" onClick={() => setIsOpen(false)}>
               Solicitar Servicio
