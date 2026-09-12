@@ -79,18 +79,18 @@ export default function Navbar() {
               Servicios
             </Link>
             <Link
-              href="/contacto"
-              className="block text-foreground/80 hover:text-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Contacto
-            </Link>
-            <Link
               href="/pedidos"
               className="block text-foreground/80 hover:text-foreground transition-colors"
               onClick={() => setIsOpen(false)}
             >
               Mis Pedidos
+            </Link>
+            <Link
+              href="/contacto"
+              className="block text-foreground/80 hover:text-foreground transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              Contacto
             </Link>
             <Button variant="primary" href="/contacto" className="w-full" onClick={() => setIsOpen(false)}>
               Solicitar Servicio

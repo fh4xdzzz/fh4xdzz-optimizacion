@@ -32,6 +32,16 @@ const SERVICES: Service[] = [
   { id: '7', name: 'Servicios Personalizados', slug: 'servicios-personalizados', price: 99.99, duration: 'Según complejidad' },
 ]
 
+// Verificar si Supabase está configurado
+export function isSupabaseConfigured(): boolean {
+  return !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'your_supabase_project_url' &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'your_supabase_anon_key'
+  )
+}
+
 // Generar número de pedido único
 export function generateOrderNumber(): string {
   const date = new Date()
@@ -40,7 +50,7 @@ export function generateOrderNumber(): string {
   return `ORD${dateStr}${random}`
 }
 
-// Guardar pedido en localStorage
+// Guardar pedido en localStorage (fallback cuando Supabase no está configurado)
 export function saveOrder(order: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>): Order {
   const orders = getOrders()
   const newOrder: Order = {
@@ -54,14 +64,14 @@ export function saveOrder(order: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>
   return newOrder
 }
 
-// Obtener todos los pedidos
+// Obtener todos los pedidos (localStorage - fallback)
 export function getOrders(): Order[] {
   if (typeof window === 'undefined') return []
   const orders = localStorage.getItem('orders')
   return orders ? JSON.parse(orders) : []
 }
 
-// Obtener pedido por número
+// Obtener pedido por número (localStorage - fallback)
 export function getOrderByNumber(orderNumber: string): Order | undefined {
   const orders = getOrders()
   return orders.find(order => order.orderNumber === orderNumber)
