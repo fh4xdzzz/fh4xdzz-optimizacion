@@ -30,8 +30,21 @@ CREATE POLICY "Admins can update any profile"
         )
     );
 
--- 3. Actualizar función de seguridad para incluir owner
--- (En database/07_security_functions.sql)
+-- 3. Modificar la función prevent_role_change para incluir owner en la validación
+CREATE OR REPLACE FUNCTION prevent_role_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Verificar si el usuario es admin o owner
+    IF EXISTS (
+        SELECT 1 FROM public.users
+        WHERE id = auth.uid() AND role IN ('admin', 'owner')
+    ) THEN
+        RETURN NEW;
+    END IF;
+    
+    RAISE EXCEPTION 'No tienes permiso para cambiar roles. Solo admins pueden modificar roles.';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 4. Asignar rol owner al usuario principal
 UPDATE public.users
