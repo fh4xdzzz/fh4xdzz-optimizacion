@@ -1,9 +1,9 @@
 # 📊 ESTADO ACTUAL - FASE 5.4
 ## TheDulcanDesign - Protección Server-Side y Validación Real de RLS
 
-**Fecha:** 13/09/2026 (actualizado 5.4.1)  
-**Estado:** ✅ Completado - Auditoría de seguridad completada y endurecida  
-**Modo Actual:** Supabase (configurado y validado)  
+**Fecha:** 13/09/2026 (actualizado 5.4.2)
+**Estado:** ⏳ Auditoría 5.4.2 en progreso - Infraestructura lista, pruebas manuales pendientes
+**Modo Actual:** Supabase (configurado y validado)
 **Modo Demo:** Disponible pero no activo
 
 ---
@@ -89,11 +89,14 @@
 - ✅ `docs/AUTH_SERVER_SIDE.md` - Implementación server-side
 - ✅ `docs/SUPABASE_CLIENTS_AUDIT.md` - Auditoría de clientes
 - ✅ `docs/RLS_AUTHENTICATED_TESTS.md` - Guía de pruebas RLS
-- ✅ `docs/SECURITY_DEFINER_VALIDATION.md` - Validación de funciones
+- ✅ `docs/SECURITY_DEFINER_VALIDATION.md` - Validación de funciones (v2.0)
 - ✅ `docs/RLS_POLICIES_AUDIT.md` - Auditoría de políticas
 - ✅ `docs/WEB_FLOW_TESTS.md` - Pruebas del flujo web
 - ✅ `docs/TEST_SCRIPTS_STATUS.md` - Estado de scripts
 - ✅ `docs/STATUS_FASE5_4.md` - Este documento
+- ⏳ `docs/FASE5_4_2_AUDIT_PLAN.md` - Plan de auditoría final (Fase 5.4.2)
+- ⏳ `docs/FASE5_4_2_AUDIT_REPORT.md` - Reporte de auditoría (Fase 5.4.2)
+- ⏳ `web/scripts/manual-test-guide.md` - Guía de pruebas manuales (Fase 5.4.2)
 
 ---
 
@@ -271,7 +274,108 @@ Completar las pruebas manuales antes de iniciar la migración de pedidos. La inf
 
 ---
 
-## 📦 COMMITS PENDIENTES
+## � FASE 5.4.2 - Auditoría Final de Permisos y Pruebas Reales
+
+**Fecha:** 13/09/2026
+**Estado:** ⏳ Infraestructura lista, pruebas manuales pendientes
+
+### Objetivos
+
+1. ✅ Verificar permisos EXECUTE reales en PostgreSQL
+2. ⏳ Ejecutar pruebas reales en Supabase con usuarios autenticados
+3. ⏳ Verificar RLS con usuarios reales
+4. ⏳ Documentar resultados en tabla
+5. ⏳ Criterio de aceptación para Fase 6
+
+### Scripts Creados
+
+- ✅ `database/08_audit_permissions.sql` - Script SQL para ejecutar en Supabase SQL Editor
+- ✅ `web/scripts/test-permissions.ts` - Script TypeScript para verificación via API
+- ✅ `docs/FASE5_4_2_AUDIT_PLAN.md` - Plan de auditoría detallado
+- ✅ `web/scripts/manual-test-guide.md` - Guía de pruebas manuales
+- ✅ `docs/FASE5_4_2_AUDIT_REPORT.md` - Reporte de auditoría
+
+### Validaciones Técnicas Completadas
+
+| Validación | Resultado | Detalles |
+|------------|-----------|----------|
+| ESLint | ✅ PASS | 0 errores, 0 warnings |
+| TypeScript | ✅ PASS | 0 errores |
+| Next.js Build | ✅ PASS | 13 rutas generadas |
+| Funciones via API | ✅ PASS | Comportamiento esperado sin auth |
+
+### Pruebas Manuales Pendientes (24 pruebas)
+
+#### Permisos EXECUTE (1 prueba)
+- ⏳ Auditoría de permisos en PostgreSQL (requiere SQL Editor)
+
+#### Autenticación Básica (5 pruebas)
+- ⏳ Login real con usuario-a
+- ⏳ Logout real
+- ⏳ Registro de nuevo usuario
+- ⏳ Recuperación de contraseña
+- ⏳ Reset de contraseña
+
+#### Protección de Rutas (4 pruebas)
+- ⏳ Acceso sin sesión a /dashboard
+- ⏳ Acceso sin sesión a /perfil
+- ⏳ Acceso sin sesión a /admin
+- ⏳ Redirect a login
+
+#### Aislamiento de Datos RLS (4 pruebas)
+- ⏳ RLS A contra B
+- ⏳ RLS B contra A
+- ⏳ Usuario A ver datos propios
+- ⏳ Admin ver todos los datos
+
+#### Protección de Roles (4 pruebas)
+- ⏳ Usuario modificar propio role
+- ⏳ Usuario modificar role de otro
+- ⏳ Admin modificar roles
+- ⏳ Trigger prevent_role_change
+
+#### Operaciones Legítimas (3 pruebas)
+- ⏳ Usuario actualizar full_name
+- ⏳ Usuario actualizar avatar_url
+- ⏳ Usuario actualizar email
+
+#### Seguridad de Sesión (3 pruebas)
+- ⏳ Manipulación de localStorage
+- ⏳ Sesión expirada
+- ⏳ Acceso directo a rutas protegidas
+
+### Bloqueadores para Fase 6
+
+**Estado Actual:** ❌ NO SE PUEDE INICIAR FASE 6
+
+**Razones:**
+1. ❌ Pruebas RLS con usuarios autenticados no ejecutadas
+2. ❌ Aislamiento A/B no confirmado
+3. ❌ Protección de roles no verificada en navegador
+4. ❌ Middleware no verificado en navegador
+5. ❌ Permisos EXECUTE no auditados en PostgreSQL directamente
+
+### Pasos Siguientes
+
+1. **Inmediato:**
+   - [ ] Ejecutar `database/08_audit_permissions.sql` en Supabase SQL Editor
+   - [ ] Documentar resultados de permisos EXECUTE
+   - [ ] Crear usuarios de prueba en Supabase Auth
+
+2. **Seguir:**
+   - [ ] Iniciar servidor de desarrollo: `cd web && npm run dev`
+   - [ ] Seguir guía en `web/scripts/manual-test-guide.md`
+   - [ ] Ejecutar 24 pruebas manuales
+   - [ ] Documentar cada resultado
+
+3. **Final:**
+   - [ ] Actualizar reporte con resultados
+   - [ ] Si todas las pruebas pasan, actualizar STATUS_FASE5_4.md
+   - [ ] Generar recomendación final sobre Fase 6
+
+---
+
+## �📦 COMMITS PENDIENTES
 
 Los siguientes cambios deben ser commitados:
 - Eliminación de DROP TABLE en 02_services.sql
