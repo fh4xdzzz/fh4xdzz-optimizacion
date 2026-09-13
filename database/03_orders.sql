@@ -36,6 +36,23 @@ CREATE INDEX IF NOT EXISTS idx_orders_order_number ON public.orders(order_number
 CREATE INDEX IF NOT EXISTS idx_orders_assigned_to ON public.orders(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at);
 
+-- Agregar foreign key de service_id a services.id (si no existe)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'orders_service_id_fkey' 
+        AND table_name = 'orders' 
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.orders 
+        ADD CONSTRAINT orders_service_id_fkey 
+        FOREIGN KEY (service_id) 
+        REFERENCES public.services(id) 
+        ON DELETE SET NULL;
+    END IF;
+END $$;
+
 -- Trigger para updated_at
 DROP TRIGGER IF EXISTS update_orders_updated_at ON public.orders;
 CREATE TRIGGER update_orders_updated_at
