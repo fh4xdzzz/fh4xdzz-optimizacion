@@ -155,8 +155,8 @@ function ContactFormContent() {
         // No fallar el pedido si el webhook falla
       }
 
-      setOrderNumber(orderData.order_number)
-      setSubmitSuccess(true)
+      // Redirigir a la página de pago
+      router.push(`/pago?orderId=${orderData.id}`)
       setFormData({
         name: '',
         email: '',
