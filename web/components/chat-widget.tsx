@@ -213,24 +213,25 @@ export default function ChatWidget() {
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors relative"
+          className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 text-white rounded-full shadow-2xl flex items-center justify-center hover:from-primary/90 hover:to-primary/70 transition-all transform hover:scale-105 relative"
         >
           {isOpen ? '✕' : '💬'}
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg animate-pulse">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </button>
 
         {isOpen && (
-          <div className="absolute bottom-16 right-0 w-96 h-[500px] bg-card border border-border rounded-lg shadow-xl flex flex-col">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-bold">Chat de Soporte - Admin</h3>
+          <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border border-primary/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 border-b border-primary/30">
+              <h3 className="font-bold text-lg text-white">Chat de Soporte - Admin</h3>
+              <p className="text-sm text-white/70 mt-1">Gestiona conversaciones con clientes</p>
               <select
                 value={selectedUserId || ''}
                 onChange={(e) => setSelectedUserId(e.target.value || null)}
-                className="w-full mt-2 px-3 py-2 rounded border border-border bg-background text-foreground text-sm"
+                className="w-full mt-4 px-4 py-3 rounded-xl border border-primary/30 bg-slate-800/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Seleccionar usuario...</option>
                 {users.map((user) => (
@@ -243,11 +244,17 @@ export default function ChatWidget() {
 
             {selectedUserId ? (
               <>
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900/50">
                   {loading ? (
-                    <p className="text-center text-muted">Cargando mensajes...</p>
+                    <div className="text-center text-white/50 py-8">
+                      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                      <p>Cargando mensajes...</p>
+                    </div>
                   ) : messages.length === 0 ? (
-                    <p className="text-center text-muted">No hay mensajes</p>
+                    <div className="text-center text-white/50 py-8">
+                      <p className="text-4xl mb-2">💬</p>
+                      <p>No hay mensajes</p>
+                    </div>
                   ) : (
                     messages.map((msg) => (
                       <div
@@ -255,14 +262,14 @@ export default function ChatWidget() {
                         className={`flex ${msg.is_from_admin ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[80%] p-3 rounded-lg ${
+                          className={`max-w-[85%] p-4 rounded-2xl shadow-lg ${
                             msg.is_from_admin
-                              ? 'bg-primary text-white'
-                              : 'bg-muted'
+                              ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-none'
+                              : 'bg-slate-700 text-white rounded-bl-none'
                           }`}
                         >
-                          <p className="text-sm">{msg.message}</p>
-                          <p className="text-xs opacity-70 mt-1">
+                          <p className="text-sm leading-relaxed">{msg.message}</p>
+                          <p className="text-xs opacity-70 mt-2 text-white/60">
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                               hour: '2-digit',
                               minute: '2-digit'
@@ -275,18 +282,18 @@ export default function ChatWidget() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="p-4 border-t border-border">
-                  <form onSubmit={sendMessage} className="flex gap-2">
+                <div className="p-6 border-t border-primary/30 bg-slate-800/50">
+                  <form onSubmit={sendMessage} className="flex gap-3">
                     <input
                       type="text"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Escribe un mensaje..."
-                      className="flex-1 px-3 py-2 rounded border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="flex-1 px-4 py-3 rounded-xl border border-primary/30 bg-slate-700/50 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary/50"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
+                      className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                       Enviar
                     </button>
@@ -294,8 +301,11 @@ export default function ChatWidget() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted">
-                <p>Selecciona un usuario para ver el chat</p>
+              <div className="flex-1 flex items-center justify-center text-white/50">
+                <div className="text-center">
+                  <p className="text-4xl mb-2">👥</p>
+                  <p>Selecciona un usuario para ver el chat</p>
+                </div>
               </div>
             )}
           </div>
@@ -308,30 +318,35 @@ export default function ChatWidget() {
     <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors relative"
+        className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 text-white rounded-full shadow-2xl flex items-center justify-center hover:from-primary/90 hover:to-primary/70 transition-all transform hover:scale-105 relative"
       >
         {isOpen ? '✕' : '💬'}
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+          <span className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-96 h-[500px] bg-card border border-border rounded-lg shadow-xl flex flex-col">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-bold">Chat de Soporte</h3>
-            <p className="text-sm text-muted">Habla con nuestro equipo de soporte</p>
+        <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border border-primary/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 border-b border-primary/30">
+            <h3 className="font-bold text-lg text-white">Chat de Soporte</h3>
+            <p className="text-sm text-white/70 mt-1">Habla con nuestro equipo de soporte</p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900/50">
             {loading ? (
-              <p className="text-center text-muted">Cargando mensajes...</p>
+              <div className="text-center text-white/50 py-8">
+                <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p>Cargando mensajes...</p>
+              </div>
             ) : messages.length === 0 ? (
-              <p className="text-center text-muted">
-                ¡Hola! ¿En qué podemos ayudarte hoy?
-              </p>
+              <div className="text-center text-white/50 py-8">
+                <p className="text-4xl mb-2">👋</p>
+                <p className="text-lg">¡Hola! ¿En qué podemos ayudarte hoy?</p>
+                <p className="text-sm mt-2">Estamos aquí para responder tus preguntas</p>
+              </div>
             ) : (
               messages.map((msg) => (
                 <div
@@ -339,14 +354,14 @@ export default function ChatWidget() {
                   className={`flex ${msg.is_from_admin ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
+                    className={`max-w-[85%] p-4 rounded-2xl shadow-lg ${
                       msg.is_from_admin
-                        ? 'bg-primary text-white'
-                        : 'bg-muted'
+                        ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-none'
+                        : 'bg-slate-700 text-white rounded-bl-none'
                     }`}
                   >
-                    <p className="text-sm">{msg.message}</p>
-                    <p className="text-xs opacity-70 mt-1">
+                    <p className="text-sm leading-relaxed">{msg.message}</p>
+                    <p className="text-xs opacity-70 mt-2 text-white/60">
                       {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                         hour: '2-digit',
                         minute: '2-digit'
@@ -359,18 +374,18 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 border-t border-border">
-            <form onSubmit={sendMessage} className="flex gap-2">
+          <div className="p-6 border-t border-primary/30 bg-slate-800/50">
+            <form onSubmit={sendMessage} className="flex gap-3">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Escribe un mensaje..."
-                className="flex-1 px-3 py-2 rounded border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 px-4 py-3 rounded-xl border border-primary/30 bg-slate-700/50 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary/50"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
+                className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Enviar
               </button>
