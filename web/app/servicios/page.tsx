@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
-import { isDemoMode } from '@/lib/auth-hybrid'
+import { isDemoMode, getSession } from '@/lib/auth-hybrid'
 
 interface Service {
   id: string
@@ -29,6 +30,7 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const isDemo = isDemoMode()
+  const router = useRouter()
 
   useEffect(() => {
     const loadServices = async () => {
@@ -164,9 +166,20 @@ export default function ServicesPage() {
     { id: 'custom', name: 'Personalizado' }
   ]
 
-  const filteredServices = selectedCategory === 'all' 
-    ? services 
+  const filteredServices = selectedCategory === 'all'
+    ? services
     : services.filter(service => service.category === selectedCategory)
+
+  const handleRequestService = async (serviceId: string) => {
+    const session = await getSession()
+    if (!session) {
+      // No autenticado: redirigir a login con el servicio
+      router.push(`/auth/login?redirect=/contacto?service=${serviceId}`)
+    } else {
+      // Autenticado: redirigir directamente a contacto con el servicio
+      router.push(`/contacto?service=${serviceId}`)
+    }
+  }
 
   if (loading) {
     return (
@@ -298,7 +311,7 @@ export default function ServicesPage() {
                         <Button variant="outline" size="sm" href={`/servicios/${service.slug}`}>
                           Ver detalles
                         </Button>
-                        <Button variant="primary" size="sm" href={`/contacto?service=${service.id}`}>
+                        <Button variant="primary" size="sm" onClick={() => handleRequestService(service.id)}>
                           Solicitar
                         </Button>
                       </div>
