@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     discord_id TEXT UNIQUE,
     discord_username TEXT,
     avatar_url TEXT,
-    role TEXT DEFAULT 'client' CHECK (role IN ('client', 'admin', 'staff')),
+    role TEXT DEFAULT 'client' CHECK (role IN ('client', 'admin', 'staff', 'owner')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -68,19 +68,27 @@ DROP POLICY IF EXISTS "Admins can view all profiles" ON public.users;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 DROP POLICY IF EXISTS "Admins can update any profile" ON public.users;
 
+-- Crear función para verificar rol sin recursión
+CREATE OR REPLACE FUNCTION public.get_user_role(user_id UUID)
+RETURNS TEXT AS $$
+BEGIN
+    RETURN (
+        SELECT role FROM public.users
+        WHERE id = user_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Los usuarios pueden ver su propio perfil
 CREATE POLICY "Users can view own profile"
     ON public.users FOR SELECT
     USING (auth.uid() = id);
 
--- Los admins pueden ver todos los perfiles
+-- Los admins y owners pueden ver todos los perfiles
 CREATE POLICY "Admins can view all profiles"
     ON public.users FOR SELECT
     USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
-        )
+        public.get_user_role(auth.uid()) IN ('admin', 'owner')
     );
 
 -- Los usuarios pueden actualizar su propio perfil
@@ -88,12 +96,9 @@ CREATE POLICY "Users can update own profile"
     ON public.users FOR UPDATE
     USING (auth.uid() = id);
 
--- Los admins pueden actualizar cualquier perfil
+-- Los admins y owners pueden actualizar cualquier perfil
 CREATE POLICY "Admins can update any profile"
     ON public.users FOR UPDATE
     USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
-        )
+        public.get_user_role(auth.uid()) IN ('admin', 'owner')
     );

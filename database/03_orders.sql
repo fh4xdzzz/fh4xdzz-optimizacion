@@ -131,14 +131,11 @@ CREATE POLICY "Users can view own orders"
     ON public.orders FOR SELECT
     USING (auth.uid() = user_id);
 
--- Los admins pueden ver todos los pedidos
+-- Los admins y owners pueden ver todos los pedidos
 CREATE POLICY "Admins can view all orders"
     ON public.orders FOR SELECT
     USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
-        )
+        public.get_user_role(auth.uid()) IN ('admin', 'owner')
     );
 
 -- Los usuarios pueden crear pedidos
@@ -146,14 +143,11 @@ CREATE POLICY "Users can create orders"
     ON public.orders FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
--- Los admins pueden actualizar cualquier pedido
+-- Los admins y owners pueden actualizar cualquier pedido
 CREATE POLICY "Admins can update any order"
     ON public.orders FOR UPDATE
     USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
-        )
+        public.get_user_role(auth.uid()) IN ('admin', 'owner')
     );
 
 ALTER TABLE public.order_events ENABLE ROW LEVEL SECURITY;
@@ -173,22 +167,16 @@ CREATE POLICY "Users can view own order events"
         )
     );
 
--- Los admins pueden ver todos los eventos
+-- Los admins y owners pueden ver todos los eventos
 CREATE POLICY "Admins can view all order events"
     ON public.order_events FOR SELECT
     USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
-        )
+        public.get_user_role(auth.uid()) IN ('admin', 'owner')
     );
 
--- Solo admins pueden crear eventos
+-- Solo admins y owners pueden crear eventos
 CREATE POLICY "Admins can create order events"
     ON public.order_events FOR INSERT
     WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
-        )
+        public.get_user_role(auth.uid()) IN ('admin', 'owner')
     );
