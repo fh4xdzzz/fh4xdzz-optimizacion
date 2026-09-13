@@ -43,6 +43,11 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     setLoading(true)
     try {
+      // Limpiar localStorage para evitar datos mezclados
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('orders')
+      }
+
       const session = await getSession()
       if (!session) {
         setAllOrders([])
@@ -57,6 +62,7 @@ export default function OrdersPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
+      console.log('Pedidos cargados desde Supabase:', data)
       // Añadir service_name a cada pedido
       const ordersWithServiceName = (data || []).map((order: any) => ({
         ...order,
@@ -85,11 +91,18 @@ export default function OrdersPage() {
     }
 
     try {
+      const session = await getSession()
+      if (!session) {
+        setSearchError('Debes iniciar sesión para buscar pedidos')
+        return
+      }
+
       const supabase = createClient()
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, services(name)')
         .eq('order_number', orderNumber.trim())
+        .eq('user_id', session.user.id)
         .single()
 
       if (error) throw error
@@ -98,7 +111,12 @@ export default function OrdersPage() {
         return
       }
 
-      setSearchResult(data)
+      const orderWithServiceName = {
+        ...data,
+        service_name: data.services?.name || 'Servicio desconocido'
+      }
+      console.log('Pedido encontrado:', orderWithServiceName)
+      setSearchResult(orderWithServiceName)
     } catch (error) {
       console.error('Error al buscar pedido:', error)
       setSearchError('Error al buscar pedido')
