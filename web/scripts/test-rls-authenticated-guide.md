@@ -1,5 +1,5 @@
 # 🧪 RLS_AUTHENTICATED_TESTS.md
-## Guía de Pruebas RLS con Usuarios Autenticados - FH4XDZzz OPTIMIZACION
+## Guía de Pruebas RLS con Usuarios Autenticados - TheDulcanDesign
 
 **Fecha:** 13/09/2026  
 **Fase:** 5.4  

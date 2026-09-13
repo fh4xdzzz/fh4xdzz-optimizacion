@@ -1,4 +1,4 @@
-# 🧪 Scripts de Prueba - FH4XDZzz OPTIMIZACION
+# 🧪 Scripts de Prueba - TheDulcanDesign
 
 Scripts de validación para verificar la configuración y funcionamiento de Supabase.
 
