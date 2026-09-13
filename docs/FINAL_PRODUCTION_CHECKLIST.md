@@ -60,6 +60,7 @@
 | DASH-09 | Dashboard | Protección por rol | ✅ PASS | Código admin/page.tsx:91-94 session.user.role !== 'admin' redirect | Devin | Sí |
 | DASH-10 | Dashboard | No se muestran datos de demostración | ✅ PASS | Código admin/page.tsx:97 if (!isDemo) check | Devin | No |
 | DASH-11 | Dashboard | Errores de conexión | ✅ PASS | Corregido: removido join inválido orders-services | Devin | No |
+| DASH-12 | Dashboard | Actualización de datos | ⏳ PENDIENTE | - | Usuario | No |
 | SERV-01 | Servicios | Los 7 servicios activos aparecen correctamente | ✅ PASS | Dashboard admin contador: 7 servicios activos | Usuario | No |
 | SERV-02 | Servicios | Los filtros de categoría funcionan | ✅ PASS | Código servicios/page.tsx estado selectedCategory implementado | Devin | No |
 | SERV-03 | Servicios | La página funciona después de recargar | ⏳ PENDIENTE | - | Usuario | No |
@@ -90,12 +91,12 @@
 
 ## 📊 Resumen Correcto
 
-### Total de Pruebas: 53
+### Total de Pruebas: 54
 
 **Estado Actual:**
-- ✅ PASS: 18 (34.0%)
-- ⏳ PENDIENTE: 33 (62.3%)
-- ❌ FAIL: 2 (3.8%)
+- ✅ PASS: 19 (35.2%)
+- ⏳ PENDIENTE: 33 (61.1%)
+- ❌ FAIL: 2 (3.7%)
 
 ### Pruebas por Categoría
 
@@ -103,12 +104,12 @@
 |-----------|-------|------|-----------|------|--------------|
 | Autenticación | 9 | 1 | 8 | 0 | 11.1% |
 | Autorización | 10 | 4 | 6 | 0 | 40.0% |
-| Dashboard | 10 | 7 | 3 | 0 | 70.0% |
+| Dashboard | 11 | 8 | 3 | 0 | 72.7% |
 | Servicios | 7 | 3 | 4 | 0 | 42.9% |
 | Seguridad | 8 | 4 | 4 | 0 | 50.0% |
 | Técnica | 6 | 3 | 3 | 0 | 50.0% |
 | Documentación | 4 | 4 | 0 | 0 | 100.0% |
-| **TOTAL** | **53** | **18** | **33** | **2** | **34.0%** |
+| **TOTAL** | **54** | **19** | **33** | **2** | **35.2%** |
 
 ---
 
