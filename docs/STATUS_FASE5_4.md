@@ -48,7 +48,8 @@
 - ✅ SECURITY DEFINER justificado en todas las funciones
 - ✅ `SET search_path = public` agregado a todas las funciones (Fase 5.4.1)
 - ✅ No hay riesgo de escalada de privilegios
-- ✅ Documentado en `docs/SECURITY_DEFINER_VALIDATION.md`
+- ✅ Documentado en `docs/SECURITY_DEFINER_VALIDATION.md` (actualizado v2.0)
+- ✅ Checklist de validación completado (13/09/2026)
 
 ### 6. Revisión de Políticas RLS Tabla por Tabla
 - ✅ `public.users` auditada

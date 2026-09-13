@@ -1,8 +1,9 @@
 # 🔒 SECURITY_DEFINER_VALIDATION.md
 ## Validación de Funciones SECURITY DEFINER - TheDulcanDesign
 
-**Fecha:** 13/09/2026  
-**Fase:** 5.4  
+**Fecha:** 13/09/2026
+**Fase:** 5.4.1
+**Última revisión:** 13/09/2026
 **Objetivo:** Validar que las funciones SECURITY DEFINER sean seguras
 
 ---
@@ -25,12 +26,16 @@
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     RETURN EXISTS (
         SELECT 1 FROM public.users
         WHERE id = auth.uid() AND role = 'admin'
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 ```
 
 #### ✅ SECURITY DEFINER Justificado
@@ -39,15 +44,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Sin SECURITY DEFINER:** Si la función se ejecuta con los permisos del usuario, un usuario normal no podría leer la tabla `users` debido a RLS, causando que la función siempre retorne `false` incluso para admins.
 
 #### ✅ search_path Controlado
-**Estado:** ✅ Ahora controlado explícitamente
+**Estado:** ✅ Controlado explícitamente con `SET search_path = public`
 
 **Análisis:**
-- La función ahora usa `SET search_path = public;` al inicio
+- La función usa `SET search_path = public;` al inicio del cuerpo
 - Usa `public.users` explícitamente
+- Tiene `SET search_path = public` al final de la definición
 - No hay riesgo de inyección de schema
 - Compatible con dependencias (no requiere pg_temp u otros esquemas)
 
-**Estado:** ✅ Corregido en Fase 5.4.1
+**Estado:** ✅ Completado en Fase 5.4.1
 
 #### ✅ Permisos Públicos Innecesarios
 **Estado:** No existen permisos públicos innecesarios
@@ -75,12 +81,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.is_staff_or_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     RETURN EXISTS (
         SELECT 1 FROM public.users
         WHERE id = auth.uid() AND role IN ('staff', 'admin')
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 ```
 
 #### ✅ SECURITY DEFINER Justificado
@@ -89,7 +99,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Análisis:** Mismo análisis que `is_admin()`.
 
 #### ✅ search_path Controlado
-**Estado:** Seguro (usa `public.users` explícitamente)
+**Estado:** ✅ Controlado explícitamente con `SET search_path = public`
+
+**Análisis:**
+- La función usa `SET search_path = public;` al inicio del cuerpo
+- Usa `public.users` explícitamente
+- Tiene `SET search_path = public` al final de la definición
+- No hay riesgo de inyección de schema
+
+**Estado:** ✅ Completado en Fase 5.4.1
 
 #### ✅ Permisos Públicos Innecesarios
 **Estado:** No existen
@@ -105,6 +123,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.has_role(user_id UUID, target_role TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     -- Verificar que el usuario actual es admin
     IF NOT EXISTS (
         SELECT 1 FROM public.users
@@ -119,7 +140,8 @@ BEGIN
         WHERE id = user_id AND role = target_role
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 ```
 
 #### ✅ SECURITY DEFINER Justificado
@@ -128,7 +150,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Análisis:** Permite que un admin verifique el rol de cualquier usuario sin estar bloqueado por RLS.
 
 #### ✅ search_path Controlado
-**Estado:** Seguro (usa `public.users` explícitamente)
+**Estado:** ✅ Controlado explícitamente con `SET search_path = public`
+
+**Análisis:**
+- La función usa `SET search_path = public;` al inicio del cuerpo
+- Usa `public.users` explícitamente
+- Tiene `SET search_path = public` al final de la definición
+- No hay riesgo de inyección de schema
+
+**Estado:** ✅ Completado en Fase 5.4.1
 
 #### ✅ Permisos Públicos Innecesarios
 **Estado:** No existen
@@ -137,10 +167,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Estado:** No es posible
 
 **Análisis Crítico:**
-- ✅ La función verifica primero que el usuario actual es admin
-- ✅ Si no es admin, retorna `false` inmediatamente
-- ✅ Un usuario normal no puede usar esta función para obtener información
-- ✅ No hay forma de bypass la verificación de admin
+- La función verifica primero que el usuario actual es admin
+- Si no es admin, retorna `false` inmediatamente
+- Un usuario normal no puede usar esta función para obtener información
+- No hay forma de bypass la verificación de admin
 
 **Riesgo Potencial:** Si un usuario lograra obtener un session de admin, podría usar esta función para verificar roles de otros usuarios. Sin embargo, esto es el comportamiento esperado y necesario para un admin.
 
@@ -152,6 +182,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.prevent_role_change()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     -- Verificar si el rol está siendo modificado
     IF OLD.role IS DISTINCT FROM NEW.role THEN
         -- Solo un admin puede cambiar roles
@@ -165,7 +198,8 @@ BEGIN
     
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 ```
 
 #### ✅ SECURITY DEFINER Justificado
@@ -174,7 +208,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Análisis:** El trigger se ejecuta en el contexto de la tabla, y necesita permisos elevados para verificar roles.
 
 #### ✅ search_path Controlado
-**Estado:** Seguro (usa `public.users` explícitamente)
+**Estado:** ✅ Controlado explícitamente con `SET search_path = public`
+
+**Análisis:**
+- La función usa `SET search_path = public;` al inicio del cuerpo
+- Usa `public.users` explícitamente
+- Tiene `SET search_path = public` al final de la definición
+- No hay riesgo de inyección de schema
+
+**Estado:** ✅ Completado en Fase 5.4.1
 
 #### ✅ Permisos Públicos Innecesarios
 **Estado:** No existen
@@ -186,20 +228,20 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Estado:** Correcto
 
 **Análisis:**
-- ✅ Solo se activa cuando `OLD.role IS DISTINCT FROM NEW.role`
-- ✅ Si el rol no cambia, el trigger no hace nada
-- ✅ Los admins pueden cambiar roles (verificación pasa)
-- ✅ Los usuarios normales no pueden cambiar roles (verificación falla)
-- ✅ Los usuarios pueden actualizar otros campos (full_name, avatar_url, etc.)
+- Solo se activa cuando `OLD.role IS DISTINCT FROM NEW.role`
+- Si el rol no cambia, el trigger no hace nada
+- Los admins pueden cambiar roles (verificación pasa)
+- Los usuarios normales no pueden cambiar roles (verificación falla)
+- Los usuarios pueden actualizar otros campos (full_name, avatar_url, etc.)
 
 **Operaciones Legítimas Permitidas:**
-- ✅ Usuario actualiza su propio nombre: `UPDATE users SET full_name = 'Nuevo' WHERE id = ...`
-- ✅ Usuario actualiza su avatar: `UPDATE users SET avatar_url = '...' WHERE id = ...`
-- ✅ Admin cambia rol de usuario: `UPDATE users SET role = 'admin' WHERE id = ...`
+- Usuario actualiza su propio nombre: `UPDATE users SET full_name = 'Nuevo' WHERE id = ...`
+- Usuario actualiza su avatar: `UPDATE users SET avatar_url = '...' WHERE id = ...`
+- Admin cambia rol de usuario: `UPDATE users SET role = 'admin' WHERE id = ...`
 
 **Operaciones Bloqueadas:**
-- ❌ Usuario cambia su propio rol: `UPDATE users SET role = 'admin' WHERE id = ...`
-- ❌ Usuario cambia rol de otro usuario: `UPDATE users SET role = 'admin' WHERE id = 'otro-id'`
+- Usuario cambia su propio rol: `UPDATE users SET role = 'admin' WHERE id = ...`
+- Usuario cambia rol de otro usuario: `UPDATE users SET role = 'admin' WHERE id = 'otro-id'`
 
 ---
 
@@ -225,8 +267,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 - Todas las funciones usan `public.users` explícitamente
 - No hay nombres de tablas no calificados
 - No hay concatenación de strings en queries
+- `SET search_path = public` controlado en todas las funciones
 
-**Recomendación:** Agregar `SET search_path = public` al inicio de cada función para mayor seguridad.
+**Estado:** ✅ Completado en Fase 5.4.1
 
 ### Riesgo 3: Escalada de Privilegios (MITIGADO)
 - **Severidad:** Alta
@@ -241,81 +284,39 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 ---
 
-## 📋 Recomendaciones de Mejora
+## 📋 Checklist de Validación
 
-### Recomendación 1: Agregar search_path Explícito
-**Estado:** ✅ COMPLETADO en Fase 5.4.1
+### Requisitos de Seguridad
 
-**Antes:**
-```sql
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM public.users
-        WHERE id = auth.uid() AND role = 'admin'
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
+1. ✅ **Todas tienen un search_path controlado**
+   - `is_admin()`: ✅ `SET search_path = public` al inicio y al final
+   - `is_staff_or_admin()`: ✅ `SET search_path = public` al inicio y al final
+   - `has_role()`: ✅ `SET search_path = public` al inicio y al final
+   - `prevent_role_change()`: ✅ `SET search_path = public` al inicio y al final
 
-**Después:**
-```sql
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-    -- Controlar search_path para evitar inyección de schema
-    SET search_path = public;
-    
-    RETURN EXISTS (
-        SELECT 1 FROM public.users
-        WHERE id = auth.uid() AND role = 'admin'
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public;
-```
+2. ✅ **Referencias calificadas con public.**
+   - Todas las funciones usan `public.users` explícitamente
+   - No hay referencias sin calificar
 
-**Aplicado a:**
-- ✅ `public.is_admin()`
-- ✅ `public.is_staff_or_admin()`
-- ✅ `public.has_role()`
-- ✅ `public.prevent_role_change()`
+3. ✅ **No existen permisos EXECUTE públicos innecesarios**
+   - Las funciones no tienen permisos públicos adicionales
+   - Solo pueden ser llamadas por usuarios autenticados
 
-**Prioridad:** Media (mejora de seguridad, no crítico) - ✅ Completado
+4. ✅ **Un usuario normal no puede escalar privilegios**
+   - `is_admin()` solo retorna boolean, no permite modificación
+   - `is_staff_or_admin()` solo retorna boolean, no permite modificación
+   - `has_role()` verifica que el usuario actual es admin antes de verificar otros roles
+   - `prevent_role_change()` bloquea cambios de roles no autorizados
 
-### Recomendación 2: Agregar Logging
+5. ✅ **El trigger de cambio de rol funciona**
+   - `prevent_unauthorized_role_changes` está activo en la tabla `users`
+   - Solo los admins pueden cambiar roles
+   - Los usuarios pueden actualizar otros campos sin problemas
 
-**Recomendación:** Agregar logging de intentos de cambio de rol no autorizados.
-
-```sql
-CREATE OR REPLACE FUNCTION public.prevent_role_change()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF OLD.role IS DISTINCT FROM NEW.role THEN
-        IF NOT EXISTS (
-            SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
-        ) THEN
-            -- Log del intento (requiere tabla de logs)
-            INSERT INTO public.audit_logs (action, user_id, details)
-            VALUES ('role_change_attempt', auth.uid(), 
-                    jsonb_build_object(
-                        'old_role', OLD.role,
-                        'new_role', NEW.role,
-                        'target_user_id', NEW.id
-                    ));
-            
-            RAISE EXCEPTION 'No tienes permiso para cambiar roles. Solo admins pueden modificar roles.';
-        END IF;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-**Prioridad:** Baja (auditoría, no crítico)
+6. ✅ **No se bloquean operaciones legítimas**
+   - Los usuarios pueden actualizar `full_name`, `avatar_url`, etc.
+   - Los admins pueden cambiar roles
+   - El trigger solo se activa cuando `OLD.role IS DISTINCT FROM NEW.role`
 
 ---
 
@@ -331,17 +332,19 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 - ✅ `prevent_role_change()` no bloquea operaciones legítimas
 - ✅ No hay forma de escalar privilegios a través de estas funciones
 - ✅ Nombres de tablas calificados evitan inyección de schema
+- ✅ `SET search_path = public` controlado en todas las funciones (Fase 5.4.1)
 
-**Puntos a mejorar:**
-- ⏳ Agregar `SET search_path = public` explícitamente (prioridad media)
+**Mejoras futuras opcionales:**
 - ⏳ Agregar logging de intentos no autorizados (prioridad baja)
+- ⏳ Agregar tabla de audit_logs para rastrear cambios (prioridad baja)
 
 **No se requieren cambios críticos.**
 
-Las funciones SECURITY DEFINER están implementadas correctamente y son seguras. Las recomendaciones son mejoras de seguridad adicionales, no correcciones de problemas críticos.
+Las funciones SECURITY DEFINER están implementadas correctamente y son seguras. Todos los requisitos de seguridad están cumplidos desde la Fase 5.4.1.
 
 ---
 
-**Documento creado por:** Devin AI  
-**Fecha:** 13/09/2026  
-**Versión:** 1.0
+**Documento actualizado por:** Devin AI
+**Fecha:** 13/09/2026
+**Versión:** 2.0
+**Estado:** ✅ Validación completada - Fase 5.4.1
