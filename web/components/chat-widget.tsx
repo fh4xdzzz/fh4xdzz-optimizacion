@@ -226,8 +226,41 @@ export default function ChatWidget() {
         {isOpen && (
           <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border border-primary/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 border-b border-primary/30">
-              <h3 className="font-bold text-lg text-white">Chat de Soporte - Admin</h3>
-              <p className="text-sm text-white/70 mt-1">Gestiona conversaciones con clientes</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-lg text-white">Chat de Soporte - Admin</h3>
+                  <p className="text-sm text-white/70 mt-1">Gestiona conversaciones con clientes</p>
+                </div>
+                {selectedUserId && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await supabase
+                            .from('chat_messages')
+                            .update({ is_read: true })
+                            .eq('user_id', selectedUserId)
+                          loadMessages()
+                        } catch (error) {
+                          console.error('Error al reclamar chat:', error)
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 transition-colors"
+                    >
+                      Reclamar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedUserId(null)
+                        setMessages([])
+                      }}
+                      className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                )}
+              </div>
               <select
                 value={selectedUserId || ''}
                 onChange={(e) => setSelectedUserId(e.target.value || null)}
@@ -268,7 +301,7 @@ export default function ChatWidget() {
                               : 'bg-slate-700 text-white rounded-bl-none'
                           }`}
                         >
-                          <p className="text-sm leading-relaxed">{msg.message}</p>
+                          <p className="text-sm leading-relaxed break-words overflow-wrap-anywhere">{msg.message}</p>
                           <p className="text-xs opacity-70 mt-2 text-white/60">
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                               hour: '2-digit',
@@ -331,8 +364,18 @@ export default function ChatWidget() {
       {isOpen && (
         <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border border-primary/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 border-b border-primary/30">
-            <h3 className="font-bold text-lg text-white">Chat de Soporte</h3>
-            <p className="text-sm text-white/70 mt-1">Habla con nuestro equipo de soporte</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-lg text-white">Chat de Soporte</h3>
+                <p className="text-sm text-white/70 mt-1">Habla con nuestro equipo de soporte</p>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900/50">
@@ -360,7 +403,7 @@ export default function ChatWidget() {
                         : 'bg-slate-700 text-white rounded-bl-none'
                     }`}
                   >
-                    <p className="text-sm leading-relaxed">{msg.message}</p>
+                    <p className="text-sm leading-relaxed break-words overflow-wrap-anywhere">{msg.message}</p>
                     <p className="text-xs opacity-70 mt-2 text-white/60">
                       {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                         hour: '2-digit',
