@@ -7,14 +7,14 @@ import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
-import { getOrders, isSupabaseConfigured as isOrdersSupabaseConfigured } from '@/lib/orders'
+import { createClient } from '@/lib/supabase/client'
 
 interface Order {
   id: string
-  orderNumber: string
-  service: string
+  order_number: string
+  service_name: string
   status: string
-  createdAt: string
+  created_at: string
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -43,16 +43,32 @@ export default function DashboardPage() {
 
       setSession(session)
 
-      // Cargar pedidos según configuración
-      if (isOrdersSupabaseConfigured()) {
-        // Si Supabase está configurado para pedidos, cargar de ahí
-        // Por ahora usamos localStorage hasta que implementemos la integración completa
-        const localOrders = getOrders()
-        setOrders(localOrders)
+      // Limpiar localStorage para evitar datos mezclados
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('orders')
+      }
+
+      // Cargar pedidos desde Supabase
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, services(name)')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error al cargar pedidos:', error)
+        setOrders([])
       } else {
-        // Sistema demo con localStorage
-        const localOrders = getOrders()
-        setOrders(localOrders)
+        // Mapear campos de Supabase a interfaz
+        const ordersMapped = (data || []).map((order: any) => ({
+          id: order.id,
+          order_number: order.order_number,
+          service_name: order.services?.name || 'Servicio desconocido',
+          status: order.status,
+          created_at: order.created_at,
+        }))
+        setOrders(ordersMapped)
       }
 
       setLoading(false)
@@ -62,7 +78,8 @@ export default function DashboardPage() {
   }, [router])
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -181,12 +198,12 @@ export default function DashboardPage() {
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="font-medium">{order.orderNumber}</div>
+                          <div className="font-medium">{order.order_number}</div>
                           <div className={`w-2 h-2 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'}`} />
                           <span className="text-sm text-muted">{STATUS_LABELS[order.status]?.label || order.status}</span>
                         </div>
-                        <div className="text-sm text-muted">{order.service}</div>
-                        <div className="text-xs text-muted mt-1">{formatDate(order.createdAt)}</div>
+                        <div className="text-sm text-muted">{order.service_name}</div>
+                        <div className="text-xs text-muted mt-1">{formatDate(order.created_at)}</div>
                       </div>
                       <Button variant="outline" size="sm" href="/pedidos">
                         Ver Detalles
