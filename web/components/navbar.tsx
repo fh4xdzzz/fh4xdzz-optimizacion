@@ -1,11 +1,33 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getSession, signOut } from '@/lib/auth-hybrid'
 import { Button } from './ui/button'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [session, setSession] = useState<{ user: { full_name?: string; email: string } } | null>(null)
+
+  useEffect(() => {
+    const loadSession = async () => {
+      const session = await getSession()
+      setSession(session)
+    }
+
+    loadSession()
+
+    // Revisar sesión cada 30 segundos (para modo demo)
+    const interval = setInterval(loadSession, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleLogout = async () => {
+    await signOut()
+    setSession(null)
+    window.location.href = '/'
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -27,12 +49,34 @@ export default function Navbar() {
             <Link href="/servicios" className="text-foreground/80 hover:text-foreground transition-colors">
               Servicios
             </Link>
-            <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors">
-              Mis Pedidos
-            </Link>
-            <Link href="/contacto" className="text-foreground/80 hover:text-foreground transition-colors">
-              Contacto
-            </Link>
+            {session ? (
+              <>
+                <Link href="/dashboard" className="text-foreground/80 hover:text-foreground transition-colors">
+                  Dashboard
+                </Link>
+                <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors">
+                  Mis Pedidos
+                </Link>
+                <Link href="/perfil" className="text-foreground/80 hover:text-foreground transition-colors">
+                  Perfil
+                </Link>
+                <Button variant="outline" onClick={handleLogout}>
+                  Cerrar Sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors">
+                  Mis Pedidos
+                </Link>
+                <Link href="/auth/login" className="text-foreground/80 hover:text-foreground transition-colors">
+                  Login
+                </Link>
+                <Button variant="primary" href="/auth/register">
+                  Registrarse
+                </Button>
+              </>
+            )}
             <Button variant="primary" href="/contacto">
               Solicitar Servicio
             </Button>
@@ -78,20 +122,54 @@ export default function Navbar() {
             >
               Servicios
             </Link>
-            <Link
-              href="/pedidos"
-              className="block text-foreground/80 hover:text-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Mis Pedidos
-            </Link>
-            <Link
-              href="/contacto"
-              className="block text-foreground/80 hover:text-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Contacto
-            </Link>
+            {session ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="block text-foreground/80 hover:text-foreground transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/pedidos"
+                  className="block text-foreground/80 hover:text-foreground transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Mis Pedidos
+                </Link>
+                <Link
+                  href="/perfil"
+                  className="block text-foreground/80 hover:text-foreground transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Perfil
+                </Link>
+                <Button variant="outline" className="w-full" onClick={() => { handleLogout(); setIsOpen(false); }}>
+                  Cerrar Sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/pedidos"
+                  className="block text-foreground/80 hover:text-foreground transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Mis Pedidos
+                </Link>
+                <Link
+                  href="/auth/login"
+                  className="block text-foreground/80 hover:text-foreground transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Login
+                </Link>
+                <Button variant="primary" href="/auth/register" className="w-full" onClick={() => setIsOpen(false)}>
+                  Registrarse
+                </Button>
+              </>
+            )}
             <Button variant="primary" href="/contacto" className="w-full" onClick={() => setIsOpen(false)}>
               Solicitar Servicio
             </Button>
