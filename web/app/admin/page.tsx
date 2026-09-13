@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
+import ChatWidget from '@/components/chat-widget'
 
 interface User {
   id: string
@@ -535,6 +536,7 @@ export default function AdminPage() {
       )}
 
       <Footer />
+      <ChatWidget />
     </div>
   )
 }

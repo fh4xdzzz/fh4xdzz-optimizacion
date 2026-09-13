@@ -22,6 +22,7 @@ export default function ChatWidget() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [users, setUsers] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
@@ -30,8 +31,43 @@ export default function ChatWidget() {
   useEffect(() => {
     if (isOpen) {
       loadMessages()
+      // Marcar mensajes como leídos al abrir
+      markAsRead()
     }
   }, [isOpen, selectedUserId])
+
+  // Cargar contador de mensajes no leídos periódicamente
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const session = await getSession()
+        if (!session) return
+
+        // Cargar todos los mensajes y filtrar en cliente
+        const { data } = await supabase
+          .from('chat_messages')
+          .select('*')
+
+        if (!data) return
+
+        let count = 0
+        if (isAdmin) {
+          // Admin cuenta mensajes no leídos de clientes
+          count = data.filter((msg: any) => !msg.is_from_admin && !msg.is_read).length
+        } else {
+          // Cliente cuenta mensajes no leídos del admin
+          count = data.filter((msg: any) => msg.user_id === session.user.id && msg.is_from_admin && !msg.is_read).length
+        }
+        setUnreadCount(count)
+      } catch (error) {
+        console.error('Error al cargar contador de no leídos:', error)
+      }
+    }
+
+    loadUnreadCount()
+    const interval = setInterval(loadUnreadCount, 10000) // Actualizar cada 10 segundos
+    return () => clearInterval(interval)
+  }, [isAdmin])
 
   // Auto-scroll al final cuando hay nuevos mensajes
   useEffect(() => {
@@ -51,11 +87,17 @@ export default function ChatWidget() {
   }, [])
 
   const loadUsers = async () => {
-    const { data } = await supabase
+    console.log('Cargando usuarios para admin...')
+    const { data, error } = await supabase
       .from('users')
       .select('id, email, full_name')
       .neq('role', 'admin')
-    if (data) setUsers(data)
+    if (error) {
+      console.error('Error al cargar usuarios:', error)
+    } else {
+      console.log('Usuarios cargados:', data)
+      setUsers(data || [])
+    }
   }
 
   const loadMessages = async () => {
@@ -70,13 +112,16 @@ export default function ChatWidget() {
         .order('created_at', { ascending: true })
 
       if (isAdmin && selectedUserId) {
+        console.log('Cargando mensajes del usuario:', selectedUserId)
         query = query.eq('user_id', selectedUserId)
       } else {
+        console.log('Cargando mensajes del usuario actual:', session.user.id)
         query = query.eq('user_id', session.user.id)
       }
 
       const { data, error } = await query
       if (error) throw error
+      console.log('Mensajes cargados:', data)
       setMessages(data || [])
     } catch (error) {
       console.error('Error al cargar mensajes:', error)
@@ -87,28 +132,79 @@ export default function ChatWidget() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim()) return
+    console.log('Intentando enviar mensaje:', newMessage)
+
+    if (!newMessage.trim()) {
+      console.log('Mensaje vacío, no se envía')
+      return
+    }
 
     try {
       const session = await getSession()
-      if (!session) return
+      console.log('Sesión:', session)
+      if (!session) {
+        console.log('No hay sesión')
+        return
+      }
+
+      const messageData = {
+        user_id: isAdmin && selectedUserId ? selectedUserId : session.user.id,
+        sender_id: session.user.id,
+        message: newMessage.trim(),
+        is_from_admin: isAdmin,
+        is_read: false,
+      }
+      console.log('Datos del mensaje:', messageData)
 
       const { error } = await supabase
         .from('chat_messages')
-        .insert({
-          user_id: isAdmin && selectedUserId ? selectedUserId : session.user.id,
-          sender_id: session.user.id,
-          message: newMessage.trim(),
-          is_from_admin: isAdmin,
-          is_read: false,
-        })
+        .insert(messageData)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error de Supabase:', error)
+        throw error
+      }
 
+      console.log('Mensaje enviado exitosamente')
       setNewMessage('')
       loadMessages()
     } catch (error) {
       console.error('Error al enviar mensaje:', error)
+    }
+  }
+
+  const markAsRead = async () => {
+    try {
+      const session = await getSession()
+      if (!session) return
+
+      // Cargar todos los mensajes y actualizar los correspondientes
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*')
+
+      if (!data) return
+
+      const messagesToUpdate = data.filter((msg: any) => {
+        if (isAdmin && selectedUserId) {
+          // Admin marca como leídos los mensajes del usuario seleccionado
+          return msg.user_id === selectedUserId && !msg.is_from_admin && !msg.is_read
+        } else if (!isAdmin) {
+          // Cliente marca como leídos los mensajes del admin
+          return msg.user_id === session.user.id && msg.is_from_admin && !msg.is_read
+        }
+        return false
+      })
+
+      // Actualizar cada mensaje individualmente
+      for (const msg of messagesToUpdate) {
+        await supabase
+          .from('chat_messages')
+          .update({ is_read: true })
+          .eq('id', msg.id)
+      }
+    } catch (error) {
+      console.error('Error al marcar como leídos:', error)
     }
   }
 
@@ -117,9 +213,14 @@ export default function ChatWidget() {
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+          className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors relative"
         >
           {isOpen ? '✕' : '💬'}
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {isOpen && (
@@ -207,9 +308,14 @@ export default function ChatWidget() {
     <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+        className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors relative"
       >
         {isOpen ? '✕' : '💬'}
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
       </button>
 
       {isOpen && (
