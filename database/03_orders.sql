@@ -37,6 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_assigned_to ON public.orders(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at);
 
 -- Trigger para updated_at
+DROP TRIGGER IF EXISTS update_orders_updated_at ON public.orders;
 CREATE TRIGGER update_orders_updated_at
     BEFORE UPDATE ON public.orders
     FOR EACH ROW
@@ -63,6 +64,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger para generar número de pedido automáticamente
+DROP TRIGGER IF EXISTS generate_order_number_trigger ON public.orders;
 CREATE TRIGGER generate_order_number_trigger
     BEFORE INSERT ON public.orders
     FOR EACH ROW
@@ -101,6 +103,13 @@ CREATE INDEX IF NOT EXISTS idx_order_events_created_at ON public.order_events(cr
 
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Users can view own orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can view all orders" ON public.orders;
+DROP POLICY IF EXISTS "Users can create orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can update any order" ON public.orders;
+DROP POLICY IF EXISTS "Users can update own orders" ON public.orders;
+
 -- Los usuarios pueden ver sus propios pedidos
 CREATE POLICY "Users can view own orders"
     ON public.orders FOR SELECT
@@ -131,16 +140,12 @@ CREATE POLICY "Admins can update any order"
         )
     );
 
--- Los usuarios pueden actualizar sus propios pedidos (limitado)
-CREATE POLICY "Users can update own orders"
-    ON public.orders FOR UPDATE
-    USING (
-        auth.uid() = user_id AND
-        -- Solo permitir actualizar ciertos campos
-        (description IS NOT NULL OR notes IS NOT NULL)
-    );
-
 ALTER TABLE public.order_events ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Users can view own order events" ON public.order_events;
+DROP POLICY IF EXISTS "Admins can view all order events" ON public.order_events;
+DROP POLICY IF EXISTS "Admins can create order events" ON public.order_events;
 
 -- Los usuarios pueden ver eventos de sus propios pedidos
 CREATE POLICY "Users can view own order events"

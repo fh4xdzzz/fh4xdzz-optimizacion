@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.business_settings (
 CREATE INDEX IF NOT EXISTS idx_business_settings_key ON public.business_settings(key);
 
 -- Trigger para updated_at
+DROP TRIGGER IF EXISTS update_business_settings_updated_at ON public.business_settings;
 CREATE TRIGGER update_business_settings_updated_at
     BEFORE UPDATE ON public.business_settings
     FOR EACH ROW
@@ -24,6 +25,13 @@ CREATE TRIGGER update_business_settings_updated_at
 -- =====================================================
 
 ALTER TABLE public.business_settings ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Anyone can view public settings" ON public.business_settings;
+DROP POLICY IF EXISTS "Admins can view all settings" ON public.business_settings;
+DROP POLICY IF EXISTS "Admins can create settings" ON public.business_settings;
+DROP POLICY IF EXISTS "Admins can update settings" ON public.business_settings;
+DROP POLICY IF EXISTS "Admins can delete settings" ON public.business_settings;
 
 -- Todos pueden ver configuraciones públicas
 CREATE POLICY "Anyone can view public settings"

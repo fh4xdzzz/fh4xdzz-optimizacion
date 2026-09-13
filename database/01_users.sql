@@ -29,6 +29,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
 CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON public.users
     FOR EACH ROW
@@ -49,6 +50,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
@@ -59,6 +61,12 @@ CREATE TRIGGER on_auth_user_created
 -- =====================================================
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.users;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+DROP POLICY IF EXISTS "Admins can update any profile" ON public.users;
 
 -- Los usuarios pueden ver su propio perfil
 CREATE POLICY "Users can view own profile"

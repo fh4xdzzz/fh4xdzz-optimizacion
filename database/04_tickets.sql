@@ -51,6 +51,7 @@ CREATE INDEX IF NOT EXISTS idx_tickets_ticket_number ON public.tickets(ticket_nu
 CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON public.tickets(created_at);
 
 -- Trigger para updated_at
+DROP TRIGGER IF EXISTS update_tickets_updated_at ON public.tickets;
 CREATE TRIGGER update_tickets_updated_at
     BEFORE UPDATE ON public.tickets
     FOR EACH ROW
@@ -77,6 +78,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger para generar número de ticket automáticamente
+DROP TRIGGER IF EXISTS generate_ticket_number_trigger ON public.tickets;
 CREATE TRIGGER generate_ticket_number_trigger
     BEFORE INSERT ON public.tickets
     FOR EACH ROW
@@ -106,6 +108,14 @@ CREATE INDEX IF NOT EXISTS idx_ticket_messages_created_at ON public.ticket_messa
 -- =====================================================
 
 ALTER TABLE public.tickets ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Users can view own tickets" ON public.tickets;
+DROP POLICY IF EXISTS "Admins can view all tickets" ON public.tickets;
+DROP POLICY IF EXISTS "Staff can view all tickets" ON public.tickets;
+DROP POLICY IF EXISTS "Users can create tickets" ON public.tickets;
+DROP POLICY IF EXISTS "Admins can update any ticket" ON public.tickets;
+DROP POLICY IF EXISTS "Staff can update tickets" ON public.tickets;
 
 -- Los usuarios pueden ver sus propios tickets
 CREATE POLICY "Users can view own tickets"
@@ -158,6 +168,12 @@ CREATE POLICY "Staff can update tickets"
     );
 
 ALTER TABLE public.ticket_messages ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Users can view own ticket messages" ON public.ticket_messages;
+DROP POLICY IF EXISTS "Admins can view all ticket messages" ON public.ticket_messages;
+DROP POLICY IF EXISTS "Staff can view all ticket messages" ON public.ticket_messages;
+DROP POLICY IF EXISTS "Staff can create ticket messages" ON public.ticket_messages;
 
 -- Los usuarios pueden ver mensajes de sus propios tickets
 CREATE POLICY "Users can view own ticket messages"

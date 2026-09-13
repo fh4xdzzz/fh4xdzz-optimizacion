@@ -25,6 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_testimonials_rating ON public.testimonials(rating
 CREATE INDEX IF NOT EXISTS idx_testimonials_created_at ON public.testimonials(created_at);
 
 -- Trigger para updated_at
+DROP TRIGGER IF EXISTS update_testimonials_updated_at ON public.testimonials;
 CREATE TRIGGER update_testimonials_updated_at
     BEFORE UPDATE ON public.testimonials
     FOR EACH ROW
@@ -35,6 +36,14 @@ CREATE TRIGGER update_testimonials_updated_at
 -- =====================================================
 
 ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Anyone can view displayed testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Users can view own testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Admins can view all testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Users can create testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Admins can update any testimonial" ON public.testimonials;
+DROP POLICY IF EXISTS "Admins can delete testimonials" ON public.testimonials;
 
 -- Todos pueden ver testimonios mostrados
 CREATE POLICY "Anyone can view displayed testimonials"
