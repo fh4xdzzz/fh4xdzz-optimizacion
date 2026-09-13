@@ -132,6 +132,29 @@ function ContactFormContent() {
 
       if (orderError) throw orderError
 
+      // Enviar webhook al bot de Discord
+      try {
+        await fetch('http://localhost:5000/webhook', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'order_created',
+            data: {
+              order_id: orderData.id,
+              order_number: orderData.order_number,
+              user_email: formData.email,
+              service_name: service.name,
+              description: formData.description
+            }
+          })
+        })
+      } catch (webhookError) {
+        console.error('Error enviando webhook:', webhookError)
+        // No fallar el pedido si el webhook falla
+      }
+
       setOrderNumber(orderData.order_number)
       setSubmitSuccess(true)
       setFormData({
