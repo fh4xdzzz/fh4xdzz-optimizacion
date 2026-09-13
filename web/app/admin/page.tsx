@@ -392,9 +392,11 @@ export default function AdminPage() {
                       <label className="text-sm font-medium mb-2 block">Nombre del negocio</label>
                       <input
                         type="text"
-                        defaultValue="TheDulcanDesign"
-                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        value="TheDulcanDesign"
+                        disabled
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-muted text-muted-foreground cursor-not-allowed"
                       />
+                      <p className="text-xs text-muted mt-1">El nombre del negocio es fijo</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-2 block">Email de contacto</label>
