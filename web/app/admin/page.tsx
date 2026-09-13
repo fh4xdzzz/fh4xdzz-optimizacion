@@ -58,14 +58,14 @@ export default function AdminPage() {
     // Cargar pedidos
     const { data: ordersData } = await supabase
       .from('orders')
-      .select('*, services(name)')
+      .select('*')
       .order('created_at', { ascending: false })
     if (ordersData) {
-      setOrders(ordersData.map((order: { id: string; order_number: string; user_id: string; created_at: string; status: string; services: { name: string } | null }) => ({
+      setOrders(ordersData.map((order: { id: string; order_number: string; user_id: string; created_at: string; status: string; service_id: string }) => ({
         id: order.id,
         order_number: order.order_number,
         user_id: order.user_id,
-        service_name: order.services?.name || 'Unknown',
+        service_name: 'Service ID: ' + order.service_id,
         status: order.status,
         created_at: order.created_at,
       })))

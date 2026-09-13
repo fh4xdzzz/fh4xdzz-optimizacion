@@ -59,6 +59,7 @@
 | DASH-08 | Dashboard | Actualización de datos | ⏳ PENDIENTE | - | Usuario | No |
 | DASH-09 | Dashboard | Protección por rol | ✅ PASS | Código admin/page.tsx:91-94 session.user.role !== 'admin' redirect | Devin | Sí |
 | DASH-10 | Dashboard | No se muestran datos de demostración | ✅ PASS | Código admin/page.tsx:97 if (!isDemo) check | Devin | No |
+| DASH-11 | Dashboard | Errores de conexión | ✅ PASS | Corregido: removido join inválido orders-services | Devin | No |
 | SERV-01 | Servicios | Los 7 servicios activos aparecen correctamente | ✅ PASS | Dashboard admin contador: 7 servicios activos | Usuario | No |
 | SERV-02 | Servicios | Los filtros de categoría funcionan | ✅ PASS | Código servicios/page.tsx estado selectedCategory implementado | Devin | No |
 | SERV-03 | Servicios | La página funciona después de recargar | ⏳ PENDIENTE | - | Usuario | No |
