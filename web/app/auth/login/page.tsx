@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { signIn, isDemoMode, isSupabaseMode } from '@/lib/auth-hybrid'
+import { signIn, isDemoMode, isSupabaseMode, getSession } from '@/lib/auth-hybrid'
 import Link from 'next/link'
 
 function LoginForm() {
@@ -27,7 +27,12 @@ function LoginForm() {
 
     try {
       await signIn(email, password)
-      router.push(redirect)
+      
+      // Verificar si el usuario es admin para redirigir al panel de administración
+      const session = await getSession()
+      const redirectTo = session?.user?.role === 'admin' ? '/admin' : redirect
+      
+      router.push(redirectTo)
       router.refresh()
     } catch {
       // No revelar si el email existe o no para seguridad

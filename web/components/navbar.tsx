@@ -9,7 +9,7 @@ import { Button } from './ui/button'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
-  const [session, setSession] = useState<{ user: { full_name?: string; email: string } } | null>(null)
+  const [session, setSession] = useState<{ user: { full_name?: string; email: string; role?: string } } | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -61,6 +61,11 @@ export default function Navbar() {
                 <Link href="/perfil" className="text-foreground/80 hover:text-foreground transition-colors">
                   Perfil
                 </Link>
+                {session.user.role === 'admin' && (
+                  <Link href="/admin" className="text-foreground/80 hover:text-foreground transition-colors font-semibold">
+                    Admin
+                  </Link>
+                )}
                 <Button variant="outline" onClick={handleLogout}>
                   Cerrar Sesión
                 </Button>
@@ -146,6 +151,15 @@ export default function Navbar() {
                 >
                   Perfil
                 </Link>
+                {session.user.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    className="block text-foreground/80 hover:text-foreground transition-colors font-semibold"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Admin
+                  </Link>
+                )}
                 <Button variant="outline" className="w-full" onClick={() => { handleLogout(); setIsOpen(false); }}>
                   Cerrar Sesión
                 </Button>
