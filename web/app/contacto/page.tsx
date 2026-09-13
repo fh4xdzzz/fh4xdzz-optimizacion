@@ -74,6 +74,13 @@ export default function ContactPage() {
       return
     }
 
+    // Verificar autenticación
+    const session = await getSession()
+    if (!session) {
+      router.push('/auth/login?redirect=/contacto')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -82,16 +89,12 @@ export default function ContactPage() {
         throw new Error('Servicio no encontrado')
       }
 
-      // Obtener sesión actual para obtener user_id
-      const session = await getSession()
-      const userId = session?.user?.id
-
       // Guardar en Supabase
       const supabase = createClient()
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: userId || null,
+          user_id: session.user.id,
           service_id: service.id,
           client_name: formData.name,
           client_email: formData.email,
@@ -203,6 +206,9 @@ export default function ContactPage() {
           <p className="text-xl text-muted max-w-2xl mx-auto">
             Completa el formulario para crear tu pedido. Te contactaremos pronto para coordinar el servicio.
           </p>
+          <div className="mt-4 bg-blue-500/10 border border-blue-500/50 text-blue-500 px-4 py-2 rounded-lg inline-block">
+            🔒 Se requiere iniciar sesión para crear pedidos
+          </div>
         </div>
       </section>
 
