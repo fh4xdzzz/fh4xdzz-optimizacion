@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
                   </div>
                   <CardTitle className="text-2xl">Email Enviado</CardTitle>
                   <CardDescription className="mt-2">
-                    Hemos enviado un email con instrucciones para restablecer tu contraseña.
+                    Hemos enviado un email con instrucciones para restablecer tu contraseña. Por favor verifica tu bandeja de entrada y haz clic en el enlace. También revisa tu carpeta de spam.
                   </CardDescription>
                 </div>
               </CardHeader>

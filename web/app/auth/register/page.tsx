@@ -66,7 +66,7 @@ export default function RegisterPage() {
                   <CardTitle className="text-2xl">¡Registro Exitoso!</CardTitle>
                   <CardDescription className="mt-2">
                     {isSupabase 
-                      ? 'Hemos enviado un email de confirmación. Por favor verifica tu bandeja de entrada.'
+                      ? 'Hemos enviado un email de confirmación a tu correo. Por favor verifica tu bandeja de entrada y haz clic en el enlace para activar tu cuenta. También revisa tu carpeta de spam.'
                       : 'Cuenta demo creada exitosamente. Serás redirigido al login...'
                     }
                   </CardDescription>
