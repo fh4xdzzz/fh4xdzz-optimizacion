@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TheDulcanDesign - Servicios Profesionales de Optimización",
   description: "Servicios profesionales de optimización y configuración de OBS, streaming, PC/Windows, gaming y soporte técnico.",
+  icons: {
+    icon: [
+      { url: "/icon.png", sizes: "any", type: "image/png" },
+    ],
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

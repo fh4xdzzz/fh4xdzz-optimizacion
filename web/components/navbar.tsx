@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSession, signOut } from '@/lib/auth-hybrid'
@@ -37,9 +38,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <span className="text-white font-bold text-sm">F</span>
-            </div>
+            <Image src="/logo.png" alt="TheDulcanDesign Logo" width={32} height={32} className="rounded-lg" />
             <span className="font-bold text-lg">TheDulcanDesign</span>
           </Link>
 
