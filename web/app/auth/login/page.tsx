@@ -28,9 +28,16 @@ function LoginForm() {
     try {
       await signIn(email, password)
       
+      // Esperar un momento para asegurar que la sesión se cargue completamente
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       // Verificar si el usuario es admin para redirigir al panel de administración
       const session = await getSession()
-      const redirectTo = session?.user?.role === 'admin' ? '/admin' : redirect
+      const userRole = session?.user?.role
+      
+      console.log('Usuario rol después de login:', userRole)
+      
+      const redirectTo = userRole === 'admin' ? '/admin' : redirect
       
       router.push(redirectTo)
       router.refresh()

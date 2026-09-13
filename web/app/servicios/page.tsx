@@ -1,9 +1,13 @@
+'use client'
+
+import { useState } from 'react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function ServicesPage() {
+  const [selectedCategory, setSelectedCategory] = useState('all')
   const services = [
     {
       id: 1,
@@ -102,6 +106,10 @@ export default function ServicesPage() {
     { id: 'custom', name: 'Personalizado' }
   ]
 
+  const filteredServices = selectedCategory === 'all' 
+    ? services 
+    : services.filter(service => service.category === selectedCategory)
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -123,8 +131,9 @@ export default function ServicesPage() {
             {categories.map((category) => (
               <Button
                 key={category.id}
-                variant={category.id === 'all' ? 'primary' : 'outline'}
+                variant={selectedCategory === category.id ? 'primary' : 'outline'}
                 size="sm"
+                onClick={() => setSelectedCategory(category.id)}
               >
                 {category.name}
               </Button>
@@ -137,7 +146,7 @@ export default function ServicesPage() {
       <section className="pb-20 px-4">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service) => (
+            {filteredServices.map((service) => (
               <Card
                 key={service.id}
                 className={`border-2 transition-all hover:scale-105 ${
