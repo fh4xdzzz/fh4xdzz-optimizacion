@@ -1,0 +1,106 @@
+#!/usr/bin/env tsx
+/**
+ * Script de prueba completa - Ejecuta todos los tests
+ * Ejecutar: npx tsx scripts/run-all-tests.ts
+ */
+
+import { execSync } from 'child_process'
+import path from 'path'
+
+const SCRIPTS_DIR = path.join(__dirname)
+
+interface TestResult {
+  name: string
+  success: boolean
+  output: string
+}
+
+async function runScript(scriptName: string): Promise<TestResult> {
+  console.log(`\n🔍 Ejecutando ${scriptName}...`)
+  console.log('='.repeat(50))
+  
+  try {
+    const output = execSync(`npx tsx ${scriptName}`, {
+      cwd: SCRIPTS_DIR,
+      encoding: 'utf-8',
+      stdio: 'pipe'
+    })
+    
+    console.log(output)
+    return {
+      name: scriptName,
+      success: true,
+      output
+    }
+  } catch (error: any) {
+    const errorMsg = error.stderr || error.stdout || error.message
+    console.log(errorMsg)
+    return {
+      name: scriptName,
+      success: false,
+      output: errorMsg
+    }
+  }
+}
+
+async function main() {
+  console.log('🧪 Suite de Pruebas Completas - FH4XDZzz OPTIMIZACION')
+  console.log('='.repeat(60))
+  
+  const results: TestResult[] = []
+  
+  // Test 1: Conexión
+  const connectionResult = await runScript('test-connection.ts')
+  results.push(connectionResult)
+  
+  if (!connectionResult.success) {
+    console.log('\n❌ Falló test de conexión. Deteniendo ejecución.')
+    console.log('💡 Soluciona los errores de conexión antes de continuar.')
+    printSummary(results)
+    process.exit(1)
+  }
+  
+  // Test 2: Auth
+  const authResult = await runScript('test-auth.ts')
+  results.push(authResult)
+  
+  // Test 3: RLS
+  const rlsResult = await runScript('test-rls.ts')
+  results.push(rlsResult)
+  
+  // Summary
+  printSummary(results)
+  
+  // Final recommendation
+  const allPassed = results.every(r => r.success)
+  
+  if (allPassed) {
+    console.log('\n🎉 ¡Todos los tests pasaron!')
+    console.log('💡 Puedes proceder con pruebas manuales en la web:')
+    console.log('   - /auth/register')
+    console.log('   - /auth/login')
+    console.log('   - /dashboard')
+    console.log('   - /perfil')
+  } else {
+    console.log('\n⚠️  Algunos tests fallaron')
+    console.log('💡 Revisa los errores arriba y documenta las soluciones en docs/STATUS_FASE5.md')
+  }
+}
+
+function printSummary(results: TestResult[]) {
+  console.log('\n' + '='.repeat(60))
+  console.log('📊 RESUMEN DE PRUEBAS')
+  console.log('='.repeat(60))
+  
+  results.forEach(result => {
+    const icon = result.success ? '✅' : '❌'
+    console.log(`${icon} ${result.name}`)
+  })
+  
+  const passed = results.filter(r => r.success).length
+  const total = results.length
+  
+  console.log(`\n📈 Resultado: ${passed}/${total} tests pasaron`)
+}
+
+main().catch(console.error)
