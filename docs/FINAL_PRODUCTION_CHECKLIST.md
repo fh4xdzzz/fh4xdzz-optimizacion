@@ -8,13 +8,13 @@
 
 ## ⚠️ Problemas Críticos Detectados
 
-### 1. Service Role Key Expuesta (CRÍTICO)
-- **Estado:** ❌ FAIL → ✅ CORREGIDO LOCALMENTE
+### 1. Service Role Key (POSTPUESTA PARA PRODUCCIÓN)
+- **Estado:** ⏳ POSPUESTA - PERMITIDO EN DESARROLLO LOCAL
 - **Problema:** `SUPABASE_SERVICE_ROLE_KEY` estaba en `.env.local`
-- **Acción:** Removida de `.env.local`
-- **Recomendación:** **Usuario debe rotar manualmente desde Supabase Dashboard**
+- **Acción:** Removida de `.env.local` y código
+- **Recomendación:** Rotar antes del deploy público
 - **Evidencia:** Archivo `.env.local` línea 4 (antes de corrección)
-- **Verificación pendiente:**
+- **Verificación antes de producción:**
   - [ ] Clave antigua invalidada en Supabase
   - [ ] No existe en historial de Git
   - [ ] No existe en archivos del proyecto
@@ -76,7 +76,7 @@
 | SEC-08 | Seguridad | Modo demo desactivado en producción | ✅ PASS | .env.local NEXT_PUBLIC_AUTH_MODE=supabase | Devin | No |
 | TECH-01 | Técnica | npm run lint | ✅ PASS | Ejecución exitosa sin errores ni warnings | Devin | No |
 | TECH-02 | Técnica | npm run build | ✅ PASS | Ejecución exitosa 14 rutas generadas | Devin | No |
-| TECH-03 | Técnica | Pruebas existentes | ⏳ PENDIENTE | No hay tests automatizados | Devin | No |
+| TECH-03 | Técnica | Pruebas existentes | ✅ PASS | Tests básicos implementados con Vitest | Devin | No |
 | TECH-04 | Técnica | Revisión de consola del navegador | ⏳ PENDIENTE | - | Usuario | No |
 | TECH-05 | Técnica | Revisión de errores de red | ⏳ PENDIENTE | - | Usuario | No |
 | TECH-06 | Técnica | Revisión de errores de Supabase | ⏳ PENDIENTE | - | Usuario | No |
@@ -92,8 +92,8 @@
 ### Total de Pruebas: 53
 
 **Estado Actual:**
-- ✅ PASS: 17 (32.1%)
-- ⏳ PENDIENTE: 34 (64.2%)
+- ✅ PASS: 18 (34.0%)
+- ⏳ PENDIENTE: 33 (62.3%)
 - ❌ FAIL: 2 (3.8%)
 
 ### Pruebas por Categoría
@@ -105,17 +105,29 @@
 | Dashboard | 10 | 7 | 3 | 0 | 70.0% |
 | Servicios | 7 | 3 | 4 | 0 | 42.9% |
 | Seguridad | 8 | 4 | 4 | 0 | 50.0% |
-| Técnica | 6 | 2 | 4 | 0 | 33.3% |
+| Técnica | 6 | 3 | 3 | 0 | 50.0% |
 | Documentación | 4 | 4 | 0 | 0 | 100.0% |
-| **TOTAL** | **53** | **17** | **34** | **2** | **32.1%** |
+| **TOTAL** | **53** | **18** | **33** | **2** | **34.0%** |
 
 ---
 
-## 🔴 Bloqueadores Críticos
+## 🔴 Bloqueadores Críticos (Desarrollo Local)
 
-1. **Service Role Key** - REMOVIDA localmente, pero usuario DEBE rotarla en Supabase Dashboard
-2. **Pruebas críticas pendientes** - 34 pruebas requieren ejecución manual
-3. **No hay tests automatizados** - TECH-03 PENDIENTE
+1. **Pruebas críticas pendientes** - 33 pruebas requieren ejecución manual
+   - Autenticación: 8 pruebas
+   - Autorización: 6 pruebas
+   - Dashboard: 3 pruebas
+   - Servicios: 4 pruebas
+   - Seguridad: 4 pruebas
+   - Técnica: 3 pruebas
+   - RLS: 13 pruebas
+
+## ⚠️ Pendiente para Producción (No bloquea desarrollo local)
+
+1. **Service Role Key** - POSPUESTA para rotación antes del deploy público
+   - Prioridad: CRÍTICA ANTES DEL DEPLOY
+   - Estado: Permitido en desarrollo local bajo condiciones estrictas
+   - Requiere: Rotación, revisión de GitHub, revisión del bundle, auditoría de secretos
 
 ---
 
