@@ -22,22 +22,22 @@ export default function Footer() {
             <h3 className="font-semibold mb-4">Servicios</h3>
             <ul className="space-y-2 text-sm text-muted">
               <li>
-                <Link href="/servicios" className="hover:text-foreground transition-colors">
+                <Link href="/servicios/optimizacion-obs" className="hover:text-foreground transition-colors">
                   Optimización OBS
                 </Link>
               </li>
               <li>
-                <Link href="/servicios" className="hover:text-foreground transition-colors">
+                <Link href="/servicios/configuracion-streaming" className="hover:text-foreground transition-colors">
                   Configuración Streaming
                 </Link>
               </li>
               <li>
-                <Link href="/servicios" className="hover:text-foreground transition-colors">
+                <Link href="/servicios/optimizacion-pc-windows" className="hover:text-foreground transition-colors">
                   Optimización PC
                 </Link>
               </li>
               <li>
-                <Link href="/servicios" className="hover:text-foreground transition-colors">
+                <Link href="/servicios/soporte-tecnico" className="hover:text-foreground transition-colors">
                   Soporte Técnico
                 </Link>
               </li>
