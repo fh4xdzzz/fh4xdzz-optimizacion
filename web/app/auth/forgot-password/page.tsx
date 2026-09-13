@@ -5,7 +5,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { resetPassword, isSupabaseConfigured } from '@/lib/auth-hybrid'
+import { resetPassword, isDemoMode } from '@/lib/auth-hybrid'
 import Link from 'next/link'
 
 export default function ForgotPasswordPage() {
@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const isSupabaseReady = isSupabaseConfigured()
+  const isDemo = isDemoMode()
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,14 +23,15 @@ export default function ForgotPasswordPage() {
     try {
       await resetPassword(email)
       setSuccess(true)
-    } catch (error: unknown) {
-      setError((error as Error).message || 'Error al enviar email de recuperación')
+    } catch {
+      // No revelar si el email existe por seguridad
+      setError('Si el email está registrado, recibirás instrucciones en tu bandeja de entrada.')
     } finally {
       setLoading(false)
     }
   }
 
-  if (!isSupabaseReady) {
+  if (isDemo) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -40,12 +41,12 @@ export default function ForgotPasswordPage() {
               <CardHeader>
                 <CardTitle className="text-2xl">Recuperar Contraseña</CardTitle>
                 <CardDescription>
-                  Esta función requiere Supabase configurado
+                  Esta función solo está disponible en modo Supabase
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm mb-4">
-                  ⚠️ Supabase no está configurado
+                  ⚠️ Modo demo activo - La recuperación de contraseña requiere Supabase
                 </div>
                 <div className="text-center">
                   <Button variant="outline" className="w-full" href="/auth/login">

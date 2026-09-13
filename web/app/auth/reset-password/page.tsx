@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { updatePassword, isSupabaseConfigured } from '@/lib/auth-hybrid'
+import { updatePassword, isDemoMode } from '@/lib/auth-hybrid'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
@@ -14,7 +14,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const router = useRouter()
-  const isSupabaseReady = isSupabaseConfigured()
+  const isDemo = isDemoMode()
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,14 +27,14 @@ export default function ResetPasswordPage() {
       setTimeout(() => {
         router.push('/auth/login')
       }, 3000)
-    } catch (error: unknown) {
-      setError((error as Error).message || 'Error al actualizar contraseña')
+    } catch {
+      setError('Error al actualizar contraseña. El link puede haber expirado.')
     } finally {
       setLoading(false)
     }
   }
 
-  if (!isSupabaseReady) {
+  if (isDemo) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -44,12 +44,12 @@ export default function ResetPasswordPage() {
               <CardHeader>
                 <CardTitle className="text-2xl">Nueva Contraseña</CardTitle>
                 <CardDescription>
-                  Esta función requiere Supabase configurado
+                  Esta función solo está disponible en modo Supabase
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm mb-4">
-                  ⚠️ Supabase no está configurado
+                  ⚠️ Modo demo activo - La actualización de contraseña requiere Supabase
                 </div>
                 <div className="text-center">
                   <Button variant="outline" className="w-full" href="/auth/login">

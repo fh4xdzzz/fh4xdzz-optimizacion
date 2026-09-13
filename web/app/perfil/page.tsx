@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getSession, signOut, isSupabaseConfigured } from '@/lib/auth-hybrid'
+import { getSession, signOut, isDemoMode, isSupabaseMode } from '@/lib/auth-hybrid'
 
 export default function ProfilePage() {
   const [session, setSession] = useState<{ user: { full_name?: string; email: string; discord_id?: string; discord_username?: string; role?: string } } | null>(null)
@@ -19,7 +19,8 @@ export default function ProfilePage() {
     discord_username: '',
   })
   const router = useRouter()
-  const isSupabaseReady = isSupabaseConfigured()
+  const isDemo = isDemoMode()
+  const isSupabase = isSupabaseMode()
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -47,15 +48,15 @@ export default function ProfilePage() {
     setError('')
 
     try {
-      // En modo demo, solo actualizamos localStorage
-      if (!isSupabaseReady) {
-        setError('La actualización de perfil requiere Supabase configurado')
+      // En modo demo, no permitir actualización
+      if (isDemo) {
+        setError('La actualización de perfil solo está disponible en modo Supabase')
       } else {
         // Implementar actualización en Supabase cuando esté conectado
         setError('Función de actualización pendiente de implementación')
       }
-    } catch (error: unknown) {
-      setError((error as Error).message || 'Error al actualizar perfil')
+    } catch {
+      setError('Error al actualizar perfil. Intenta nuevamente.')
     } finally {
       setLoading(false)
     }
@@ -88,9 +89,9 @@ export default function ProfilePage() {
         <div className="container mx-auto max-w-4xl">
           <h1 className="text-4xl font-bold mb-8">Mi Perfil</h1>
 
-          {!isSupabaseReady && (
+          {isDemo && (
             <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm mb-8">
-              ⚠️ Modo demo activo - Configura Supabase para funcionalidad completa
+              ⚠️ Modo demo activo - Usando localStorage (no es autenticación real)
             </div>
           )}
 
@@ -208,7 +209,7 @@ export default function ProfilePage() {
 
                   <div>
                     <div className="text-sm text-muted mb-1">Tipo de Autenticación</div>
-                    <div className="font-medium">{isSupabaseReady ? 'Supabase (Real)' : 'LocalStorage (Demo)'}</div>
+                    <div className="font-medium">{isSupabase ? 'Supabase (Real)' : 'LocalStorage (Demo)'}</div>
                   </div>
 
                   <div className="pt-4 border-t border-border">

@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { getSession, signOut } from '@/lib/auth-hybrid'
 import { Button } from './ui/button'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [session, setSession] = useState<{ user: { full_name?: string; email: string } } | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const loadSession = async () => {
@@ -26,7 +28,7 @@ export default function Navbar() {
   const handleLogout = async () => {
     await signOut()
     setSession(null)
-    window.location.href = '/'
+    router.push('/')
   }
 
   return (

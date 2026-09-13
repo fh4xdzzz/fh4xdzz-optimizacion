@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { signIn, isSupabaseConfigured } from '@/lib/auth-hybrid'
+import { signIn, isDemoMode, isSupabaseMode } from '@/lib/auth-hybrid'
 import Link from 'next/link'
 
 function LoginForm() {
@@ -17,7 +17,8 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/dashboard'
-  const isSupabaseReady = isSupabaseConfigured()
+  const isDemo = isDemoMode()
+  const isSupabase = isSupabaseMode()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,8 +29,9 @@ function LoginForm() {
       await signIn(email, password)
       router.push(redirect)
       router.refresh()
-    } catch (error: unknown) {
-      setError((error as Error).message || 'Error al iniciar sesión')
+    } catch {
+      // No revelar si el email existe o no para seguridad
+      setError('Credenciales inválidas o error de conexión')
     } finally {
       setLoading(false)
     }
@@ -40,7 +42,7 @@ function LoginForm() {
       <CardHeader>
         <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
         <CardDescription>
-          {isSupabaseReady 
+          {isSupabase 
             ? 'Ingresa tus credenciales para acceder a tu cuenta'
             : 'Modo demo: Usa cualquier email y contraseña'
           }
@@ -54,9 +56,9 @@ function LoginForm() {
             </div>
           )}
 
-          {!isSupabaseReady && (
+          {isDemo && (
             <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm">
-              ⚠️ Modo demo activo - Supabase no está configurado
+              ⚠️ Modo demo activo - Usando localStorage (no es autenticación real)
             </div>
           )}
 
@@ -107,7 +109,7 @@ function LoginForm() {
           </Link>
         </div>
 
-        {isSupabaseReady && (
+        {isSupabase && (
           <div className="mt-2 text-center text-sm">
             <Link href="/auth/forgot-password" className="text-muted hover:text-foreground">
               ¿Olvidaste tu contraseña?

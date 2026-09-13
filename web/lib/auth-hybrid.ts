@@ -1,5 +1,5 @@
-// Sistema híbrido de autenticación
-// Supabase cuando está configurado, localStorage cuando no
+// Sistema de autenticación con modo explícito
+// Modos: 'demo' (localStorage) o 'supabase' (autenticación real)
 
 import { createClient } from './supabase/client'
 
@@ -18,6 +18,16 @@ export interface Session {
   access_token: string
 }
 
+// Obtener modo de autenticación configurado
+export function getAuthMode(): 'demo' | 'supabase' {
+  const mode = process.env.NEXT_PUBLIC_AUTH_MODE?.toLowerCase()
+  if (mode === 'demo' || mode === 'supabase') {
+    return mode
+  }
+  // Por defecto, modo demo para desarrollo
+  return 'demo'
+}
+
 // Verificar si Supabase está configurado
 export function isSupabaseConfigured(): boolean {
   return !!(
@@ -26,6 +36,16 @@ export function isSupabaseConfigured(): boolean {
     process.env.NEXT_PUBLIC_SUPABASE_URL !== 'your_supabase_project_url' &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'your_supabase_anon_key'
   )
+}
+
+// Verificar si el sistema está en modo demo
+export function isDemoMode(): boolean {
+  return getAuthMode() === 'demo'
+}
+
+// Verificar si el sistema está en modo Supabase
+export function isSupabaseMode(): boolean {
+  return getAuthMode() === 'supabase'
 }
 
 // Sistema localStorage (demo)
@@ -77,9 +97,13 @@ export function createDemoUser(email: string, full_name: string): User {
   }
 }
 
-// Obtener sesión actual (híbrido)
+// Obtener sesión actual (según modo configurado)
 export async function getSession(): Promise<Session | null> {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseMode()) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    }
+    
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     
@@ -97,6 +121,8 @@ export async function getSession(): Promise<Session | null> {
           email: session.user.email!,
           full_name: profile?.full_name || session.user.user_metadata?.full_name,
           avatar_url: profile?.avatar_url || session.user.user_metadata?.avatar_url,
+          discord_id: profile?.discord_id,
+          discord_username: profile?.discord_username,
           role: profile?.role || 'client',
         },
         access_token: session.access_token,
@@ -104,13 +130,18 @@ export async function getSession(): Promise<Session | null> {
     }
     return null
   } else {
+    // Modo demo - usar localStorage
     return getDemoSession()
   }
 }
 
-// Iniciar sesión (híbrido)
+// Iniciar sesión (según modo configurado)
 export async function signIn(email: string, password: string): Promise<Session> {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseMode()) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    }
+    
     const supabase = createClient()
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -141,7 +172,7 @@ export async function signIn(email: string, password: string): Promise<Session> 
       access_token: data.session.access_token,
     }
   } else {
-    // Sistema demo - cualquier email/password funciona
+    // Modo demo - sistema localStorage
     const user = createDemoUser(email, email.split('@')[0])
     const session: Session = {
       user,
@@ -153,9 +184,13 @@ export async function signIn(email: string, password: string): Promise<Session> 
   }
 }
 
-// Registrarse (híbrido)
+// Registrarse (según modo configurado)
 export async function signUp(email: string, password: string, full_name: string): Promise<Session> {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseMode()) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    }
+    
     const supabase = createClient()
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -191,7 +226,7 @@ export async function signUp(email: string, password: string, full_name: string)
       access_token: data.session?.access_token || '',
     }
   } else {
-    // Sistema demo
+    // Modo demo - sistema localStorage
     const user = createDemoUser(email, full_name)
     const session: Session = {
       user,
@@ -203,9 +238,13 @@ export async function signUp(email: string, password: string, full_name: string)
   }
 }
 
-// Cerrar sesión (híbrido)
+// Cerrar sesión (según modo configurado)
 export async function signOut(): Promise<void> {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseMode()) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    }
+    
     const supabase = createClient()
     await supabase.auth.signOut()
   } else {
@@ -213,9 +252,13 @@ export async function signOut(): Promise<void> {
   }
 }
 
-// Recuperar contraseña (solo Supabase)
+// Recuperar contraseña (solo modo Supabase)
 export async function resetPassword(email: string): Promise<void> {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseMode()) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    }
+    
     const supabase = createClient()
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
@@ -223,13 +266,17 @@ export async function resetPassword(email: string): Promise<void> {
     
     if (error) throw error
   } else {
-    throw new Error('La recuperación de contraseña requiere Supabase configurado')
+    throw new Error('La recuperación de contraseña solo está disponible en modo Supabase')
   }
 }
 
-// Actualizar contraseña (solo Supabase)
+// Actualizar contraseña (solo modo Supabase)
 export async function updatePassword(newPassword: string): Promise<void> {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseMode()) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    }
+    
     const supabase = createClient()
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
@@ -237,6 +284,6 @@ export async function updatePassword(newPassword: string): Promise<void> {
     
     if (error) throw error
   } else {
-    throw new Error('La actualización de contraseña requiere Supabase configurado')
+    throw new Error('La actualización de contraseña solo está disponible en modo Supabase')
   }
 }

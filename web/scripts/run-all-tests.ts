@@ -32,8 +32,9 @@ async function runScript(scriptName: string): Promise<TestResult> {
       success: true,
       output
     }
-  } catch (error: any) {
-    const errorMsg = error.stderr || error.stdout || error.message
+  } catch (error: unknown) {
+    const err = error as { stderr?: string; stdout?: string; message?: string }
+    const errorMsg = err.stderr || err.stdout || err.message || 'Unknown error'
     console.log(errorMsg)
     return {
       name: scriptName,

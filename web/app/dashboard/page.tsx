@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getSession, isSupabaseConfigured } from '@/lib/auth-hybrid'
+import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { getOrders, isSupabaseConfigured as isOrdersSupabaseConfigured } from '@/lib/orders'
 
 interface Order {
@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const isSupabaseReady = isSupabaseConfigured()
+  const isDemo = isDemoMode()
 
   useEffect(() => {
     const loadData = async () => {
@@ -99,7 +99,7 @@ export default function DashboardPage() {
               </h1>
               <p className="text-muted">
                 Gestiona tus servicios y solicitudes
-                {!isSupabaseReady && ' (Modo Demo)'}
+                {isDemo && ' (Modo Demo)'}
               </p>
             </div>
             <Button variant="primary" href="/contacto">
@@ -107,9 +107,9 @@ export default function DashboardPage() {
             </Button>
           </div>
 
-          {!isSupabaseReady && (
+          {isDemo && (
             <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm mb-8">
-              ⚠️ Modo demo activo - Configura Supabase para autenticación real
+              ⚠️ Modo demo activo - Usando localStorage (no es autenticación real)
             </div>
           )}
 

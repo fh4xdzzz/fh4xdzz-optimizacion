@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { signUp, isSupabaseConfigured } from '@/lib/auth-hybrid'
+import { signUp, isDemoMode, isSupabaseMode } from '@/lib/auth-hybrid'
 import Link from 'next/link'
 
 export default function RegisterPage() {
@@ -19,7 +19,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const router = useRouter()
-  const isSupabaseReady = isSupabaseConfigured()
+  const isDemo = isDemoMode()
+  const isSupabase = isSupabaseMode()
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,8 +33,9 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push('/auth/login')
       }, 3000)
-    } catch (error: unknown) {
-      setError((error as Error).message || 'Error al registrarse')
+    } catch {
+      // No revelar detalles específicos del error por seguridad
+      setError('Error al registrarse. Verifica tus datos e intenta nuevamente.')
     } finally {
       setLoading(false)
     }
@@ -62,7 +64,7 @@ export default function RegisterPage() {
                   </div>
                   <CardTitle className="text-2xl">¡Registro Exitoso!</CardTitle>
                   <CardDescription className="mt-2">
-                    {isSupabaseReady 
+                    {isSupabase 
                       ? 'Hemos enviado un email de confirmación. Por favor verifica tu bandeja de entrada.'
                       : 'Cuenta demo creada exitosamente. Serás redirigido al login...'
                     }
@@ -92,7 +94,7 @@ export default function RegisterPage() {
             <CardHeader>
               <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
               <CardDescription>
-                {isSupabaseReady 
+                {isSupabase 
                   ? 'Regístrate para comenzar a solicitar servicios'
                   : 'Modo demo: Crea una cuenta de prueba'
                 }
@@ -106,9 +108,9 @@ export default function RegisterPage() {
                   </div>
                 )}
 
-                {!isSupabaseReady && (
+                {isDemo && (
                   <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm">
-                    ⚠️ Modo demo activo - Supabase no está configurado
+                    ⚠️ Modo demo activo - Usando localStorage (no es autenticación real)
                   </div>
                 )}
 

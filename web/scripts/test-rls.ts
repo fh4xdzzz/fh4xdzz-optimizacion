@@ -27,9 +27,8 @@ async function testRLS() {
 
   // Test 1: Verificar que RLS está habilitado
   console.log('📊 Test 1: Verificar estado de RLS')
-  const { data: rlsStatus, error: rlsError } = await supabase
+  const { error: rlsError } = await supabase
     .rpc('check_rls_enabled', { table_name: 'users' })
-    .catch(() => ({ data: null, error: { message: 'Function not available' } }))
   
   if (rlsError) {
     console.log('ℹ️  No se puede verificar RLS directamente con anon key')
@@ -40,7 +39,7 @@ async function testRLS() {
 
   // Test 2: Verificar acceso sin autenticación
   console.log('\n📊 Test 2: Acceso sin autenticación')
-  const { data: anonUsers, error: anonError } = await supabase
+  const { error: anonError } = await supabase
     .from('users')
     .select('*')
   
@@ -49,7 +48,6 @@ async function testRLS() {
     console.log(`   Error: ${anonError.message}`)
   } else {
     console.log('⚠️  Acceso permitido sin autenticación (puede indicar RLS no habilitado)')
-    console.log(`   Usuarios encontrados: ${anonUsers?.length || 0}`)
   }
 
   // Test 3: Verificar tablas existentes

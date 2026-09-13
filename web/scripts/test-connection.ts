@@ -26,7 +26,7 @@ if (!supabaseAnonKey) {
 
 console.log('✅ Variables de entorno encontradas')
 console.log(`📡 URL: ${supabaseUrl}`)
-console.log(`🔑 Anon Key: ${supabaseAnonKey.substring(0, 10)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 4)}\n`)
+console.log(`🔑 Anon Key: configurado\n`)
 
 // Crear cliente Supabase
 console.log('🔌 Creando cliente Supabase...')
@@ -38,7 +38,7 @@ console.log('🚀 Intentando conectar a Supabase...')
 async function testConnection() {
   try {
     // Test simple: obtener estado del servidor
-    const { data, error } = await supabase.from('users').select('count').limit(1)
+    const { error } = await supabase.from('users').select('count').limit(1)
 
     if (error) {
       console.log('❌ Error de conexión:', error.message)
@@ -68,8 +68,8 @@ async function testConnection() {
     console.log('\n✅ Validación completada exitosamente')
     return true
     
-  } catch (error: any) {
-    console.log('❌ Error inesperado:', error.message)
+  } catch (error: unknown) {
+    console.log('❌ Error inesperado:', (error as Error).message)
     return false
   }
 }
