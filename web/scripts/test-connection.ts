@@ -4,7 +4,13 @@
  * Ejecutar: npx tsx scripts/test-connection.ts
  */
 
+import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
+import path from 'path'
+
+// Cargar variables de entorno desde el directorio raíz
+import { config } from 'dotenv'
+config({ path: path.resolve(__dirname, '../../.env') })
 
 // Verificar variables de entorno
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

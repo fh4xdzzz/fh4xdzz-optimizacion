@@ -6,7 +6,13 @@
  * NOTA: Este script requiere NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY
  */
 
+import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
+import path from 'path'
+
+// Cargar variables de entorno desde el directorio raíz
+import { config } from 'dotenv'
+config({ path: path.resolve(__dirname, '../../.env') })
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

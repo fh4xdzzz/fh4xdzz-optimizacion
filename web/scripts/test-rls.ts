@@ -9,7 +9,13 @@
  * - Scripts SQL ejecutados en Supabase
  */
 
+import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
+import path from 'path'
+
+// Cargar variables de entorno desde el directorio raíz
+import { config } from 'dotenv'
+config({ path: path.resolve(__dirname, '../../.env') })
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -71,8 +77,8 @@ async function testRLS() {
   console.log('\n📊 Test 4: Tabla services (debería ser pública)')
   const { data: services, error: servicesError } = await supabase
     .from('services')
-    .select('id, name, active')
-    .eq('active', true)
+    .select('id, name, is_active')
+    .eq('is_active', true)
     .limit(5)
   
   if (servicesError) {
