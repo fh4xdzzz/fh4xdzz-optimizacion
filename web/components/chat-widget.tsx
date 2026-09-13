@@ -89,16 +89,38 @@ export default function ChatWidget() {
   }, [])
 
   const loadUsers = async () => {
-    console.log('Cargando usuarios para admin...')
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, email, full_name')
-      .neq('role', 'admin')
-    if (error) {
+    console.log('Cargando usuarios que contactaron al soporte...')
+    try {
+      // Cargar usuarios que tienen mensajes en chat_messages
+      const { data: messages } = await supabase
+        .from('chat_messages')
+        .select('user_id')
+        .neq('is_from_admin', true)
+
+      if (!messages || messages.length === 0) {
+        setUsers([])
+        return
+      }
+
+      // Obtener IDs únicos de usuarios
+      const userIds = [...new Set(messages.map((m: any) => m.user_id))]
+
+      // Cargar datos de esos usuarios
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, email, full_name')
+        .in('id', userIds)
+        .neq('role', 'admin')
+
+      if (error) {
+        console.error('Error al cargar usuarios:', error)
+      } else {
+        console.log('Usuarios que contactaron:', users)
+        setUsers(users || [])
+      }
+    } catch (error) {
       console.error('Error al cargar usuarios:', error)
-    } else {
-      console.log('Usuarios cargados:', data)
-      setUsers(data || [])
+      setUsers([])
     }
   }
 
