@@ -203,7 +203,7 @@ export default function AdminPage() {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
+              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('users')}>
                 <CardHeader>
                   <CardTitle className="text-lg">Total Usuarios</CardTitle>
                 </CardHeader>
@@ -212,7 +212,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('orders')}>
                 <CardHeader>
                   <CardTitle className="text-lg">Total Pedidos</CardTitle>
                 </CardHeader>
@@ -221,7 +221,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('orders')}>
                 <CardHeader>
                   <CardTitle className="text-lg">Pedidos Pendientes</CardTitle>
                 </CardHeader>
@@ -232,7 +232,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('services')}>
                 <CardHeader>
                   <CardTitle className="text-lg">Servicios Activos</CardTitle>
                 </CardHeader>
