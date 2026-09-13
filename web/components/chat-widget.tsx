@@ -91,10 +91,11 @@ export default function ChatWidget() {
   const loadUsers = async () => {
     console.log('Cargando usuarios que contactaron al soporte...')
     try {
-      // Cargar usuarios que tienen mensajes en chat_messages
+      // Cargar usuarios que tienen mensajes NO cerrados en chat_messages
       const { data: messages } = await supabase
         .from('chat_messages')
         .select('user_id')
+        .eq('is_closed', false)
         .neq('is_from_admin', true)
 
       if (!messages || messages.length === 0) {
@@ -115,7 +116,7 @@ export default function ChatWidget() {
       if (error) {
         console.error('Error al cargar usuarios:', error)
       } else {
-        console.log('Usuarios que contactaron:', users)
+        console.log('Usuarios con chats activos:', users)
         setUsers(users || [])
       }
     } catch (error) {
@@ -238,19 +239,12 @@ export default function ChatWidget() {
       if (!session) return
 
       if (isAdmin && selectedUserId) {
-        console.log('Cerrando chat del usuario:', selectedUserId)
         // Admin cierra el chat del usuario (marca todos como cerrados)
-        const { error } = await supabase
+        await supabase
           .from('chat_messages')
           .update({ is_closed: true })
           .eq('user_id', selectedUserId)
 
-        if (error) {
-          console.error('Error al cerrar chat:', error)
-          throw error
-        }
-
-        console.log('Chat cerrado exitosamente')
         setSelectedUserId(null)
         setMessages([])
       }
