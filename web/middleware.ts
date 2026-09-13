@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    // Verificar rol de admin para rutas de administración
+    // Verificar rol de admin o owner para rutas de administración
     if (request.nextUrl.pathname.startsWith('/admin') && session) {
       const { data: profile } = await supabase
         .from('users')
@@ -52,8 +52,8 @@ export async function middleware(request: NextRequest) {
         .eq('id', session.user.id)
         .single()
 
-      if (!profile || profile.role !== 'admin') {
-        // Redirigir a dashboard si no es admin
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) {
+        // Redirigir a dashboard si no es admin ni owner
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }

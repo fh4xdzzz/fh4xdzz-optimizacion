@@ -10,7 +10,7 @@ export interface User {
   avatar_url?: string
   discord_id?: string
   discord_username?: string
-  role?: 'client' | 'admin' | 'staff'
+  role?: 'client' | 'admin' | 'staff' | 'owner'
 }
 
 export interface Session {
