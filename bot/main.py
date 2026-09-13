@@ -52,8 +52,17 @@ intents.presences = True
 bot = commands.Bot(
     command_prefix=commands.when_mentioned_or('!'),
     intents=intents,
-    description="TheDulcanDesign - Sistema Profesional de Servicios"
+    description="TheDulcanDesign - Sistema Profesional de Servicios e Integración Web"
 )
+
+# Import event processor
+from event_processor import EventProcessor
+event_processor = None
+
+# Import cogs
+from cogs.setup_server import SetupServer
+from cogs.events import Events
+from cogs.role_sync import RoleSync
 
 # Storage (en produccion usar Supabase)
 tickets = {}
@@ -105,12 +114,31 @@ def webhook():
         data = request.json
         logger.info(f"Webhook recibido: {data}")
 
-        if data.get('type') == 'order_created':
-            order_data = data.get('data', {})
-            create_order_from_web(order_data)
-            return jsonify({'success': True, 'message': 'Pedido creado'}), 200
+        # Validar token secreto
+        webhook_secret = os.getenv('DISCORD_WEBHOOK_SECRET')
+        auth_header = request.headers.get('Authorization')
 
-        return jsonify({'success': False, 'message': 'Tipo no soportado'}), 400
+        if not webhook_secret or not auth_header or not auth_header.startswith('Bearer '):
+            logger.error("Webhook sin autenticación válida")
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+        token = auth_header[7:]  # Remove 'Bearer '
+        if token != webhook_secret:
+            logger.error("Token webhook inválido")
+            return jsonify({'success': False, 'message': 'Forbidden'}), 403
+
+        # Procesar evento con EventProcessor
+        if event_processor:
+            # Ejecutar en loop del bot
+            asyncio.run_coroutine_threadsafe(
+                event_processor.process_event(data),
+                bot.loop
+            )
+            return jsonify({'success': True, 'message': 'Evento procesado'}), 200
+        else:
+            logger.error("EventProcessor no inicializado")
+            return jsonify({'success': False, 'message': 'EventProcessor no disponible'}), 500
+
     except Exception as e:
         logger.error(f"Error en webhook: {e}")
         return jsonify({'success': False, 'message': 'Error interno'}), 500
@@ -170,10 +198,21 @@ async def on_ready():
     logger.info(f'Connected to {len(bot.guilds)} guilds')
     logger.info('------')
 
+    # Inicializar EventProcessor
+    global event_processor
+    event_processor = EventProcessor(bot)
+    logger.info('EventProcessor inicializado')
+
+    # Cargar cogs
+    await bot.add_cog(SetupServer(bot))
+    await bot.add_cog(Events(bot))
+    await bot.add_cog(RoleSync(bot))
+    logger.info('Cogs cargados')
+
     await bot.change_presence(
         activity=discord.Activity(
             type=discord.ActivityType.watching,
-            name="servicios profesionales"
+            name="servicios profesionales e integración web"
         ),
         status=discord.Status.online
     )
