@@ -238,12 +238,19 @@ export default function ChatWidget() {
       if (!session) return
 
       if (isAdmin && selectedUserId) {
+        console.log('Cerrando chat del usuario:', selectedUserId)
         // Admin cierra el chat del usuario (marca todos como cerrados)
-        await supabase
+        const { error } = await supabase
           .from('chat_messages')
           .update({ is_closed: true })
           .eq('user_id', selectedUserId)
 
+        if (error) {
+          console.error('Error al cerrar chat:', error)
+          throw error
+        }
+
+        console.log('Chat cerrado exitosamente')
         setSelectedUserId(null)
         setMessages([])
       }

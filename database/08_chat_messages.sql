@@ -9,8 +9,6 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     message TEXT NOT NULL,
     is_from_admin BOOLEAN DEFAULT false,
     is_read BOOLEAN DEFAULT false,
-    is_closed BOOLEAN DEFAULT false,
-    assigned_admin_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -18,6 +16,36 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON public.chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_id ON public.chat_messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at);
+
+-- =====================================================
+-- Migración: Agregar columnas de tickets (para tablas existentes)
+-- =====================================================
+
+-- Agregar columna is_closed si no existe
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'chat_messages' 
+        AND column_name = 'is_closed'
+    ) THEN
+        ALTER TABLE public.chat_messages ADD COLUMN is_closed BOOLEAN DEFAULT false;
+    END IF;
+END $$;
+
+-- Agregar columna assigned_admin_id si no existe
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'chat_messages' 
+        AND column_name = 'assigned_admin_id'
+    ) THEN
+        ALTER TABLE public.chat_messages ADD COLUMN assigned_admin_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Crear índices adicionales para tickets
 CREATE INDEX IF NOT EXISTS idx_chat_messages_assigned_admin_id ON public.chat_messages(assigned_admin_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_is_closed ON public.chat_messages(is_closed);
 
