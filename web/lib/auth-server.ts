@@ -22,7 +22,7 @@ export interface Session {
 // Obtener sesión del lado del servidor
 export async function getServerSession(): Promise<Session | null> {
   if (isSupabaseMode()) {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: { session } } = await supabase.auth.getSession()
     
     if (session) {
@@ -63,7 +63,7 @@ export async function isAdmin(): Promise<boolean> {
   const session = await getServerSession()
   if (!session) return false
   
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data } = await supabase
     .from('users')
     .select('role')
@@ -82,7 +82,7 @@ export async function isStaffOrAdmin(): Promise<boolean> {
   const session = await getServerSession()
   if (!session) return false
   
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data } = await supabase
     .from('users')
     .select('role')

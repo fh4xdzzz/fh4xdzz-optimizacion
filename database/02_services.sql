@@ -1,11 +1,11 @@
 -- =====================================================
 -- Tabla: services (Servicios ofrecidos)
 -- =====================================================
+-- NOTA: Este script ahora usa CREATE TABLE IF NOT EXISTS para ser seguro
+-- El DROP TABLE fue eliminado para evitar pérdida de datos en producción
+-- Si necesitas recrear la tabla, hazlo manualmente con DROP TABLE
 
--- Eliminar tabla existente para evitar errores de estructura
-DROP TABLE IF EXISTS public.services CASCADE;
-
-CREATE TABLE public.services (
+CREATE TABLE IF NOT EXISTS public.services (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,

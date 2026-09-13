@@ -61,7 +61,7 @@ async function testRLS() {
   const tables = ['users', 'services', 'orders', 'tickets', 'testimonials', 'business_settings']
   
   for (const table of tables) {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from(table)
       .select('count')
       .limit(1)
