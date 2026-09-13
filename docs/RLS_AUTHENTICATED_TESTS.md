@@ -1,113 +1,203 @@
-# 🧪 RLS_AUTHENTICATED_TESTS.md
-## Resultados de Pruebas RLS con Usuarios Autenticados - TheDulcanDesign
+# 🧪 Pruebas de RLS con Usuarios Autenticados
 
-**Fecha:** 13/09/2026  
-**Fase:** 5.4  
-**Estado:** ⏳ Pendiente de Ejecución Manual
-
----
-
-## 📋 Estado de Pruebas
-
-### ⚠️ IMPORTANTE
-Las pruebas de RLS con usuarios autenticados requieren ejecución manual a través de la interfaz web. 
-
-**Guía completa disponible en:** `web/scripts/test-rls-authenticated-guide.md`
+**Fecha:** 13/09/2026
+**Versión:** 1.0
+**Ubicación:** docs/RLS_AUTHENTICATED_TESTS.md
 
 ---
 
-## 👥 Usuarios de Prueba (Configurados)
+## 📋 Pruebas de Row Level Security con Usuarios Reales
 
-### Usuario A (Cliente Normal)
-- **Email:** `usuario-a@testing.local`
-- **Contraseña:** `TestPass123!`
-- **Rol esperado:** `client`
-- **Estado:** ⏳ Por registrar
-
-### Usuario B (Cliente Normal)
-- **Email:** `usuario-b@testing.local`
-- **Contraseña:** `TestPass456!`
-- **Rol esperado:** `client`
-- **Estado:** ⏳ Por registrar
-
-### Usuario C (Administrador)
-- **Email:** `admin@testing.local`
-- **Contraseña:** `AdminPass789!`
-- **Rol esperado:** `admin`
-- **Estado:** ⏳ Por registrar
+### Pruebas Requieren Ejecución Manual con Supabase Real
 
 ---
 
-## 🔬 Resultados de Pruebas
+## TABLA: users
 
-### Test 1: Usuario A No Puede Ver Datos de Usuario B
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+### RLS-USERS-01: Usuario puede ver su propio perfil
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
 
-### Test 2: Usuario B No Puede Ver Datos de Usuario A
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+**Instrucciones:**
+1. Logueate como userA@test.com
+2. Ejecuta: `SELECT * FROM public.users WHERE email = 'userA@test.com'`
+3. Verifica que devuelva tu perfil
 
-### Test 3: Usuario A No Puede Modificar Datos de Usuario B
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+### RLS-USERS-02: Usuario NO puede ver otros perfiles
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
 
-### Test 4: Usuario A No Puede Cambiar Su Propio Rol
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+**Instrucciones:**
+1. Logueate como userA@test.com
+2. Ejecuta: `SELECT * FROM public.users WHERE email = 'userB@test.com'`
+3. Verifica que devuelva 0 filas o error
 
-### Test 5: Usuario A No Puede Cambiar Rol de Usuario B
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+### RLS-USERS-03: Admin puede ver todos los perfiles
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
 
-### Test 6: Usuario A No Puede Modificar business_settings
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+**Instrucciones:**
+1. Logueate como admin
+2. Ejecuta: `SELECT * FROM public.users`
+3. Verifica que devuelva todos los usuarios
 
-### Test 7: Admin Puede Ver Todos los Datos
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+### RLS-USERS-04: Usuario puede actualizar su propio perfil
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
 
-### Test 8: Admin Puede Modificar Datos
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+**Instrucciones:**
+1. Logueate como userA@test.com
+2. Ejecuta: `UPDATE public.users SET full_name = 'Test' WHERE email = 'userA@test.com'`
+3. Verifique que se actualice correctamente
 
-### Test 9: Usuario Sin Sesión No Puede Ver Datos Privados
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+### RLS-USERS-05: Usuario NO puede actualizar otros perfiles
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
 
-### Test 10: Usuario Sin Sesión No Puede Modificar Datos
-- **Estado:** ⏳ NO EJECUTADO
-- **Resultado:** Pendiente
-- **Notas:** 
+**Instrucciones:**
+1. Logueate como userA@test.com
+2. Ejecuta: `UPDATE public.users SET full_name = 'Hack' WHERE email = 'userB@test.com'`
+3. Verifique que se reciba error o 0 filas afectadas
+
+### RLS-USERS-06: Admin puede actualizar cualquier perfil
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
+
+**Instrucciones:**
+1. Logueate como admin
+2. Ejecuta: `UPDATE public.users SET full_name = 'AdminTest' WHERE email = 'userA@test.com'`
+3. Verifique que se actualice correctamente
+
+### RLS-USERS-07: Trigger bloquea cambio de rol
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
+
+**Instrucciones:**
+1. Logueate como admin
+2. Ejecuta: `UPDATE public.users SET role = 'admin' WHERE email = 'userA@test.com'`
+3. Verifique que se reciba error del trigger `prevent_role_change`
+
+---
+
+## TABLA: services
+
+### RLS-SERVICES-01: Cualquiera puede ver servicios activos
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** No
+
+**Instrucciones:**
+1. Sin autenticación o como usuario normal
+2. Ejecuta: `SELECT * FROM public.services WHERE is_active = true`
+3. Verifique que devuelva todos los servicios activos
+
+### RLS-SERVICES-02: Servicios inactivos NO son visibles públicamente
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** No
+
+**Instrucciones:**
+1. Sin autenticación o como usuario normal
+2. Ejecuta: `SELECT * FROM public.services WHERE is_active = false`
+3. Verifique que devuelva 0 filas o error
+
+### RLS-SERVICES-03: Admin puede ver todos los servicios
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** No
+
+**Instrucciones:**
+1. Logueate como admin
+2. Ejecuta: `SELECT * FROM public.services`
+3. Verifique que devuelva todos los servicios (activos e inactivos)
+
+---
+
+## TABLA: orders
+
+### RLS-ORDERS-01: Usuario puede ver sus propios pedidos
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
+
+**Instrucciones:**
+1. Logueate como userA@test.com
+2. Crea un pedido
+3. Ejecuta: `SELECT * FROM public.orders WHERE user_id = auth.uid()`
+4. Verifique que devuelva tu pedido
+
+### RLS-ORDERS-02: Usuario NO puede ver pedidos de otros
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
+
+**Instrucciones:**
+1. Logueate como userA@test.com
+2. Ejecuta: `SELECT * FROM public.orders WHERE user_id != auth.uid()`
+3. Verifique que devuelva 0 filas o error
+
+### RLS-ORDERS-03: Admin puede ver todos los pedidos
+- **Estado:** ⏳ PENDIENTE
+- **Evidencia:** - Requiere prueba manual
+- **Responsable:** Usuario
+- **Bloqueo Crítico:** Sí
+
+**Instrucciones:**
+1. Logueate como admin
+2. Ejecuta: `SELECT * FROM public.orders`
+3. Verifique que devuelva todos los pedidos
 
 ---
 
 ## 📊 Resumen
 
-### Tests Ejecutados: 0/10
-### Tests Pasados: 0/0
-### Tests Fallados: 0/0
+- **Total:** 13 pruebas
+- **PASS:** 0 (0%)
+- **PENDIENTE:** 13 (100%)
+- **FAIL:** 0
 
 ---
 
-## 🚨 Observaciones
+## 🎯 Instrucciones Generales para Pruebas RLS
 
-Las pruebas de RLS con usuarios autenticados son críticas para validar la seguridad del sistema. Estas pruebas deben ejecutarse antes de migrar pedidos o tickets a producción.
+### Preparación
+1. Crea 3 usuarios en Supabase:
+   - userA@test.com (cliente)
+   - userB@test.com (cliente)
+   - admin@test.com (admin)
+2. Asigna roles correctamente en Supabase
+3. Verifica que las políticas RLS estén activas
 
-**Recomendación:** Ejecutar estas pruebas manualmente siguiendo la guía en `web/scripts/test-rls-authenticated-guide.md` antes de proceder con la migración de datos.
+### Ejecución
+1. Usa Supabase SQL Editor o Supabase Client en el navegador
+2. Ejecuta cada query en la tabla correspondiente
+3. Documenta el resultado en este archivo
+
+### Herramientas
+- Supabase Dashboard > SQL Editor
+- Supabase Client (window.supabase en DevTools)
+- Browser Console con Supabase JS Client
 
 ---
 
-**Documento creado por:** Devin AI  
-**Fecha:** 13/09/2026  
-**Versión:** 1.0
+**Generado por:** Devin AI
+**Fecha:** 13/09/2026

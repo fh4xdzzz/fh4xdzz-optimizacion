@@ -16,7 +16,6 @@ Asegúrate de tener las siguientes variables en tu archivo `.env`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://wbkgesmnyjnomctdvxqb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
-SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
 ```
 
 ## 📊 Scripts Disponibles
