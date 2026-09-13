@@ -1,4 +1,4 @@
-# 🚀 FH4XDZzz OPTIMIZACION
+# 🚀 TheDulcanDesign
 
 Servicios profesionales de optimización y configuración de OBS, streaming, PC/Windows, gaming y soporte técnico.
 
@@ -33,7 +33,7 @@ Sistema completo integrado por:
 ## 📁 Estructura del Proyecto
 
 ```
-FH4XDZzz OPTIMIZACION/
+TheDulcanDesign/
 ├── web/                          # Next.js frontend
 │   ├── app/                      # App Router pages
 │   ├── components/              # UI components
@@ -59,7 +59,7 @@ FH4XDZzz OPTIMIZACION/
 ### 1. Clonar el repositorio
 ```bash
 git clone <repository-url>
-cd FH4XDZzz OPTIMIZACION
+cd TheDulcanDesign
 ```
 
 ### 2. Configurar variables de entorno
@@ -114,11 +114,11 @@ Ejecuta los scripts SQL en la carpeta `database/` para crear las tablas necesari
 
 ## 🤝 Contribución
 
-Este es un proyecto privado de FH4XDZzz OPTIMIZACION.
+Este es un proyecto privado de TheDulcanDesign.
 
 ## 📄 Licencia
 
-Propiedad de FH4XDZzz OPTIMIZACION. Todos los derechos reservados.
+Propiedad de TheDulcanDesign. Todos los derechos reservados.
 
 ## 📞 Contacto
 
@@ -127,4 +127,4 @@ Propiedad de FH4XDZzz OPTIMIZACION. Todos los derechos reservados.
 
 ---
 
-Desarrollado con ❤️ por FH4XDZzz OPTIMIZACION
+Desarrollado con ❤️ por TheDulcanDesign

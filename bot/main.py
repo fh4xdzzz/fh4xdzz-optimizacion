@@ -23,7 +23,7 @@ intents.members = True
 bot = commands.Bot(
     command_prefix=commands.when_mentioned_or('!'),
     intents=intents,
-    description="FH4XDZzz OPTIMIZACION Bot",
+    description="TheDulcanDesign Bot",
     help_command=commands.DefaultHelpCommand()
 )
 

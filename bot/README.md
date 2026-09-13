@@ -1,10 +1,10 @@
-# 🤖 FH4XDZzz OPTIMIZACION Discord Bot
+# 🤖 TheDulcanDesign Discord Bot
 
-Bot profesional de Discord para el sistema de soporte y gestión de tickets de FH4XDZzz OPTIMIZACION.
+Bot profesional de Discord para el sistema de soporte y gestión de tickets de TheDulcanDesign.
 
 ## 📋 Descripción
 
-Bot modular con sistema de tickets, gestión de servicios y administración para el servidor de Discord de FH4XDZzz OPTIMIZACION.
+Bot modular con sistema de tickets, gestión de servicios y administración para el servidor de Discord de TheDulcanDesign.
 
 ## 🛠️ Tecnologías
 
@@ -54,7 +54,7 @@ bot/
 ### Paso 1: Clonar el repositorio
 
 ```bash
-cd "C:\Users\FH4XDZzz\Desktop\FH4XDZzz OPTIMIZACION"
+cd "C:\Users\FH4XDZzz\Desktop\TheDulcanDesign"
 ```
 
 ### Paso 2: Configurar variables de entorno
@@ -189,7 +189,7 @@ Los logs incluyen:
    ```
    Deberías ver:
    ```
-   ✅ Bot logged in as FH4XDZzz OPTIMIZACION (ID: 123456789)
+   ✅ Bot logged in as TheDulcanDesign (ID: 123456789)
    📊 Connected to 1 guilds
    ------
    ```
@@ -301,4 +301,4 @@ Para problemas o sugerencias:
 
 ---
 
-Desarrollado con ❤️ para FH4XDZzz OPTIMIZACION
+Desarrollado con ❤️ para TheDulcanDesign

@@ -15,7 +15,7 @@ class Config:
     
     # Bot
     BOT_PREFIX = os.getenv('BOT_PREFIX', '!')
-    BOT_DESCRIPTION = os.getenv('BOT_DESCRIPTION', 'FH4XDZzz OPTIMIZACION Bot')
+    BOT_DESCRIPTION = os.getenv('BOT_DESCRIPTION', 'TheDulcanDesign Bot')
     
     # Colors
     COLOR_PRIMARY = 0x3b82f6  # Blue

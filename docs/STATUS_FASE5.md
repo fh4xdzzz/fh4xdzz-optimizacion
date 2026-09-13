@@ -1,5 +1,5 @@
 # 📊 ESTADO ACTUAL - FASE 5
-## FH4XDZzz OPTIMIZACION - Autenticación y Supabase
+## TheDulcanDesign - Autenticación y Supabase
 
 **Fecha:** 13/09/2026  
 **Estado:** En progreso - Autenticación híbrida implementada  

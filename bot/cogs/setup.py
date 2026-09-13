@@ -16,7 +16,7 @@ class Setup(commands.Cog):
         """Configura inicial del servidor"""
         embed = discord.Embed(
             title="🔧 Configuración del Servidor",
-            description="Bienvenido al sistema de configuración de FH4XDZzz OPTIMIZACION",
+            description="Bienvenido al sistema de configuración de TheDulcanDesign",
             color=config.COLOR_PRIMARY
         )
         
@@ -38,7 +38,7 @@ class Setup(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text="FH4XDZzz OPTIMIZACION Bot")
+        embed.set_footer(text="TheDulcanDesign Bot")
         await ctx.send(embed=embed)
         
         logger.info(f"Setup command executed by {ctx.author} in {ctx.guild.name}")

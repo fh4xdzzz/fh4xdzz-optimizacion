@@ -1,4 +1,4 @@
-# 🗄️ Base de Datos - FH4XDZzz OPTIMIZACION
+# 🗄️ Base de Datos - TheDulcanDesign
 
 Documentación del esquema de base de datos en Supabase.
 

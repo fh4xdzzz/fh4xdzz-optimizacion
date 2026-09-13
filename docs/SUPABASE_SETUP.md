@@ -1,8 +1,8 @@
 # 🚀 GUÍA DE CONFIGURACIÓN DE SUPABASE
-## FH4XDZzz OPTIMIZACION - Fase 5.1
+## TheDulcanDesign - Fase 5.1
 
 **Fecha:** 13/09/2026  
-**Objetivo:** Guía paso a paso para configurar Supabase para FH4XDZzz OPTIMIZACION
+**Objetivo:** Guía paso a paso para configurar Supabase para TheDulcanDesign
 
 ---
 
@@ -51,7 +51,7 @@ fh4xdzz-optimizacion
   - `US West` (Oeste de EE.UU.)
   - `EU West` (Europa Oeste)
   - `AP Northeast` (Asia Nordeste)
-- **Para FH4XDZzz OPTIMIZACION:** Si tus clientes son principalmente hispanohablantes, considera `US East` o `EU West`
+- **Para TheDulcanDesign:** Si tus clientes son principalmente hispanohablantes, considera `US East` o `EU West`
 
 **Precio Plan:**
 - **Free Tier:** Suficiente para empezar
@@ -120,7 +120,7 @@ fh4xdzz-optimizacion
 - **Secure email change:** Requiere verificación al cambiar email
 - **Double opt-in:** Requiere confirmación antes de crear cuenta
 
-**Recomendación para FH4XDZzz OPTIMIZACION:**
+**Recomendación para TheDulcanDesign:**
 - ✅ Habilitar "Confirm email"
 - ✅ Habilitar "Secure email change"
 - ❌ No habilitar "Double opt-in" (puede reducir conversiones)
@@ -372,7 +372,7 @@ NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/your_invite_link
 
 ```env
 # Business Configuration
-BUSINESS_NAME=FH4XDZzz OPTIMIZACION
+BUSINESS_NAME=TheDulcanDesign
 BUSINESS_EMAIL=contact@fh4xdzz.com
 BUSINESS_DISCORD=https://discord.gg/your_invite_link
 ```
@@ -575,7 +575,7 @@ testConnection()
 - [Supabase Database](https://supabase.com/docs/guides/database)
 - [Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security)
 
-### Proyecto FH4XDZzz OPTIMIZACION
+### Proyecto TheDulcanDesign
 
 - [Auditoría Técnica](./AUDITORIA_FASE5.md)
 - [Revisión de Scripts SQL](./SQL_REVIEW.md)

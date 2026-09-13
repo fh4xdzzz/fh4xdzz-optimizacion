@@ -11,7 +11,7 @@ export default function Footer() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                 <span className="text-white font-bold text-sm">F</span>
               </div>
-              <span className="font-bold">FH4XDZzz OPTIMIZACION</span>
+              <span className="font-bold">TheDulcanDesign</span>
             </div>
             <p className="text-muted text-sm">
               Servicios profesionales de optimización y configuración para streaming, gaming y soporte técnico.
@@ -96,7 +96,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted">
-          <p>&copy; {new Date().getFullYear()} FH4XDZzz OPTIMIZACION. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} TheDulcanDesign. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

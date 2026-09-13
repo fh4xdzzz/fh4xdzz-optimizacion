@@ -84,7 +84,7 @@ CREATE POLICY "Admins can delete settings"
 
 INSERT INTO public.business_settings (key, value, description) VALUES
 ('public_business_info', '{
-    "name": "FH4XDZzz OPTIMIZACION",
+    "name": "TheDulcanDesign",
     "tagline": "Servicios profesionales de optimización",
     "description": "Expertos en optimización de OBS, streaming, PC/Windows, gaming y soporte técnico.",
     "email": "contact@fh4xdzz.com",

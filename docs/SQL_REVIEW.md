@@ -1,5 +1,5 @@
 # 📋 REVISIÓN DE SCRIPTS SQL
-## FH4XDZzz OPTIMIZACION - Fase 5.1
+## TheDulcanDesign - Fase 5.1
 
 **Fecha:** 13/09/2026  
 **Objetivo:** Revisar scripts SQL para compatibilidad con Supabase

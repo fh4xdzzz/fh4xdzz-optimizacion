@@ -1,5 +1,5 @@
 # 🔒 RLS_POLICIES_AUDIT.md
-## Auditoría de Políticas RLS Tabla por Tabla - FH4XDZzz OPTIMIZACION
+## Auditoría de Políticas RLS Tabla por Tabla - TheDulcanDesign
 
 **Fecha:** 13/09/2026  
 **Fase:** 5.4  

@@ -1,5 +1,5 @@
 # 📋 INFORME TÉCNICO DE AUDITORÍA
-## FH4XDZzz OPTIMIZACION - Fase 5: Integración Web + Discord
+## TheDulcanDesign - Fase 5: Integración Web + Discord
 
 **Fecha:** 13/09/2026  
 **Objetivo:** Auditoría completa del repositorio antes de implementar integración real
@@ -10,7 +10,7 @@
 
 ### Directorios Principales
 ```
-FH4XDZzz OPTIMIZACION/
+TheDulcanDesign/
 ├── web/                    # Aplicación web Next.js
 ├── bot/                    # Bot de Discord Python
 ├── database/               # Scripts SQL de Supabase

@@ -1,5 +1,5 @@
 # 🔐 AUTH_SERVER_SIDE.md
-## Implementación de Autenticación Server-Side - FH4XDZzz OPTIMIZACION
+## Implementación de Autenticación Server-Side - TheDulcanDesign
 
 **Fecha:** 13/09/2026  
 **Fase:** 5.4  

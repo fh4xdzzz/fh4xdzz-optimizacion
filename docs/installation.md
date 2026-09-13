@@ -1,6 +1,6 @@
 # 📦 Guía de Instalación
 
-Guía paso a paso para instalar y configurar FH4XDZzz OPTIMIZACION.
+Guía paso a paso para instalar y configurar TheDulcanDesign.
 
 ## 🎯 Prerrequisitos
 
@@ -17,7 +17,7 @@ Guía paso a paso para instalar y configurar FH4XDZzz OPTIMIZACION.
 
 ```bash
 git clone <repository-url>
-cd "FH4XDZzz OPTIMIZACION"
+cd "TheDulcanDesign"
 ```
 
 ### 2. Configurar Variables de Entorno
@@ -96,7 +96,7 @@ python main.py
 
 Deberías ver:
 ```
-✅ Bot logged in as FH4XDZzz OPTIMIZACION (ID: 123456789)
+✅ Bot logged in as TheDulcanDesign (ID: 123456789)
 📊 Connected to 1 guilds
 ------
 ```

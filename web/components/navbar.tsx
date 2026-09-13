@@ -40,7 +40,7 @@ export default function Navbar() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
               <span className="text-white font-bold text-sm">F</span>
             </div>
-            <span className="font-bold text-lg">FH4XDZzz OPTIMIZACION</span>
+            <span className="font-bold text-lg">TheDulcanDesign</span>
           </Link>
 
           {/* Desktop Navigation */}

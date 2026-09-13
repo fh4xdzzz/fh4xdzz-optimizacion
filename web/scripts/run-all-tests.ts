@@ -63,7 +63,7 @@ async function runScript(scriptName: string): Promise<TestResult> {
 }
 
 async function main() {
-  console.log('🧪 Suite de Pruebas Completas - FH4XDZzz OPTIMIZACION')
+  console.log('🧪 Suite de Pruebas Completas - TheDulcanDesign')
   console.log('='.repeat(60))
   
   const results: TestResult[] = []

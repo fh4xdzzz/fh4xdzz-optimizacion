@@ -33,7 +33,7 @@ class Services(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text="FH4XDZzz OPTIMIZACION Bot")
+        embed.set_footer(text="TheDulcanDesign Bot")
         await ctx.send(embed=embed)
         
         logger.info(f"Services command executed by {ctx.author} in {ctx.guild.name}")
@@ -77,7 +77,7 @@ class Services(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text="FH4XDZzz OPTIMIZACION Bot")
+        embed.set_footer(text="TheDulcanDesign Bot")
         await ctx.send(embed=embed)
         
         logger.info(f"Service info command executed by {ctx.author} for {service_name}")

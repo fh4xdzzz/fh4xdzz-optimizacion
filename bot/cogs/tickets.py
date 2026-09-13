@@ -138,7 +138,7 @@ class Tickets(commands.Cog):
                 inline=False
             )
             
-            welcome_embed.set_footer(text="FH4XDZzz OPTIMIZACION - Soporte")
+            welcome_embed.set_footer(text="TheDulcanDesign - Soporte")
             
             # Crear botón para cerrar ticket
             close_button = ui.Button(label="Cerrar Ticket", style=discord.ButtonStyle.red, emoji="🔒", custom_id="close_ticket")
@@ -210,7 +210,7 @@ class Tickets(commands.Cog):
             inline=False
         )
         
-        close_embed.set_footer(text="FH4XDZzz OPTIMIZACION - Soporte")
+        close_embed.set_footer(text="TheDulcanDesign - Soporte")
         
         await ctx.channel.send(embed=close_embed)
         

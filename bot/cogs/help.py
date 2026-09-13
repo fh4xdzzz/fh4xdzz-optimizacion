@@ -13,7 +13,7 @@ class Help(commands.Cog):
     async def help_command(self, ctx):
         """Muestra ayuda del bot"""
         embed = discord.Embed(
-            title="🤖 FH4XDZzz OPTIMIZACION - Ayuda",
+            title="🤖 TheDulcanDesign - Ayuda",
             description="Sistema de optimización y soporte técnico",
             color=config.COLOR_PRIMARY
         )
@@ -30,7 +30,7 @@ class Help(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text="FH4XDZzz OPTIMIZACION Bot")
+        embed.set_footer(text="TheDulcanDesign Bot")
         await ctx.send(embed=embed)
         
         logger.info(f"Help command executed by {ctx.author} in {ctx.guild.name}")

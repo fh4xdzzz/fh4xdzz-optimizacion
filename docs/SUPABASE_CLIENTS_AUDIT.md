@@ -1,5 +1,5 @@
 # 🔍 SUPABASE_CLIENTS_AUDIT.md
-## Auditoría de Clientes Supabase - FH4XDZzz OPTIMIZACION
+## Auditoría de Clientes Supabase - TheDulcanDesign
 
 **Fecha:** 13/09/2026  
 **Fase:** 5.4  

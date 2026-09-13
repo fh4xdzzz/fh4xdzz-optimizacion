@@ -1,5 +1,5 @@
 # 🔒 SECURITY_DEFINER_VALIDATION.md
-## Validación de Funciones SECURITY DEFINER - FH4XDZzz OPTIMIZACION
+## Validación de Funciones SECURITY DEFINER - TheDulcanDesign
 
 **Fecha:** 13/09/2026  
 **Fase:** 5.4  

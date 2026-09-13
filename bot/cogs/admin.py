@@ -29,7 +29,7 @@ class Admin(commands.Cog):
         embed.add_field(name="Tickets Abiertos", value=str(open_tickets), inline=True)
         embed.add_field(name="Tickets Cerrados", value=str(total_tickets - open_tickets), inline=True)
         
-        embed.set_footer(text="FH4XDZzz OPTIMIZACION Bot - Admin")
+        embed.set_footer(text="TheDulcanDesign Bot - Admin")
         await ctx.send(embed=embed)
         
         logger.info(f"Admin stats executed by {ctx.author} in {ctx.guild.name}")
@@ -55,7 +55,7 @@ class Admin(commands.Cog):
                 inline=False
             )
         
-        embed.set_footer(text="FH4XDZzz OPTIMIZACION Bot - Admin")
+        embed.set_footer(text="TheDulcanDesign Bot - Admin")
         await ctx.send(embed=embed)
         
         logger.info(f"Admin tickets executed by {ctx.author} in {ctx.guild.name}")
