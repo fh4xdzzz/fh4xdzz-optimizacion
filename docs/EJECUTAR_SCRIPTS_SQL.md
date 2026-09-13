@@ -130,6 +130,7 @@ CREATE POLICY "Admins can update any profile"
 2. Pégalo en el SQL Editor
 3. Click en "Run"
 4. Espera "Success"
+5. **Nota:** Si sale error de "duplicate key", es normal - el script usa `ON CONFLICT` para ser idempotente
 
 ### Paso 4: Ejecutar Script 3 - 03_orders.sql
 
