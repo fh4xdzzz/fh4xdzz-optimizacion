@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
+import ChatWidget from '@/components/chat-widget'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -394,6 +395,7 @@ export default function ContactPage() {
       </section>
 
       <Footer />
+      <ChatWidget />
     </div>
   )
 }
