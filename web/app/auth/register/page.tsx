@@ -33,8 +33,9 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push('/auth/login')
       }, 3000)
-    } catch {
-      // No revelar detalles específicos del error por seguridad
+    } catch (err) {
+      // Log detallado para diagnóstico
+      console.error('Error de registro:', err)
       setError('Error al registrarse. Verifica tus datos e intenta nuevamente.')
     } finally {
       setLoading(false)

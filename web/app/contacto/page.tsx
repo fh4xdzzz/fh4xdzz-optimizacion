@@ -149,8 +149,8 @@ export default function ContactPage() {
                     <Button variant="primary" href="https://discord.gg/EDaCnZgC6T" target="_blank" rel="noopener noreferrer">
                       Unirse a Discord
                     </Button>
-                    <Button variant="outline" onClick={() => setSubmitSuccess(false)}>
-                      Crear otra solicitud
+                    <Button variant="outline" onClick={() => router.push('/pedidos')}>
+                      Ver mis pedidos
                     </Button>
                   </div>
                 </div>
