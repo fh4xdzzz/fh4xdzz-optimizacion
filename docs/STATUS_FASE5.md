@@ -63,6 +63,14 @@
 - ✅ Lint limpio (0 errores, 0 warnings)
 - ✅ Todas las rutas generadas correctamente
 
+### 10. Scripts de Prueba
+- ✅ `web/scripts/test-connection.ts` - Verifica conexión básica
+- ✅ `web/scripts/test-auth.ts` - Verifica autenticación
+- ✅ `web/scripts/test-rls.ts` - Verifica seguridad RLS
+- ✅ `web/scripts/run-all-tests.ts` - Ejecuta todos los tests
+- ✅ `web/scripts/README.md` - Documentación de scripts
+- ✅ Scripts listos para usar cuando Supabase esté configurado
+
 ---
 
 ## ⏳ PENDIENTE (CONFIGURACIÓN MANUAL REQUERIDA)
@@ -195,14 +203,26 @@ SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
 3. En Database → Tables → users
 4. Actualizar `role` a `admin`
 
-### Paso 5: Testing (Automático)
+### Paso 5: Ejecutar Scripts de Prueba (Automático)
 
-Una vez configurado, podré:
-- ✅ Verificar conexión a Supabase
-- ✅ Test de registro real
-- ✅ Test de login real
-- ✅ Test de logout
-- ✅ Verificar RLS policies
+Una vez configurado, ejecuta:
+
+```bash
+cd web
+npx tsx scripts/run-all-tests.ts
+```
+
+O ejecuta individualmente:
+```bash
+npx tsx scripts/test-connection.ts
+npx tsx scripts/test-auth.ts
+npx tsx scripts/test-rls.ts
+```
+
+Esto verificará:
+- ✅ Conexión a Supabase
+- ✅ Autenticación configurada
+- ✅ Seguridad RLS activa
 
 ---
 
@@ -276,6 +296,11 @@ Una vez configurado, podré:
 - ✅ `docs/SUPABASE_SETUP.md` - Guía de configuración de Supabase
 - ✅ `docs/AUDITORIA_FASE5.md` - Auditoría técnica completa
 - ✅ `docs/STATUS_FASE5.md` - Este documento (estado actual)
+- ✅ `web/scripts/README.md` - Documentación de scripts de prueba
+- ✅ `web/scripts/test-connection.ts` - Script de prueba de conexión
+- ✅ `web/scripts/test-auth.ts` - Script de prueba de autenticación
+- ✅ `web/scripts/test-rls.ts` - Script de prueba de RLS
+- ✅ `web/scripts/run-all-tests.ts` - Script de prueba completa
 
 ---
 
