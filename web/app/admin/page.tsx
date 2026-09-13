@@ -14,7 +14,7 @@ interface User {
   id: string
   email: string
   full_name?: string
-  role: 'client' | 'admin' | 'staff'
+  role: 'client' | 'admin' | 'staff' | 'owner'
   created_at: string
 }
 
@@ -50,6 +50,7 @@ export default function AdminPage() {
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
   const [orderNote, setOrderNote] = useState('')
+  const [userRole, setUserRole] = useState<'client' | 'admin' | 'staff' | 'owner'>('client')
   const router = useRouter()
   const isDemo = isDemoMode()
 
@@ -98,8 +99,10 @@ export default function AdminPage() {
         return
       }
 
-      // Verificar si es admin
-      if (session.user.role !== 'admin') {
+      // Verificar si es admin o owner
+      const role = session.user.role as string || 'client'
+      setUserRole(role as 'client' | 'admin' | 'staff' | 'owner')
+      if (role !== 'admin' && role !== 'owner') {
         router.push('/dashboard')
         return
       }
@@ -138,6 +141,7 @@ export default function AdminPage() {
     client: { label: 'Cliente', color: 'bg-blue-500' },
     admin: { label: 'Admin', color: 'bg-red-500' },
     staff: { label: 'Staff', color: 'bg-purple-500' },
+    owner: { label: 'Owner', color: 'bg-black' },
   }
 
   if (loading) {
@@ -203,12 +207,14 @@ export default function AdminPage() {
             >
               Servicios ({services.length})
             </Button>
-            <Button
-              variant={activeTab === 'settings' ? 'primary' : 'outline'}
-              onClick={() => setActiveTab('settings')}
-            >
-              Configuración
-            </Button>
+            {(userRole === 'owner') && (
+              <Button
+                variant={activeTab === 'settings' ? 'primary' : 'outline'}
+                onClick={() => setActiveTab('settings')}
+              >
+                Configuración
+              </Button>
+            )}
           </div>
 
           {/* Overview Tab */}
