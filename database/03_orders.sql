@@ -45,9 +45,8 @@ CREATE TRIGGER update_orders_updated_at
 
 -- Función para generar número de pedido único
 CREATE OR REPLACE FUNCTION generate_order_number()
-RETURNS TEXT AS $$
+RETURNS TRIGGER AS $$
 DECLARE
-    order_num TEXT;
     base_num TEXT;
     counter INTEGER;
 BEGIN
@@ -58,8 +57,8 @@ BEGIN
     FROM public.orders
     WHERE order_number LIKE base_num || '%';
     
-    order_num := base_num || LPAD(counter::TEXT, 4, '0');
-    RETURN order_num;
+    NEW.order_number := base_num || LPAD(counter::TEXT, 4, '0');
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -68,7 +67,7 @@ DROP TRIGGER IF EXISTS generate_order_number_trigger ON public.orders;
 CREATE TRIGGER generate_order_number_trigger
     BEFORE INSERT ON public.orders
     FOR EACH ROW
-    EXECUTE PROCEDURE generate_order_number();
+    EXECUTE FUNCTION generate_order_number();
 
 -- =====================================================
 -- Tabla: order_events (Historial de eventos de pedidos)

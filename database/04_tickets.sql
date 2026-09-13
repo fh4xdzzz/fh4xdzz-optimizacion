@@ -59,9 +59,8 @@ CREATE TRIGGER update_tickets_updated_at
 
 -- Función para generar número de ticket único
 CREATE OR REPLACE FUNCTION generate_ticket_number()
-RETURNS TEXT AS $$
+RETURNS TRIGGER AS $$
 DECLARE
-    ticket_num TEXT;
     base_num TEXT;
     counter INTEGER;
 BEGIN
@@ -72,8 +71,8 @@ BEGIN
     FROM public.tickets
     WHERE ticket_number LIKE base_num || '%';
     
-    ticket_num := base_num || LPAD(counter::TEXT, 4, '0');
-    RETURN ticket_num;
+    NEW.ticket_number := base_num || LPAD(counter::TEXT, 4, '0');
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -82,7 +81,7 @@ DROP TRIGGER IF EXISTS generate_ticket_number_trigger ON public.tickets;
 CREATE TRIGGER generate_ticket_number_trigger
     BEFORE INSERT ON public.tickets
     FOR EACH ROW
-    EXECUTE PROCEDURE generate_ticket_number();
+    EXECUTE FUNCTION generate_ticket_number();
 
 -- =====================================================
 -- Tabla: ticket_messages (Mensajes de tickets)

@@ -95,14 +95,10 @@ CREATE POLICY "Admins can view all profiles"
     USING (public.is_admin());
 
 -- Política mejorada: usuarios pueden actualizar su propio perfil
--- PERO NO pueden cambiar su propio rol
+-- NOTA: El trigger prevent_unauthorized_role_changes ya previene cambios de roles
 CREATE POLICY "Users can update own profile"
     ON public.users FOR UPDATE
-    USING (auth.uid() = id)
-    WITH CHECK (
-        -- Prevenir cambio de rol propio
-        (OLD.role = NEW.role)
-    );
+    USING (auth.uid() = id);
 
 -- Política mejorada: admins pueden actualizar cualquier perfil
 CREATE POLICY "Admins can update any profile"
@@ -118,7 +114,7 @@ CREATE POLICY "No direct inserts allowed"
 -- Política para que usuarios no puedan eliminar directamente
 CREATE POLICY "No direct deletes allowed"
     ON public.users FOR DELETE
-    WITH CHECK (false);
+    USING (false);
 
 -- =====================================================
 -- Correcciones de Seguridad para Orders

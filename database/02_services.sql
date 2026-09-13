@@ -2,7 +2,10 @@
 -- Tabla: services (Servicios ofrecidos)
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS public.services (
+-- Eliminar tabla existente para evitar errores de estructura
+DROP TABLE IF EXISTS public.services CASCADE;
+
+CREATE TABLE public.services (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
@@ -36,6 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_services_is_featured ON public.services(is_featur
 CREATE INDEX IF NOT EXISTS idx_services_sort_order ON public.services(sort_order);
 
 -- Trigger para updated_at
+DROP TRIGGER IF EXISTS update_services_updated_at ON public.services;
 CREATE TRIGGER update_services_updated_at
     BEFORE UPDATE ON public.services
     FOR EACH ROW
@@ -46,6 +50,13 @@ CREATE TRIGGER update_services_updated_at
 -- =====================================================
 
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar policies existentes para evitar errores
+DROP POLICY IF EXISTS "Anyone can view active services" ON public.services;
+DROP POLICY IF EXISTS "Admins can view all services" ON public.services;
+DROP POLICY IF EXISTS "Admins can create services" ON public.services;
+DROP POLICY IF EXISTS "Admins can update services" ON public.services;
+DROP POLICY IF EXISTS "Admins can delete services" ON public.services;
 
 -- Todos pueden ver servicios activos
 CREATE POLICY "Anyone can view active services"
