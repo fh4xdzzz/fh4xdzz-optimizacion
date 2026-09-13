@@ -39,14 +39,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Sin SECURITY DEFINER:** Si la función se ejecuta con los permisos del usuario, un usuario normal no podría leer la tabla `users` debido a RLS, causando que la función siempre retorne `false` incluso para admins.
 
 #### ✅ search_path Controlado
-**Estado:** No explícitamente controlado, pero seguro
+**Estado:** ✅ Ahora controlado explícitamente
 
 **Análisis:**
-- La función no usa nombres no calificados de tablas
+- La función ahora usa `SET search_path = public;` al inicio
 - Usa `public.users` explícitamente
 - No hay riesgo de inyección de schema
+- Compatible con dependencias (no requiere pg_temp u otros esquemas)
 
-**Recomendación:** Considerar agregar `SET search_path = public` al inicio de la función para mayor seguridad.
+**Estado:** ✅ Corregido en Fase 5.4.1
 
 #### ✅ Permisos Públicos Innecesarios
 **Estado:** No existen permisos públicos innecesarios
@@ -243,8 +244,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ## 📋 Recomendaciones de Mejora
 
 ### Recomendación 1: Agregar search_path Explícito
+**Estado:** ✅ COMPLETADO en Fase 5.4.1
 
-**Estado Actual:**
+**Antes:**
 ```sql
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
@@ -257,7 +259,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-**Recomendado:**
+**Después:**
 ```sql
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
@@ -270,10 +272,17 @@ BEGIN
         WHERE id = auth.uid() AND role = 'admin'
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 ```
 
-**Prioridad:** Media (mejora de seguridad, no crítico)
+**Aplicado a:**
+- ✅ `public.is_admin()`
+- ✅ `public.is_staff_or_admin()`
+- ✅ `public.has_role()`
+- ✅ `public.prevent_role_change()`
+
+**Prioridad:** Media (mejora de seguridad, no crítico) - ✅ Completado
 
 ### Recomendación 2: Agregar Logging
 

@@ -8,29 +8,40 @@
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     RETURN EXISTS (
         SELECT 1 FROM public.users
         WHERE id = auth.uid() AND role = 'admin'
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 
 -- Función segura para verificar si el usuario actual es staff o admin
 CREATE OR REPLACE FUNCTION public.is_staff_or_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     RETURN EXISTS (
         SELECT 1 FROM public.users
         WHERE id = auth.uid() AND role IN ('staff', 'admin')
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 
 -- Función para verificar si un usuario específico tiene un rol específico
 -- Solo admins pueden usar esta función
 CREATE OR REPLACE FUNCTION public.has_role(user_id UUID, target_role TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     -- Verificar que el usuario actual es admin
     IF NOT EXISTS (
         SELECT 1 FROM public.users
@@ -45,12 +56,16 @@ BEGIN
         WHERE id = user_id AND role = target_role
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 
 -- Trigger function para prevenir modificación de roles desde el frontend
 CREATE OR REPLACE FUNCTION public.prevent_role_change()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- Controlar search_path para evitar inyección de schema
+    SET search_path = public;
+    
     -- Verificar si el rol está siendo modificado
     IF OLD.role IS DISTINCT FROM NEW.role THEN
         -- Solo un admin puede cambiar roles
@@ -64,7 +79,8 @@ BEGIN
     
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 
 -- =====================================================
 -- Actualizar RLS Policies de Users con funciones seguras
