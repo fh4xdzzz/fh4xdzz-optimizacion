@@ -24,6 +24,9 @@ interface Order {
   service_name: string
   status: string
   created_at: string
+  client_name: string
+  client_email: string
+  description: string
 }
 
 interface Service {
@@ -42,6 +45,10 @@ export default function AdminPage() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'settings'>('overview')
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [newStatus, setNewStatus] = useState('')
+  const [orderNote, setOrderNote] = useState('')
   const router = useRouter()
   const isDemo = isDemoMode()
 
@@ -58,16 +65,19 @@ export default function AdminPage() {
     // Cargar pedidos
     const { data: ordersData } = await supabase
       .from('orders')
-      .select('*')
+      .select('*, services(name)')
       .order('created_at', { ascending: false })
     if (ordersData) {
-      setOrders(ordersData.map((order: { id: string; order_number: string; user_id: string; created_at: string; status: string; service_id: string }) => ({
+      setOrders(ordersData.map((order: any) => ({
         id: order.id,
         order_number: order.order_number,
         user_id: order.user_id,
-        service_name: 'Service ID: ' + order.service_id,
+        service_name: order.services?.name || 'Servicio desconocido',
         status: order.status,
         created_at: order.created_at,
+        client_name: order.client_name,
+        client_email: order.client_email,
+        description: order.description,
       })))
     }
 
@@ -295,7 +305,13 @@ export default function AdminPage() {
                     {orders.map((order) => (
                       <div
                         key={order.id}
-                        className="flex items-center justify-between p-4 border border-border rounded-lg"
+                        className="flex items-center justify-between p-4 border border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
+                        onClick={() => {
+                          setSelectedOrder(order)
+                          setNewStatus(order.status)
+                          setOrderNote('')
+                          setShowOrderModal(true)
+                        }}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -307,6 +323,7 @@ export default function AdminPage() {
                             {order.service_name} • {formatDate(order.created_at)}
                           </div>
                         </div>
+                        <div className="text-sm text-muted">Click para ver detalles</div>
                       </div>
                     ))}
                   </div>
@@ -381,6 +398,141 @@ export default function AdminPage() {
           )}
         </div>
       </section>
+
+      {/* Order Details Modal */}
+      {showOrderModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Detalle del Pedido</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setShowOrderModal(false)}>
+                  Cerrar
+                </Button>
+              </div>
+              <CardDescription>{selectedOrder.order_number}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Order Info */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted mb-1">Servicio</div>
+                    <div className="font-medium">{selectedOrder.service_name}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted mb-1">Estado actual</div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[selectedOrder.status]?.color || 'bg-gray-500'}`} />
+                      <span className="font-medium">{STATUS_LABELS[selectedOrder.status]?.label || selectedOrder.status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted mb-1">Cliente</div>
+                    <div className="font-medium">{selectedOrder.client_name}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted mb-1">Email</div>
+                    <div className="font-medium">{selectedOrder.client_email}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm text-muted mb-1">Descripción</div>
+                  <div className="text-sm">{selectedOrder.description}</div>
+                </div>
+
+                <div>
+                  <div className="text-sm text-muted mb-1">Fecha de creación</div>
+                  <div className="font-medium">{formatDate(selectedOrder.created_at)}</div>
+                </div>
+              </div>
+
+              {/* Status Change */}
+              <div className="border-t border-border pt-4">
+                <div className="text-sm font-medium mb-2">Cambiar estado</div>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="pending">Pendiente</option>
+                  <option value="reviewing">Revisando</option>
+                  <option value="in_progress">En proceso</option>
+                  <option value="waiting_client">Esperando cliente</option>
+                  <option value="completed">Completado</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+              </div>
+
+              {/* Note */}
+              <div>
+                <div className="text-sm font-medium mb-2">Agregar nota</div>
+                <textarea
+                  value={orderNote}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                  placeholder="Agrega una nota sobre este pedido..."
+                  className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  onClick={async () => {
+                    try {
+                      const supabase = createClient()
+                      const { error } = await supabase
+                        .from('orders')
+                        .update({ status: newStatus })
+                        .eq('id', selectedOrder.id)
+
+                      if (error) throw error
+
+                      // Reload orders
+                      const { data: updatedOrders } = await supabase
+                        .from('orders')
+                        .select('*, services(name)')
+                        .order('created_at', { ascending: false })
+
+                      if (updatedOrders) {
+                        setOrders(updatedOrders.map((order: any) => ({
+                          id: order.id,
+                          order_number: order.order_number,
+                          user_id: order.user_id,
+                          service_name: order.services?.name || 'Servicio desconocido',
+                          status: order.status,
+                          created_at: order.created_at,
+                          client_name: order.client_name,
+                          client_email: order.client_email,
+                          description: order.description,
+                        })))
+                      }
+
+                      setShowOrderModal(false)
+                    } catch (error) {
+                      console.error('Error al actualizar pedido:', error)
+                    }
+                  }}
+                >
+                  Guardar cambios
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowOrderModal(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Footer />
     </div>
