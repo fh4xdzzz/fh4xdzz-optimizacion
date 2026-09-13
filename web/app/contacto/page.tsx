@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
 import ChatWidget from '@/components/chat-widget'
 
-export default function ContactPage() {
+function ContactFormContent() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,6 +25,7 @@ export default function ContactPage() {
   const [services, setServices] = useState<Array<{id: string, name: string, slug: string, price: number}>>([])
   const [userEmail, setUserEmail] = useState<string>('')
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // Cargar servicios desde Supabase
   useEffect(() => {
@@ -35,7 +36,18 @@ export default function ContactPage() {
         .select('id, name, slug, price')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
-      if (data) setServices(data)
+      if (data) {
+        setServices(data)
+
+        // Pre-llenar servicio si se pasó en URL
+        const serviceId = searchParams.get('service')
+        if (serviceId) {
+          const selectedService = data.find(s => s.id === serviceId)
+          if (selectedService) {
+            setFormData(prev => ({ ...prev, service: selectedService.name }))
+          }
+        }
+      }
     }
     loadServices()
 
@@ -48,19 +60,7 @@ export default function ContactPage() {
       }
     }
     loadUserEmail()
-  }, [])
-  useEffect(() => {
-    const loadServices = async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('services')
-        .select('id, name, slug, price')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-      if (data) setServices(data)
-    }
-    loadServices()
-  }, [])
+  }, [searchParams])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -397,5 +397,23 @@ export default function ContactPage() {
       <Footer />
       <ChatWidget />
     </div>
+  )
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <section className="pt-32 pb-20 px-4">
+          <div className="container mx-auto text-center">
+            <p>Cargando...</p>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    }>
+      <ContactFormContent />
+    </Suspense>
   )
 }

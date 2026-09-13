@@ -298,7 +298,7 @@ export default function ServicesPage() {
                         <Button variant="outline" size="sm" href={`/servicios/${service.slug}`}>
                           Ver detalles
                         </Button>
-                        <Button variant="primary" size="sm" href="/contacto">
+                        <Button variant="primary" size="sm" href={`/contacto?service=${service.id}`}>
                           Solicitar
                         </Button>
                       </div>
