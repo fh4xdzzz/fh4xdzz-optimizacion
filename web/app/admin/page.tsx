@@ -380,22 +380,221 @@ export default function AdminPage() {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuración del Sistema</CardTitle>
-                <CardDescription>Configuración general del negocio</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-muted mb-4">
-                    La configuración de administración está en desarrollo
-                  </p>
-                  <p className="text-sm text-muted">
-                    Usa el Supabase Dashboard para configuración avanzada
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Información del Negocio</CardTitle>
+                  <CardDescription>Configura la información básica de tu negocio</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Nombre del negocio</label>
+                      <input
+                        type="text"
+                        defaultValue="TheDulcanDesign"
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Email de contacto</label>
+                      <input
+                        type="email"
+                        defaultValue="contact@thedulcandesign.com"
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Teléfono</label>
+                      <input
+                        type="text"
+                        placeholder="+1 234 567 890"
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Dirección</label>
+                      <input
+                        type="text"
+                        placeholder="Calle, Ciudad, País"
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Enlace de Discord</label>
+                    <input
+                      type="url"
+                      defaultValue="https://discord.gg/EDaCnZgC6T"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <Button>Guardar cambios</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Redes Sociales</CardTitle>
+                  <CardDescription>Configura los enlaces a tus redes sociales</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Discord</label>
+                    <input
+                      type="url"
+                      defaultValue="https://discord.gg/EDaCnZgC6T"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Twitter</label>
+                    <input
+                      type="url"
+                      placeholder="https://twitter.com/tuusuario"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">YouTube</label>
+                    <input
+                      type="url"
+                      placeholder="https://youtube.com/tucanal"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Instagram</label>
+                    <input
+                      type="url"
+                      placeholder="https://instagram.com/tuusuario"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <Button>Guardar cambios</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Formulario de Contacto</CardTitle>
+                  <CardDescription>Configura el formulario de contacto</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Habilitar formulario</div>
+                      <div className="text-sm text-muted">Permite que los usuarios envíen mensajes de contacto</div>
+                    </div>
+                    <input type="checkbox" defaultChecked className="w-5 h-5" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Habilitar reCAPTCHA</div>
+                      <div className="text-sm text-muted">Protege el formulario contra spam</div>
+                    </div>
+                    <input type="checkbox" className="w-5 h-5" />
+                  </div>
+                  <Button>Guardar cambios</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configuración de Pagos</CardTitle>
+                  <CardDescription>Configura los métodos de pago</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Moneda</label>
+                    <select className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option value="USD">USD - Dólar Estadounidense</option>
+                      <option value="EUR">EUR - Euro</option>
+                      <option value="MXN">MXN - Peso Mexicano</option>
+                      <option value="COP">COP - Peso Colombiano</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Habilitar PayPal</div>
+                      <div className="text-sm text-muted">Acepta pagos con PayPal</div>
+                    </div>
+                    <input type="checkbox" className="w-5 h-5" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Habilitar Stripe</div>
+                      <div className="text-sm text-muted">Acepta pagos con tarjetas de crédito</div>
+                    </div>
+                    <input type="checkbox" className="w-5 h-5" />
+                  </div>
+                  <Button>Guardar cambios</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Modo de Mantenimiento</CardTitle>
+                  <CardDescription>Desactiva el sitio temporalmente</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Activar modo de mantenimiento</div>
+                      <div className="text-sm text-muted">El sitio mostrará un mensaje de mantenimiento</div>
+                    </div>
+                    <input type="checkbox" className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Mensaje de mantenimiento</label>
+                    <textarea
+                      defaultValue="Sitio en mantenimiento. Vuelve pronto."
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
+                    />
+                  </div>
+                  <Button>Guardar cambios</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Integración con Discord</CardTitle>
+                  <CardDescription>Configura la integración con tu bot de Discord</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">URL del Bot de Discord</label>
+                    <input
+                      type="url"
+                      placeholder="http://localhost:5000/webhook"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Webhook Secret</label>
+                    <input
+                      type="password"
+                      placeholder="Tu webhook secreto"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">ID del Canal de Notificaciones</label>
+                    <input
+                      type="text"
+                      placeholder="ID del canal de Discord"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button>Guardar cambios</Button>
+                    <Button variant="outline">Probar conexión</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </section>
