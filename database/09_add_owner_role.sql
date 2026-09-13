@@ -34,7 +34,6 @@ CREATE POLICY "Admins can update any profile"
 -- (En database/07_security_functions.sql)
 
 -- 4. Asignar rol owner al usuario principal
--- REEMPLAZA 'tu_email_aqui' con tu email real
 UPDATE public.users
 SET role = 'owner'
-WHERE email = 'tu_email_aqui';  -- CAMBIAR ESTO POR TU EMAIL REAL
+WHERE email = 'thedulcanzzz@gmail.com';
