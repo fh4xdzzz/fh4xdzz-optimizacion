@@ -309,7 +309,7 @@ NEXT_PUBLIC_DISCORD_REDIRECT_URI=http://localhost:3000/api/auth/discord/callback
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/your_invite_link
+NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/EDaCnZgC6T
 ```
 
 **Estado Real:**

@@ -23,7 +23,7 @@ export default function Home() {
               <Button variant="primary" size="lg" href="/contacto">
                 Solicitar Servicio
               </Button>
-              <Button variant="secondary" size="lg" href="https://discord.gg/your_invite_link" target="_blank" rel="noopener noreferrer">
+              <Button variant="secondary" size="lg" href="https://discord.gg/EDaCnZgC6T" target="_blank" rel="noopener noreferrer">
                 Unirse a Discord
               </Button>
             </div>

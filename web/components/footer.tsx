@@ -82,7 +82,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://discord.gg/your_invite_link"
+                  href="https://discord.gg/EDaCnZgC6T"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-foreground transition-colors"

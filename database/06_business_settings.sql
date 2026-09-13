@@ -88,7 +88,7 @@ INSERT INTO public.business_settings (key, value, description) VALUES
     "tagline": "Servicios profesionales de optimización",
     "description": "Expertos en optimización de OBS, streaming, PC/Windows, gaming y soporte técnico.",
     "email": "contact@fh4xdzz.com",
-    "discord": "https://discord.gg/your_invite_link",
+    "discord": "https://discord.gg/EDaCnZgC6T",
     "social_media": {
         "twitter": "",
         "youtube": "",
@@ -98,7 +98,7 @@ INSERT INTO public.business_settings (key, value, description) VALUES
 
 ('public_contact_info', '{
     "email": "contact@fh4xdzz.com",
-    "discord": "https://discord.gg/your_invite_link",
+    "discord": "https://discord.gg/EDaCnZgC6T",
     "response_time": "24-48 horas",
     "business_hours": "Lun-Vie 10:00-22:00, Sáb-Dom 12:00-20:00"
 }', 'Información de contacto pública'),

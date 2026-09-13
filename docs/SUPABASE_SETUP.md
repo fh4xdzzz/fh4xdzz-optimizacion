@@ -365,7 +365,7 @@ NEXT_PUBLIC_DISCORD_REDIRECT_URI=http://localhost:3000/api/auth/discord/callback
 ```env
 # Application Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/your_invite_link
+NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/EDaCnZgC6T
 ```
 
 ### Paso 6: Configurar Variables de Negocio
@@ -374,7 +374,7 @@ NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/your_invite_link
 # Business Configuration
 BUSINESS_NAME=TheDulcanDesign
 BUSINESS_EMAIL=contact@fh4xdzz.com
-BUSINESS_DISCORD=https://discord.gg/your_invite_link
+BUSINESS_DISCORD=https://discord.gg/EDaCnZgC6T
 ```
 
 ---
