@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getOrderByNumber, getOrders, Order } from '@/lib/orders'
+import { createClient } from '@/lib/supabase/client'
+import { getSession } from '@/lib/auth-hybrid'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pendiente', color: 'bg-yellow-500' },
@@ -16,14 +17,64 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   cancelled: { label: 'Cancelado', color: 'bg-red-500' },
 }
 
+interface Order {
+  id: string
+  order_number: string
+  service_id: string
+  service_name?: string
+  client_name: string
+  client_email: string
+  client_discord?: string
+  description: string
+  price: number
+  status: string
+  created_at: string
+}
+
 export default function OrdersPage() {
   const [orderNumber, setOrderNumber] = useState('')
   const [searchResult, setSearchResult] = useState<Order | null>(null)
   const [searchError, setSearchError] = useState('')
   const [showAllOrders, setShowAllOrders] = useState(false)
-  const [allOrders] = useState(getOrders())
+  const [allOrders, setAllOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const handleSearch = (e: React.FormEvent) => {
+  // Cargar pedidos del usuario desde Supabase
+  const loadOrders = async () => {
+    setLoading(true)
+    try {
+      const session = await getSession()
+      if (!session) {
+        setAllOrders([])
+        return
+      }
+
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, services(name)')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      // Añadir service_name a cada pedido
+      const ordersWithServiceName = (data || []).map((order: any) => ({
+        ...order,
+        service_name: order.services?.name || 'Servicio desconocido'
+      }))
+      setAllOrders(ordersWithServiceName)
+    } catch (error) {
+      console.error('Error al cargar pedidos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadOrders()
+  }, [])
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     setSearchError('')
     setSearchResult(null)
@@ -33,13 +84,25 @@ export default function OrdersPage() {
       return
     }
 
-    const order = getOrderByNumber(orderNumber.trim())
-    if (!order) {
-      setSearchError('Pedido no encontrado')
-      return
-    }
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('order_number', orderNumber.trim())
+        .single()
 
-    setSearchResult(order)
+      if (error) throw error
+      if (!data) {
+        setSearchError('Pedido no encontrado')
+        return
+      }
+
+      setSearchResult(data)
+    } catch (error) {
+      console.error('Error al buscar pedido:', error)
+      setSearchError('Error al buscar pedido')
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -50,6 +113,13 @@ export default function OrdersPage() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price)
   }
 
   return (
@@ -103,7 +173,7 @@ export default function OrdersPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Detalle del Pedido</CardTitle>
-                  <div className="text-sm text-muted">{searchResult.orderNumber}</div>
+                  <div className="text-sm text-muted">{searchResult.order_number}</div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -111,11 +181,11 @@ export default function OrdersPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-sm text-muted mb-1">Servicio</div>
-                      <div className="font-medium">{searchResult.service}</div>
+                      <div className="font-medium">{searchResult.service_name || 'ID: ' + searchResult.service_id}</div>
                     </div>
                     <div>
                       <div className="text-sm text-muted mb-1">Precio</div>
-                      <div className="font-medium">${searchResult.price}</div>
+                      <div className="font-medium">{formatPrice(searchResult.price)}</div>
                     </div>
                   </div>
 
@@ -129,7 +199,7 @@ export default function OrdersPage() {
 
                   <div>
                     <div className="text-sm text-muted mb-1">Fecha de creación</div>
-                    <div className="font-medium">{formatDate(searchResult.createdAt)}</div>
+                    <div className="font-medium">{formatDate(searchResult.created_at)}</div>
                   </div>
 
                   <div>
@@ -140,10 +210,10 @@ export default function OrdersPage() {
                   <div className="pt-4 border-t border-border">
                     <div className="text-sm text-muted mb-2">Información de contacto</div>
                     <div className="space-y-1 text-sm">
-                      <div><span className="text-muted">Nombre:</span> {searchResult.clientName}</div>
-                      <div><span className="text-muted">Email:</span> {searchResult.clientEmail}</div>
-                      {searchResult.clientDiscord && (
-                        <div><span className="text-muted">Discord:</span> {searchResult.clientDiscord}</div>
+                      <div><span className="text-muted">Nombre:</span> {searchResult.client_name}</div>
+                      <div><span className="text-muted">Email:</span> {searchResult.client_email}</div>
+                      {searchResult.client_discord && (
+                        <div><span className="text-muted">Discord:</span> {searchResult.client_discord}</div>
                       )}
                     </div>
                   </div>
@@ -173,18 +243,18 @@ export default function OrdersPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="font-medium">{order.orderNumber}</div>
+                          <div className="font-medium">{order.order_number}</div>
                           <div className={`w-2 h-2 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'}`} />
                           <span className="text-sm text-muted">{STATUS_LABELS[order.status]?.label || order.status}</span>
                         </div>
-                        <div className="text-sm text-muted">{order.service}</div>
-                        <div className="text-xs text-muted mt-1">{formatDate(order.createdAt)}</div>
+                        <div className="text-sm text-muted">{order.service_name || 'ID: ' + order.service_id}</div>
+                        <div className="text-xs text-muted mt-1">{formatDate(order.created_at)}</div>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setOrderNumber(order.orderNumber)
+                          setOrderNumber(order.order_number)
                           setSearchResult(order)
                           setShowAllOrders(false)
                         }}
