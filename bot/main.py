@@ -3,6 +3,7 @@ import sys
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from utils.logger import logger
 
 # Load environment variables
 load_dotenv()
@@ -10,7 +11,7 @@ load_dotenv()
 # Check for required environment variables
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if not TOKEN:
-    print("ERROR: DISCORD_BOT_TOKEN not found in environment variables")
+    logger.error("ERROR: DISCORD_BOT_TOKEN not found in environment variables")
     sys.exit(1)
 
 # Bot configuration
@@ -22,14 +23,15 @@ intents.members = True
 bot = commands.Bot(
     command_prefix=commands.when_mentioned_or('!'),
     intents=intents,
-    description="FH4XDZzz OPTIMIZACION Bot"
+    description="FH4XDZzz OPTIMIZACION Bot",
+    help_command=commands.DefaultHelpCommand()
 )
 
 @bot.event
 async def on_ready():
-    print(f'✅ Bot logged in as {bot.user.name} (ID: {bot.user.id})')
-    print(f'📊 Connected to {len(bot.guilds)} guilds')
-    print('------')
+    logger.info(f'✅ Bot logged in as {bot.user.name} (ID: {bot.user.id})')
+    logger.info(f'📊 Connected to {len(bot.guilds)} guilds')
+    logger.info('------')
     
     # Set bot status
     await bot.change_presence(
@@ -50,7 +52,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send(f"❌ Faltan argumentos requeridos: {error.param.name}")
     else:
-        print(f"Error in command {ctx.command}: {error}")
+        logger.error(f"Error in command {ctx.command}: {error}")
         await ctx.send("❌ Ocurrió un error al ejecutar el comando.")
 
 # Load cogs
@@ -60,9 +62,9 @@ async def load_extensions():
         if filename.endswith('.py') and filename != '__init__.py':
             try:
                 await bot.load_extension(f'cogs.{filename[:-3]}')
-                print(f'✅ Loaded extension: cogs.{filename[:-3]}')
+                logger.info(f'✅ Loaded extension: cogs.{filename[:-3]}')
             except Exception as e:
-                print(f'❌ Failed to load extension {filename}: {e}')
+                logger.error(f'❌ Failed to load extension {filename}: {e}')
 
 @bot.event
 async def setup_hook():
@@ -73,6 +75,6 @@ if __name__ == '__main__':
     try:
         bot.run(TOKEN)
     except KeyboardInterrupt:
-        print("\n🛑 Bot stopped by user")
+        logger.info("🛑 Bot stopped by user")
     except Exception as e:
-        print(f"❌ Fatal error: {e}")
+        logger.error(f"❌ Fatal error: {e}")
