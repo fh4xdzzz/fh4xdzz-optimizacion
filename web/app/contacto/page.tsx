@@ -22,9 +22,32 @@ export default function ContactPage() {
   const [orderNumber, setOrderNumber] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [services, setServices] = useState<Array<{id: string, name: string, slug: string, price: number}>>([])
+  const [userEmail, setUserEmail] = useState<string>('')
   const router = useRouter()
 
   // Cargar servicios desde Supabase
+  useEffect(() => {
+    const loadServices = async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('services')
+        .select('id, name, slug, price')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+      if (data) setServices(data)
+    }
+    loadServices()
+
+    // Cargar email del usuario
+    const loadUserEmail = async () => {
+      const session = await getSession()
+      if (session) {
+        setUserEmail(session.user.email)
+        setFormData(prev => ({ ...prev, email: session.user.email }))
+      }
+    }
+    loadUserEmail()
+  }, [])
   useEffect(() => {
     const loadServices = async () => {
       const supabase = createClient()
@@ -258,14 +281,12 @@ export default function ContactPage() {
                     id="email"
                     name="email"
                     required
+                    disabled
                     value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 ${
-                      errors.email ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
-                    }`}
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-muted text-muted-foreground focus:outline-none cursor-not-allowed"
                     placeholder="tu@email.com"
                   />
-                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                  <p className="text-sm text-muted mt-1">Email de tu cuenta (no editable)</p>
                 </div>
 
                 <div>
