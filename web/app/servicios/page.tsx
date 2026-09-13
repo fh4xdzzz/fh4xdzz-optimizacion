@@ -18,6 +18,7 @@ interface Service {
   includes: string[]
   price: number
   duration_estimate: string
+  featured?: boolean
   is_active: boolean
   is_featured: boolean
 }

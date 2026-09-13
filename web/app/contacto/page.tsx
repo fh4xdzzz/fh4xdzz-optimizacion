@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { saveOrder, getServiceByName, getServices } from '@/lib/orders'
+import { createClient } from '@/lib/supabase/client'
+import { getSession } from '@/lib/auth-hybrid'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -19,8 +21,22 @@ export default function ContactPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [services, setServices] = useState<Array<{id: string, name: string, slug: string, price: number}>>([])
+  const router = useRouter()
 
-  const services = getServices()
+  // Cargar servicios desde Supabase
+  useEffect(() => {
+    const loadServices = async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('services')
+        .select('id, name, slug, price')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+      if (data) setServices(data)
+    }
+    loadServices()
+  }, [])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -61,22 +77,35 @@ export default function ContactPage() {
     setIsSubmitting(true)
 
     try {
-      const service = getServiceByName(formData.service)
+      const service = services.find(s => s.name === formData.service)
       if (!service) {
         throw new Error('Servicio no encontrado')
       }
 
-      const order = saveOrder({
-        service: formData.service,
-        clientName: formData.name,
-        clientEmail: formData.email,
-        clientDiscord: formData.discord || undefined,
-        description: formData.description,
-        price: service.price,
-        status: 'pending',
-      })
+      // Obtener sesión actual para obtener user_id
+      const session = await getSession()
+      const userId = session?.user?.id
 
-      setOrderNumber(order.orderNumber)
+      // Guardar en Supabase
+      const supabase = createClient()
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: userId || null,
+          service_id: service.id,
+          client_name: formData.name,
+          client_email: formData.email,
+          client_discord: formData.discord || null,
+          description: formData.description,
+          price: service.price,
+          status: 'pending',
+        })
+        .select()
+        .single()
+
+      if (orderError) throw orderError
+
+      setOrderNumber(orderData.order_number)
       setSubmitSuccess(true)
       setFormData({
         name: '',
