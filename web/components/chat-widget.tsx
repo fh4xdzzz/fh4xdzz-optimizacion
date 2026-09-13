@@ -11,6 +11,8 @@ interface Message {
   message: string
   is_from_admin: boolean
   is_read: boolean
+  is_closed: boolean
+  assigned_admin_id: string | null
   created_at: string
 }
 
@@ -116,7 +118,7 @@ export default function ChatWidget() {
         query = query.eq('user_id', selectedUserId)
       } else {
         console.log('Cargando mensajes del usuario actual:', session.user.id)
-        query = query.eq('user_id', session.user.id)
+        query = query.eq('user_id', session.user.id).eq('is_closed', false)
       }
 
       const { data, error } = await query
@@ -208,6 +210,56 @@ export default function ChatWidget() {
     }
   }
 
+  const closeChat = async () => {
+    try {
+      const session = await getSession()
+      if (!session) return
+
+      if (isAdmin && selectedUserId) {
+        // Admin cierra el chat del usuario (marca todos como cerrados)
+        await supabase
+          .from('chat_messages')
+          .update({ is_closed: true })
+          .eq('user_id', selectedUserId)
+
+        setSelectedUserId(null)
+        setMessages([])
+      }
+    } catch (error) {
+      console.error('Error al cerrar chat:', error)
+    }
+  }
+
+  const claimChat = async () => {
+    try {
+      const session = await getSession()
+      if (!session || !selectedUserId) return
+
+      // Asignar admin al chat
+      await supabase
+        .from('chat_messages')
+        .update({ assigned_admin_id: session.user.id })
+        .eq('user_id', selectedUserId)
+
+      // Enviar mensaje automático
+      const adminName = session.user.full_name || session.user.email
+      await supabase
+        .from('chat_messages')
+        .insert({
+          user_id: selectedUserId,
+          sender_id: session.user.id,
+          message: `🎫 ${adminName} ha reclamado este chat. Estamos revisando tu solicitud.`,
+          is_from_admin: true,
+          is_read: false,
+          is_closed: false,
+        })
+
+      loadMessages()
+    } catch (error) {
+      console.error('Error al reclamar chat:', error)
+    }
+  }
+
   if (isAdmin) {
     return (
       <div className="fixed bottom-4 right-4 z-50">
@@ -234,29 +286,25 @@ export default function ChatWidget() {
                 {selectedUserId && (
                   <div className="flex gap-2">
                     <button
-                      onClick={async () => {
-                        try {
-                          await supabase
-                            .from('chat_messages')
-                            .update({ is_read: true })
-                            .eq('user_id', selectedUserId)
-                          loadMessages()
-                        } catch (error) {
-                          console.error('Error al reclamar chat:', error)
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 transition-colors"
+                      onClick={claimChat}
+                      className="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors"
                     >
-                      Reclamar
+                      🎫 Reclamar
+                    </button>
+                    <button
+                      onClick={closeChat}
+                      className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors"
+                    >
+                      ❌ Cerrar Chat
                     </button>
                     <button
                       onClick={() => {
                         setSelectedUserId(null)
                         setMessages([])
                       }}
-                      className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors"
+                      className="px-3 py-1.5 bg-slate-500/20 text-slate-400 rounded-lg text-sm hover:bg-slate-500/30 transition-colors"
                     >
-                      Cerrar
+                      X
                     </button>
                   </div>
                 )}

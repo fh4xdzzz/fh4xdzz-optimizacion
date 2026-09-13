@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     message TEXT NOT NULL,
     is_from_admin BOOLEAN DEFAULT false,
     is_read BOOLEAN DEFAULT false,
+    is_closed BOOLEAN DEFAULT false,
+    assigned_admin_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -16,6 +18,8 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON public.chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_id ON public.chat_messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_assigned_admin_id ON public.chat_messages(assigned_admin_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_is_closed ON public.chat_messages(is_closed);
 
 -- =====================================================
 -- Row Level Security (RLS) Policies
@@ -28,11 +32,13 @@ DROP POLICY IF EXISTS "Users can view own chat messages" ON public.chat_messages
 DROP POLICY IF EXISTS "Admins can view all chat messages" ON public.chat_messages;
 DROP POLICY IF EXISTS "Users can create chat messages" ON public.chat_messages;
 DROP POLICY IF EXISTS "Admins can create chat messages" ON public.chat_messages;
+DROP POLICY IF EXISTS "Users can update own messages" ON public.chat_messages;
+DROP POLICY IF EXISTS "Admins can update any message" ON public.chat_messages;
 
--- Los usuarios pueden ver sus propios mensajes
+-- Los usuarios pueden ver sus propios mensajes no cerrados
 CREATE POLICY "Users can view own chat messages"
     ON public.chat_messages FOR SELECT
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id AND is_closed = false);
 
 -- Los admins pueden ver todos los mensajes
 CREATE POLICY "Admins can view all chat messages"
