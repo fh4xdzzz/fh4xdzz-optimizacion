@@ -76,11 +76,11 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Verificar si es admin
+  // Verificar si es admin u owner
   useEffect(() => {
     const checkAdmin = async () => {
       const session = await getSession()
-      if (session?.user?.role === 'admin') {
+      if (session?.user?.role === 'admin' || session?.user?.role === 'owner') {
         setIsAdmin(true)
         loadUsers()
       }
