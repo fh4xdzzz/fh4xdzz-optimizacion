@@ -4,7 +4,7 @@
 
 -- Actualizar servicios con imágenes locales
 UPDATE public.services 
-SET image_url = '/service-obs.jpg'
+SET image_url = '/service-obs.png'
 WHERE slug = 'optimizacion-obs';
 
 UPDATE public.services 
