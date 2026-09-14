@@ -1,35 +1,34 @@
 -- =====================================================
--- Agregar imágenes a los servicios
+-- Agregar imágenes locales a los servicios
 -- =====================================================
 
--- Actualizar servicios con imágenes de ejemplo
--- Puedes cambiar estas URLs por tus propias imágenes
+-- Actualizar servicios con imágenes locales
 UPDATE public.services 
-SET image_url = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&h=400&fit=crop'
+SET image_url = '/service-obs.jpg'
 WHERE slug = 'optimizacion-obs';
 
 UPDATE public.services 
-SET image_url = 'https://images.unsplash.com/photo-1593720219276-0b1eac0a9ef8?w=800&h=400&fit=crop'
+SET image_url = '/service-streaming.jpg'
 WHERE slug = 'configuracion-streaming';
 
 UPDATE public.services 
-SET image_url = 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop'
+SET image_url = '/service-pc.jpg'
 WHERE slug = 'optimizacion-pc-windows';
 
 UPDATE public.services 
-SET image_url = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=400&fit=crop'
+SET image_url = '/service-gaming.jpg'
 WHERE slug = 'configuracion-gaming';
 
 UPDATE public.services 
-SET image_url = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=400&fit=crop'
+SET image_url = '/service-design.jpg'
 WHERE slug = 'diseno-overlays-alertas';
 
 UPDATE public.services 
-SET image_url = 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=800&h=400&fit=crop'
+SET image_url = '/service-support.jpg'
 WHERE slug = 'soporte-tecnico';
 
 UPDATE public.services 
-SET image_url = 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=400&fit=crop'
+SET image_url = '/service-custom.jpg'
 WHERE slug = 'servicios-personalizados';
 
 -- Agregar campo de detalles extendidos (opcional)
