@@ -1,0 +1,78 @@
+=======================================
+THE DULCAN DESIGN - APOLLO PANEL CONFIG
+=======================================
+
+CONFIGURACIÓN DEL BOT EN APOLLO PANEL
+=======================================
+
+1. CONFIGURACIÓN DE LENGUAJE
+-----------------------------
+Lenguaje: Python 3.10
+Versión: 3.10.x (la más reciente disponible)
+
+
+2. COMANDO DE ARRANQUE
+---------------------
+Opción A (Recomendada):
+bash start.sh
+
+Opción B (Directo):
+python main.py
+
+Opción C (Con directorio específico):
+cd bot && python main.py
+
+
+3. DIRECTORIO DE TRABAJO
+------------------------
+/home/container
+
+
+4. VARIABLES DE ENTORNO
+-----------------------
+COPIA Y PEGA ESTAS VARIABLES EN EL PANEL DE APOLLO:
+
+DISCORD_BOT_TOKEN=tu_token_de_discord_aqui
+DISCORD_CLIENT_ID=tu_client_id_aqui
+DISCORD_GUILD_ID=tu_guild_id_aqui
+DISCORD_STAFF_ROLE_ID=tu_staff_role_id_aqui
+DISCORD_ADMIN_ROLE_ID=tu_admin_role_id_aqui
+BOT_PREFIX=!
+DISCORD_WEBHOOK_SECRET=tu_secreto_webhook_aqui
+DISCORD_BOT_API_URL=tu_url_api_bot_aqui
+DISCORD_BOT_API_SECRET=tu_secreto_api_bot_aqui
+SUPABASE_URL=https://wbkgesmnyjnomctdvxqb.supabase.co
+SUPABASE_ANON_KEY=tu_anon_key_aqui
+SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key_aqui
+WEBHOOK_URL=tu_url_webhook_aqui
+LOG_LEVEL=INFO
+LOG_FILE=bot.log
+
+
+5. IMPORTANTE
+-------------
+- REEMPLAZA los valores que dicen "tu_xxx_aqui" con tus valores reales
+- Estos valores están en tu archivo bot/.env local
+- NO uses el archivo .env local, usa estos valores en el panel
+- El DISCORD_BOT_TOKEN es crítico, no lo compartas
+
+
+6. PRIMERA VEZ
+--------------
+Cuando inicies el servidor por primera vez:
+1. El script instalará las dependencias automáticamente
+2. Luego iniciará el bot
+3. Verifica los logs para confirmar que el bot se conectó
+
+
+7. VERIFICACIÓN
+--------------
+Después de iniciar, busca en los logs:
+- "Bot is ready!" - Bot conectado exitosamente
+- "Logged in as" - Nombre del bot
+- Cualquier error de conexión
+
+
+=======================================
+FIN DE CONFIGURACIÓN
+=======================================
