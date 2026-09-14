@@ -12,7 +12,7 @@ export default function Home() {
       <section className="pt-32 pb-20 px-4">
         <div className="container mx-auto text-center">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent hero-title-glow hero-title-stroke">
               Optimización Profesional para Streaming y Gaming
             </h1>
             <p className="text-xl text-muted mb-8 max-w-2xl mx-auto">
