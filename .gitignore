@@ -51,6 +51,8 @@ venv/
 ENV/
 .venv
 bot/.env
+bot/logs/
+bot/*.log
 
 # Supabase
 .supabase/
