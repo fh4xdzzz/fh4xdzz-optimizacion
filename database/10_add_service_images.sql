@@ -8,7 +8,7 @@ SET image_url = '/service-obs.png'
 WHERE slug = 'optimizacion-obs';
 
 UPDATE public.services 
-SET image_url = '/service-streaming.jpg'
+SET image_url = '/service-streaming.png'
 WHERE slug = 'configuracion-streaming';
 
 UPDATE public.services 
