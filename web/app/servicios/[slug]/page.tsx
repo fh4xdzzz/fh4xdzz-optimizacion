@@ -62,6 +62,18 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
               <span>/</span>
               <span className="text-foreground">{service.name}</span>
             </div>
+            
+            {/* Image */}
+            {service.image_url && (
+              <div className="mb-8 rounded-lg overflow-hidden border border-border">
+                <img 
+                  src={service.image_url} 
+                  alt={service.name}
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+            )}
+            
             <h1 className="text-4xl md:text-5xl font-bold mb-4">{service.name}</h1>
             <p className="text-xl text-muted mb-6">{service.description}</p>
             <div className="flex items-center gap-4">
