@@ -61,7 +61,7 @@ export default function Navbar() {
                 <Link href="/perfil" className="text-foreground/80 hover:text-foreground transition-colors">
                   Perfil
                 </Link>
-                {session.user.role === 'admin' && (
+                {(session.user.role === 'admin' || session.user.role === 'owner') && (
                   <Link href="/admin" className="text-foreground/80 hover:text-foreground transition-colors font-semibold">
                     Admin
                   </Link>
@@ -151,7 +151,7 @@ export default function Navbar() {
                 >
                   Perfil
                 </Link>
-                {session.user.role === 'admin' && (
+                {(session.user.role === 'admin' || session.user.role === 'owner') && (
                   <Link
                     href="/admin"
                     className="block text-foreground/80 hover:text-foreground transition-colors font-semibold"
