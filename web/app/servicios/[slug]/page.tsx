@@ -187,7 +187,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                   <p className="text-muted text-sm mb-4">
                     Únete a nuestro Discord para consultar con nuestro equipo antes de solicitar.
                   </p>
-                  <Button variant="outline" className="w-full" href="https://discord.gg/EDaCnZgC6T" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="w-full" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
                     Unirse a Discord
                   </Button>
                 </CardContent>

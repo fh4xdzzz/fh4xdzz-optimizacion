@@ -225,7 +225,7 @@ function ContactFormContent() {
                     <p className="text-muted">
                       Te contactaremos pronto por email o Discord para coordinar tu servicio.
                     </p>
-                    <Button variant="primary" href="https://discord.gg/EDaCnZgC6T" target="_blank" rel="noopener noreferrer">
+                    <Button variant="primary" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
                       Unirse a Discord
                     </Button>
                     <Button variant="outline" onClick={() => router.push('/pedidos')}>
@@ -394,7 +394,7 @@ function ContactFormContent() {
                 <p className="text-muted mb-4">
                   Únete a nuestro servidor para soporte en tiempo real
                 </p>
-                <Button variant="outline" className="w-full" href="https://discord.gg/EDaCnZgC6T" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" className="w-full" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
                   Unirse al Servidor
                 </Button>
               </CardContent>

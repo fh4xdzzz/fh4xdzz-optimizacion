@@ -122,7 +122,7 @@ Propiedad de TheDulcanDesign. Todos los derechos reservados.
 
 ## 📞 Contacto
 
-- **Discord:** [Unirse al servidor](https://discord.gg/EDaCnZgC6T)
+- **Discord:** [Unirse al servidor](https://discord.gg/DXkEXrYRvM)
 - **Email:** contact@fh4xdzz.com
 
 ---

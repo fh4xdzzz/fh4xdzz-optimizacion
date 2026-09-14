@@ -63,7 +63,7 @@ CREATE POLICY "No direct deletes allowed"
 -- =====================================================
 
 INSERT INTO public.business_settings (setting_key, setting_value, description) VALUES
-('business_info', '{"name": "TheDulcanDesign", "email": "contact@thedulcandesign.com", "phone": "", "address": "", "discord": "https://discord.gg/EDaCnZgC6T"}', 'Información básica del negocio')
+('business_info', '{"name": "TheDulcanDesign", "email": "contact@thedulcandesign.com", "phone": "", "address": "", "discord": "https://discord.gg/DXkEXrYRvM"}', 'Información básica del negocio')
 ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = NOW();
 
 INSERT INTO public.business_settings (setting_key, setting_value, description) VALUES
@@ -71,7 +71,7 @@ INSERT INTO public.business_settings (setting_key, setting_value, description) V
 ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = NOW();
 
 INSERT INTO public.business_settings (setting_key, setting_value, description) VALUES
-('social_links', '{"discord": "https://discord.gg/EDaCnZgC6T", "twitter": "", "youtube": "", "instagram": ""}', 'Enlaces a redes sociales')
+('social_links', '{"discord": "https://discord.gg/DXkEXrYRvM", "twitter": "", "youtube": "", "instagram": ""}', 'Enlaces a redes sociales')
 ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = NOW();
 
 INSERT INTO public.business_settings (setting_key, setting_value, description) VALUES
