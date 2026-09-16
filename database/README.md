@@ -173,6 +173,7 @@ En el SQL Editor de Supabase, ejecuta los scripts en orden:
 5. `05_testimonials.sql` - Tabla de testimonios
 6. `06_business_settings.sql` - Configuraciones del negocio
 7. `11_orders_delete_policy.sql` - Política RLS para eliminación de pedidos por owner
+8. `12_maintenance_settings.sql` - Configuración inicial del modo de mantenimiento
 
 ### 3. Configurar variables de entorno
 Copia las credenciales de Supabase a tu archivo `.env`:
