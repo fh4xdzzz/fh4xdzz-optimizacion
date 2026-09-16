@@ -9,7 +9,7 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
+      <section className="pt-32 pb-20 px-4 animate-fade-in-up">
         <div className="container mx-auto text-center">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent hero-title-glow hero-title-stroke">
@@ -20,7 +20,7 @@ export default function Home() {
               Lleva tu setup al siguiente nivel.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="primary" size="lg" href="/servicios">
+              <Button variant="primary" size="lg" href="/servicios" className="shimmer-button animate-bounce-subtle">
                 Ver Servicios
               </Button>
               <Button variant="secondary" size="lg" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
@@ -36,7 +36,7 @@ export default function Home() {
         <div className="container mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">Servicios Destacados</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-primary/50 hover:border-primary transition-colors">
+            <Card className="border-primary/50 hover:border-primary transition-all hover-lift hover-glow">
               <CardHeader>
                 <CardTitle>Optimización de OBS</CardTitle>
                 <CardDescription>Configuración profesional para streaming de alta calidad</CardDescription>
@@ -50,14 +50,14 @@ export default function Home() {
                 </ul>
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-2xl font-bold">$29.99</span>
-                  <Button variant="outline" size="sm" href="/servicios">
+                  <Button variant="outline" size="sm" href="/servicios" className="shimmer-button">
                     Ver detalles
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-secondary/50 hover:border-secondary transition-colors">
+            <Card className="border-secondary/50 hover:border-secondary transition-all hover-lift hover-glow">
               <CardHeader>
                 <CardTitle>Configuración de Streaming</CardTitle>
                 <CardDescription>Setup completo para Twitch, YouTube u otras plataformas</CardDescription>
@@ -71,14 +71,14 @@ export default function Home() {
                 </ul>
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-2xl font-bold">$49.99</span>
-                  <Button variant="outline" size="sm" href="/servicios">
+                  <Button variant="outline" size="sm" href="/servicios" className="shimmer-button">
                     Ver detalles
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-accent/50 hover:border-accent transition-colors">
+            <Card className="border-accent/50 hover:border-accent transition-all hover-lift hover-glow">
               <CardHeader>
                 <CardTitle>Optimización de PC</CardTitle>
                 <CardDescription>Mejora del rendimiento del sistema para gaming</CardDescription>
@@ -92,7 +92,7 @@ export default function Home() {
                 </ul>
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-2xl font-bold">$39.99</span>
-                  <Button variant="outline" size="sm" href="/servicios">
+                  <Button variant="outline" size="sm" href="/servicios" className="shimmer-button">
                     Ver detalles
                   </Button>
                 </div>
@@ -103,37 +103,37 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 px-4">
+      <section className="py-24 px-4">
         <div className="container mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Cómo Funciona</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-primary">1</span>
+          <h2 className="text-3xl font-bold text-center mb-16">Cómo Funciona</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+            <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform">
+                <span className="text-3xl font-bold text-primary">1</span>
               </div>
-              <h3 className="font-semibold mb-2">Selecciona Servicio</h3>
-              <p className="text-sm text-muted">Elige el servicio que necesitas de nuestro catálogo</p>
+              <h3 className="font-semibold mb-3 text-lg">Selecciona Servicio</h3>
+              <p className="text-sm text-muted leading-relaxed">Elige el servicio que necesitas de nuestro catálogo</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-secondary">2</span>
+            <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform">
+                <span className="text-3xl font-bold text-secondary">2</span>
               </div>
-              <h3 className="font-semibold mb-2">Completa Formulario</h3>
-              <p className="text-sm text-muted">Proporciona los detalles de lo que necesitas</p>
+              <h3 className="font-semibold mb-3 text-lg">Completa Formulario</h3>
+              <p className="text-sm text-muted leading-relaxed">Proporciona los detalles de lo que necesitas</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-accent">3</span>
+            <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform">
+                <span className="text-3xl font-bold text-accent">3</span>
               </div>
-              <h3 className="font-semibold mb-2">Recibe Confirmación</h3>
-              <p className="text-sm text-muted">Te contactaremos para coordinar el servicio</p>
+              <h3 className="font-semibold mb-3 text-lg">Recibe Confirmación</h3>
+              <p className="text-sm text-muted leading-relaxed">Te contactaremos para coordinar el servicio</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-primary">4</span>
+            <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform">
+                <span className="text-3xl font-bold text-primary">4</span>
               </div>
-              <h3 className="font-semibold mb-2">Disfruta Resultados</h3>
-              <p className="text-sm text-muted">Tu setup optimizado y listo para usar</p>
+              <h3 className="font-semibold mb-3 text-lg">Disfruta Resultados</h3>
+              <p className="text-sm text-muted leading-relaxed">Tu setup optimizado y listo para usar</p>
             </div>
           </div>
         </div>

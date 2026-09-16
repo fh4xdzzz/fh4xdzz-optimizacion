@@ -44,47 +44,47 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="text-foreground/80 hover:text-foreground transition-colors">
+            <Link href="/" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
               Inicio
             </Link>
-            <Link href="/servicios" className="text-foreground/80 hover:text-foreground transition-colors">
+            <Link href="/servicios" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
               Servicios
             </Link>
             {session ? (
               <>
-                <Link href="/dashboard" className="text-foreground/80 hover:text-foreground transition-colors">
+                <Link href="/dashboard" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
                   Dashboard
                 </Link>
-                <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors">
+                <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
                   Mis Pedidos
                 </Link>
-                <Link href="/perfil" className="text-foreground/80 hover:text-foreground transition-colors">
+                <Link href="/perfil" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
                   Perfil
                 </Link>
                 {(session.user.role === 'admin' || session.user.role === 'owner') && (
-                  <Link href="/admin" className="text-foreground/80 hover:text-foreground transition-colors font-semibold">
+                  <Link href="/admin" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform font-semibold">
                     Admin
                   </Link>
                 )}
-                <Button variant="outline" onClick={handleLogout}>
+                <Button variant="outline" onClick={handleLogout} className="hover:scale-105 transform transition-transform">
                   Cerrar Sesión
                 </Button>
               </>
             ) : (
               <>
-                <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors">
+                <Link href="/pedidos" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
                   Mis Pedidos
                 </Link>
-                <Link href="/auth/login" className="text-foreground/80 hover:text-foreground transition-colors">
+                <Link href="/auth/login" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
                   Login
                 </Link>
-                <Button variant="primary" href="/auth/register">
+                <Button variant="primary" href="/auth/register" className="hover:scale-105 transform transition-transform shimmer-button">
                   Registrarse
                 </Button>
               </>
             )}
-            <Button variant="primary" href="/contacto">
-              Solicitar Servicio
+            <Button variant="primary" href="/servicios" className="hover:scale-105 transform transition-transform shimmer-button">
+              Ver Servicios
             </Button>
           </div>
 
@@ -185,8 +185,8 @@ export default function Navbar() {
                 </Button>
               </>
             )}
-            <Button variant="primary" href="/contacto" className="w-full" onClick={() => setIsOpen(false)}>
-              Solicitar Servicio
+            <Button variant="primary" href="/servicios" className="w-full" onClick={() => setIsOpen(false)}>
+              Ver Servicios
             </Button>
           </div>
         )}
