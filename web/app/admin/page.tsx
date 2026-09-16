@@ -217,42 +217,57 @@ export default function AdminPage() {
 
           {/* Tabs */}
           <div className="flex flex-wrap gap-3 mb-8 border-b border-border/50 pb-6 animate-fade-in-up">
-            <Button
-              variant={activeTab === 'overview' ? 'primary' : 'outline'}
+            <button
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+                activeTab === 'overview' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'border border-border bg-transparent hover:bg-card'
+              }`}
               onClick={() => setActiveTab('overview')}
-              className="hover-lift"
             >
               Resumen
-            </Button>
-            <Button
-              variant={activeTab === 'users' ? 'primary' : 'outline'}
+            </button>
+            <button
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+                activeTab === 'users' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'border border-border bg-transparent hover:bg-card'
+              }`}
               onClick={() => setActiveTab('users')}
-              className="hover-lift"
             >
               Usuarios ({users.length})
-            </Button>
-            <Button
-              variant={activeTab === 'orders' ? 'primary' : 'outline'}
+            </button>
+            <button
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+                activeTab === 'orders' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'border border-border bg-transparent hover:bg-card'
+              }`}
               onClick={() => setActiveTab('orders')}
-              className="hover-lift"
             >
               Pedidos ({orders.length})
-            </Button>
-            <Button
-              variant={activeTab === 'services' ? 'primary' : 'outline'}
+            </button>
+            <button
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+                activeTab === 'services' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'border border-border bg-transparent hover:bg-card'
+              }`}
               onClick={() => setActiveTab('services')}
-              className="hover-lift"
             >
               Servicios ({services.length})
-            </Button>
+            </button>
             {(userRole === 'owner') && (
-              <Button
-                variant={activeTab === 'settings' ? 'primary' : 'outline'}
+              <button
+                className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+                  activeTab === 'settings' 
+                    ? 'bg-primary text-white hover:bg-primary/90' 
+                    : 'border border-border bg-transparent hover:bg-card'
+                }`}
                 onClick={() => setActiveTab('settings')}
-                className="hover-lift"
               >
                 Configuración
-              </Button>
+              </button>
             )}
           </div>
 
