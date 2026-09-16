@@ -834,6 +834,7 @@ export default function AdminPage() {
 
       <Footer />
       <ChatWidget />
+      </div>
     </div>
   )
 }

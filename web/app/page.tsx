@@ -281,6 +281,7 @@ export default function Home() {
       </section>
 
       <Footer />
+      </div>
     </div>
   )
 }

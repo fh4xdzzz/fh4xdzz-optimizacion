@@ -356,6 +356,7 @@ export default function ServicesPage() {
       </section>
 
       <Footer />
+      </div>
     </div>
   )
 }
