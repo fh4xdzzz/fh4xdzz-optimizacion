@@ -216,9 +216,9 @@ export default function AdminPage() {
           )}
 
           {/* Tabs */}
-          <div className="flex flex-wrap gap-3 mb-8 border-b border-border/50 pb-6 animate-fade-in-up">
+          <div className="flex flex-wrap gap-3 mb-8 border-b border-border/50 pb-6 relative z-30">
             <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'overview' 
                   ? 'bg-primary text-white hover:bg-primary/90' 
                   : 'border border-border bg-transparent hover:bg-card'
@@ -228,7 +228,7 @@ export default function AdminPage() {
               Resumen
             </button>
             <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'users' 
                   ? 'bg-primary text-white hover:bg-primary/90' 
                   : 'border border-border bg-transparent hover:bg-card'
@@ -238,7 +238,7 @@ export default function AdminPage() {
               Usuarios ({users.length})
             </button>
             <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'orders' 
                   ? 'bg-primary text-white hover:bg-primary/90' 
                   : 'border border-border bg-transparent hover:bg-card'
@@ -248,7 +248,7 @@ export default function AdminPage() {
               Pedidos ({orders.length})
             </button>
             <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'services' 
                   ? 'bg-primary text-white hover:bg-primary/90' 
                   : 'border border-border bg-transparent hover:bg-card'
@@ -259,7 +259,7 @@ export default function AdminPage() {
             </button>
             {(userRole === 'owner') && (
               <button
-                className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg hover-lift ${
+                className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                   activeTab === 'settings' 
                     ? 'bg-primary text-white hover:bg-primary/90' 
                     : 'border border-border bg-transparent hover:bg-card'
