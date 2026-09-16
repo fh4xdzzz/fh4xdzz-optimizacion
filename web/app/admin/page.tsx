@@ -809,20 +809,6 @@ export default function AdminPage() {
                   </>
                 )}
               </div>
-                      >
-                        Confirmar
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="destructive"
-                        onClick={() => setDeleteConfirm(selectedOrder.id)}
-                      >
-                        Eliminar
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>
