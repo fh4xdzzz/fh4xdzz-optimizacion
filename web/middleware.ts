@@ -3,6 +3,50 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { isSupabaseMode, isDemoMode } from './lib/auth-hybrid'
 
 export async function middleware(request: NextRequest) {
+  // Rutas que deben estar siempre accesibles (modo mantenimiento)
+  const alwaysAccessiblePaths = ['/mantenimiento', '/admin', '/auth/login', '/auth/register']
+  const isAlwaysAccessible = alwaysAccessiblePaths.some(path =>
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  // Verificar modo mantenimiento (solo en modo Supabase)
+  if (isSupabaseMode() && !isAlwaysAccessible) {
+    try {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return request.cookies.get(name)?.value
+            },
+            set(name: string, value: string, options: Record<string, unknown>) {
+              request.cookies.set({ name, value, ...options })
+            },
+            remove(name: string, options: Record<string, unknown>) {
+              request.cookies.set({ name, value: '', ...options })
+            },
+          },
+        }
+      )
+
+      // Verificar si el modo mantenimiento está activo
+      const { data: maintenanceData } = await supabase
+        .from('business_settings')
+        .select('value')
+        .eq('key', 'maintenance_mode')
+        .single()
+
+      if (maintenanceData?.value?.enabled) {
+        // Redirigir a página de mantenimiento
+        return NextResponse.redirect(new URL('/mantenimiento', request.url))
+      }
+    } catch (error) {
+      // Si hay error al verificar modo mantenimiento, continuar normalmente
+      console.error('Error checking maintenance mode:', error)
+    }
+  }
+
   // En modo demo, no aplicar middleware de autenticación
   // El cliente maneja la autenticación demo
   if (isDemoMode()) {
@@ -33,7 +77,7 @@ export async function middleware(request: NextRequest) {
 
     // Rutas protegidas que requieren autenticación
     const protectedPaths = ['/dashboard', '/perfil', '/pedidos']
-    const isProtectedPath = protectedPaths.some(path => 
+    const isProtectedPath = protectedPaths.some(path =>
       request.nextUrl.pathname.startsWith(path)
     )
 
