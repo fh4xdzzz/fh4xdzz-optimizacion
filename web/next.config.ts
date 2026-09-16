@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
     // Mejorar manejo de errores de hidratación
     optimizePackageImports: ['lucide-react'],
   },
+  // Configuración para Turbopack
+  turbopack: {
+    root: __dirname,
+  },
+  // Permitir CORS para el browser preview
+  allowedDevOrigins: ['127.0.0.1'],
 };
 
 export default nextConfig;
