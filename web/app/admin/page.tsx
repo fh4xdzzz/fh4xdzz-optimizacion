@@ -197,12 +197,12 @@ export default function AdminPage() {
       <Navbar />
 
       {/* Header */}
-      <section className="pt-32 pb-12 px-4">
+      <section className="pt-32 pb-12 px-4 hero-bg animated-gradient-bg">
         <div className="container mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold mb-2">Panel de Administración</h1>
-              <p className="text-muted">
+              <h1 className="text-4xl md:text-5xl font-bold mb-2 gradient-text-primary animate-fade-in-up">Panel de Administración</h1>
+              <p className="text-muted text-lg text-headline">
                 Gestiona usuarios, pedidos, servicios y configuraciones
                 {isDemo && ' (Modo Demo)'}
               </p>
@@ -210,34 +210,38 @@ export default function AdminPage() {
           </div>
 
           {isDemo && (
-            <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm mb-8">
+            <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-6 py-3 rounded-xl text-base mb-8 animate-fade-in-up glass-card">
               ⚠️ Modo demo activo - Funcionalidades limitadas
             </div>
           )}
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-8 border-b border-border pb-4">
+          <div className="flex flex-wrap gap-3 mb-8 border-b border-border/50 pb-6 animate-fade-in-up">
             <Button
               variant={activeTab === 'overview' ? 'primary' : 'outline'}
               onClick={() => setActiveTab('overview')}
+              className="hover-lift"
             >
               Resumen
             </Button>
             <Button
               variant={activeTab === 'users' ? 'primary' : 'outline'}
               onClick={() => setActiveTab('users')}
+              className="hover-lift"
             >
               Usuarios ({users.length})
             </Button>
             <Button
               variant={activeTab === 'orders' ? 'primary' : 'outline'}
               onClick={() => setActiveTab('orders')}
+              className="hover-lift"
             >
               Pedidos ({orders.length})
             </Button>
             <Button
               variant={activeTab === 'services' ? 'primary' : 'outline'}
               onClick={() => setActiveTab('services')}
+              className="hover-lift"
             >
               Servicios ({services.length})
             </Button>
@@ -245,6 +249,7 @@ export default function AdminPage() {
               <Button
                 variant={activeTab === 'settings' ? 'primary' : 'outline'}
                 onClick={() => setActiveTab('settings')}
+                className="hover-lift"
               >
                 Configuración
               </Button>
@@ -253,44 +258,48 @@ export default function AdminPage() {
 
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('users')}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.1s' }} onClick={() => setActiveTab('users')}>
                 <CardHeader>
-                  <CardTitle className="text-lg">Total Usuarios</CardTitle>
+                  <CardTitle className="text-xl mb-2">Total Usuarios</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{users.length}</div>
+                  <div className="text-4xl font-bold gradient-text-primary">{users.length}</div>
+                  <p className="text-sm text-muted mt-2">Usuarios registrados</p>
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('orders')}>
+              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.2s' }} onClick={() => setActiveTab('orders')}>
                 <CardHeader>
-                  <CardTitle className="text-lg">Total Pedidos</CardTitle>
+                  <CardTitle className="text-xl mb-2">Total Pedidos</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{orders.length}</div>
+                  <div className="text-4xl font-bold gradient-text-secondary">{orders.length}</div>
+                  <p className="text-sm text-muted mt-2">Pedidos totales</p>
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('orders')}>
+              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.3s' }} onClick={() => setActiveTab('orders')}>
                 <CardHeader>
-                  <CardTitle className="text-lg">Pedidos Pendientes</CardTitle>
+                  <CardTitle className="text-xl mb-2">Pedidos Pendientes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-yellow-500">
+                  <div className="text-4xl font-bold text-yellow-500">
                     {orders.filter((order) => order.status === 'pending').length}
                   </div>
+                  <p className="text-sm text-muted mt-2">Requieren atención</p>
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setActiveTab('services')}>
+              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.4s' }} onClick={() => setActiveTab('services')}>
                 <CardHeader>
-                  <CardTitle className="text-lg">Servicios Activos</CardTitle>
+                  <CardTitle className="text-xl mb-2">Servicios Activos</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-green-500">
+                  <div className="text-4xl font-bold text-green-500">
                     {services.filter((service) => service.is_active).length}
                   </div>
+                  <p className="text-sm text-muted mt-2">Disponibles</p>
                 </CardContent>
               </Card>
             </div>
@@ -298,26 +307,27 @@ export default function AdminPage() {
 
           {/* Users Tab */}
           {activeTab === 'users' && (
-            <Card>
+            <Card className="glass-card hover-glow animate-fade-in-up">
               <CardHeader>
-                <CardTitle>Usuarios Registrados</CardTitle>
-                <CardDescription>Gestión de usuarios y roles</CardDescription>
+                <CardTitle className="text-2xl">Usuarios Registrados</CardTitle>
+                <CardDescription className="text-base">Gestión de usuarios y roles</CardDescription>
               </CardHeader>
               <CardContent>
                 {users.length > 0 ? (
                   <div className="space-y-4">
-                    {users.map((user) => (
+                    {users.map((user, index) => (
                       <div
                         key={user.id}
-                        className="flex items-center justify-between p-4 border border-border rounded-lg"
+                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                        style={{ animationDelay: `${index * 0.05}s` }}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="font-medium">{user.email}</div>
-                            <div className={`w-2 h-2 rounded-full ${ROLE_LABELS[user.role]?.color || 'bg-gray-500'}`} />
-                            <span className="text-sm text-muted">{ROLE_LABELS[user.role]?.label || user.role}</span>
+                            <div className="font-medium text-lg">{user.email}</div>
+                            <div className={`w-3 h-3 rounded-full ${ROLE_LABELS[user.role]?.color || 'bg-gray-500'} animate-pulse`} />
+                            <span className="text-sm text-muted font-medium">{ROLE_LABELS[user.role]?.label || user.role}</span>
                           </div>
-                          <div className="text-sm text-muted">
+                          <div className="text-base text-muted">
                             {user.full_name || 'Sin nombre'} • {formatDate(user.created_at)}
                           </div>
                         </div>
@@ -325,8 +335,8 @@ export default function AdminPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted">No hay usuarios registrados</p>
+                  <div className="text-center py-12">
+                    <p className="text-muted text-lg">No hay usuarios registrados</p>
                   </div>
                 )}
               </CardContent>
@@ -335,18 +345,19 @@ export default function AdminPage() {
 
           {/* Orders Tab */}
           {activeTab === 'orders' && (
-            <Card>
+            <Card className="glass-card hover-glow animate-fade-in-up">
               <CardHeader>
-                <CardTitle>Todos los Pedidos</CardTitle>
-                <CardDescription>Gestión de pedidos de todos los usuarios</CardDescription>
+                <CardTitle className="text-2xl">Todos los Pedidos</CardTitle>
+                <CardDescription className="text-base">Gestión de pedidos de todos los usuarios</CardDescription>
               </CardHeader>
               <CardContent>
                 {orders.length > 0 ? (
                   <div className="space-y-4">
-                    {orders.map((order) => (
+                    {orders.map((order, index) => (
                       <div
                         key={order.id}
-                        className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/50 transition-colors"
+                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                        style={{ animationDelay: `${index * 0.05}s` }}
                       >
                         <div
                           className="flex-1 cursor-pointer"
@@ -358,32 +369,34 @@ export default function AdminPage() {
                           }}
                         >
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="font-medium">{order.order_number}</div>
-                            <div className={`w-2 h-2 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'}`} />
-                            <span className="text-sm text-muted">{STATUS_LABELS[order.status]?.label || order.status}</span>
+                            <div className="font-medium text-lg">{order.order_number}</div>
+                            <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'} animate-pulse`} />
+                            <span className="text-sm text-muted font-medium">{STATUS_LABELS[order.status]?.label || order.status}</span>
                           </div>
-                          <div className="text-sm text-muted">
+                          <div className="text-base text-muted">
                             {order.service_name} • {formatDate(order.created_at)}
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                           <Button
                             variant="outline"
-                            size="sm"
+                            size="md"
                             onClick={() => {
                               setSelectedOrder(order)
                               setNewStatus(order.status)
                               setOrderNote('')
                               setShowOrderModal(true)
                             }}
+                            className="hover-lift"
                           >
                             Ver detalles
                           </Button>
                           {userRole === 'owner' && (
                             <Button
                               variant="destructive"
-                              size="sm"
+                              size="md"
                               onClick={() => handleDeleteOrder(order.id)}
+                              className="hover-lift"
                             >
                               Eliminar
                             </Button>
@@ -393,8 +406,8 @@ export default function AdminPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted">No hay pedidos</p>
+                  <div className="text-center py-12">
+                    <p className="text-muted text-lg">No hay pedidos</p>
                   </div>
                 )}
               </CardContent>
@@ -403,30 +416,31 @@ export default function AdminPage() {
 
           {/* Services Tab */}
           {activeTab === 'services' && (
-            <Card>
+            <Card className="glass-card hover-glow animate-fade-in-up">
               <CardHeader>
-                <CardTitle>Servicios</CardTitle>
-                <CardDescription>Gestión de servicios del catálogo</CardDescription>
+                <CardTitle className="text-2xl">Servicios</CardTitle>
+                <CardDescription className="text-base">Gestión de servicios del catálogo</CardDescription>
               </CardHeader>
               <CardContent>
                 {services.length > 0 ? (
                   <div className="space-y-4">
-                    {services.map((service) => (
+                    {services.map((service, index) => (
                       <div
                         key={service.id}
-                        className="flex items-center justify-between p-4 border border-border rounded-lg"
+                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                        style={{ animationDelay: `${index * 0.05}s` }}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="font-medium">{service.name}</div>
+                            <div className="font-medium text-lg">{service.name}</div>
                             {!service.is_active && (
-                              <span className="text-xs bg-gray-500 text-white px-2 py-1 rounded">Inactivo</span>
+                              <span className="text-xs bg-gray-500 text-white px-3 py-1 rounded-full">Inactivo</span>
                             )}
                             {service.is_featured && (
-                              <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">Destacado</span>
+                              <span className="text-xs bg-yellow-500 text-white px-3 py-1 rounded-full">Destacado</span>
                             )}
                           </div>
-                          <div className="text-sm text-muted">
+                          <div className="text-base text-muted">
                             {service.category} • ${service.price}
                           </div>
                         </div>
@@ -434,8 +448,8 @@ export default function AdminPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted">No hay servicios</p>
+                  <div className="text-center py-12">
+                    <p className="text-muted text-lg">No hay servicios</p>
                   </div>
                 )}
               </CardContent>
@@ -645,63 +659,63 @@ export default function AdminPage() {
 
       {/* Order Details Modal */}
       {showOrderModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in-scale">
+          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto glass-card hover-glow glowing-border">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Detalle del Pedido</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setShowOrderModal(false)}>
+                <CardTitle className="text-2xl gradient-text-primary">Detalle del Pedido</CardTitle>
+                <Button variant="outline" size="md" onClick={() => setShowOrderModal(false)} className="hover-lift">
                   Cerrar
                 </Button>
               </div>
-              <CardDescription>{selectedOrder.order_number}</CardDescription>
+              <CardDescription className="text-base">{selectedOrder.order_number}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Order Info */}
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border border-border/50 rounded-xl glass-card">
                     <div className="text-sm text-muted mb-1">Servicio</div>
-                    <div className="font-medium">{selectedOrder.service_name}</div>
+                    <div className="font-medium text-lg">{selectedOrder.service_name}</div>
                   </div>
-                  <div>
+                  <div className="p-4 border border-border/50 rounded-xl glass-card">
                     <div className="text-sm text-muted mb-1">Estado actual</div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[selectedOrder.status]?.color || 'bg-gray-500'}`} />
-                      <span className="font-medium">{STATUS_LABELS[selectedOrder.status]?.label || selectedOrder.status}</span>
+                      <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[selectedOrder.status]?.color || 'bg-gray-500'} animate-pulse`} />
+                      <span className="font-medium text-lg">{STATUS_LABELS[selectedOrder.status]?.label || selectedOrder.status}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border border-border/50 rounded-xl glass-card">
                     <div className="text-sm text-muted mb-1">Cliente</div>
-                    <div className="font-medium">{selectedOrder.client_name}</div>
+                    <div className="font-medium text-lg">{selectedOrder.client_name}</div>
                   </div>
-                  <div>
+                  <div className="p-4 border border-border/50 rounded-xl glass-card">
                     <div className="text-sm text-muted mb-1">Email</div>
-                    <div className="font-medium">{selectedOrder.client_email}</div>
+                    <div className="font-medium text-lg">{selectedOrder.client_email}</div>
                   </div>
                 </div>
 
-                <div>
+                <div className="p-4 border border-border/50 rounded-xl glass-card">
                   <div className="text-sm text-muted mb-1">Descripción</div>
-                  <div className="text-sm">{selectedOrder.description}</div>
+                  <div className="text-base">{selectedOrder.description}</div>
                 </div>
 
-                <div>
+                <div className="p-4 border border-border/50 rounded-xl glass-card">
                   <div className="text-sm text-muted mb-1">Fecha de creación</div>
-                  <div className="font-medium">{formatDate(selectedOrder.created_at)}</div>
+                  <div className="font-medium text-lg">{formatDate(selectedOrder.created_at)}</div>
                 </div>
               </div>
 
               {/* Status Change */}
-              <div className="border-t border-border pt-4">
-                <div className="text-sm font-medium mb-2">Cambiar estado</div>
+              <div className="border-t border-border/50 pt-6">
+                <div className="text-base font-medium mb-3">Cambiar estado</div>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="pending">Pendiente</option>
                   <option value="reviewing">Revisando</option>
@@ -714,20 +728,20 @@ export default function AdminPage() {
 
               {/* Note */}
               <div>
-                <div className="text-sm font-medium mb-2">Agregar nota</div>
+                <div className="text-base font-medium mb-3">Agregar nota</div>
                 <textarea
                   value={orderNote}
                   onChange={(e) => setOrderNote(e.target.value)}
                   placeholder="Agrega una nota sobre este pedido..."
-                  className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[120px]"
                 />
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex gap-3 pt-4">
                 <Button
                   variant="primary"
-                  className="flex-1"
+                  className="flex-1 hover-lift shimmer-button"
                   onClick={async () => {
                     try {
                       const supabase = createClient()
@@ -769,6 +783,7 @@ export default function AdminPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowOrderModal(false)}
+                  className="hover-lift"
                 >
                   Cancelar
                 </Button>
@@ -778,6 +793,22 @@ export default function AdminPage() {
                       <Button
                         variant="destructive"
                         onClick={() => handleDeleteOrder(selectedOrder.id)}
+                        className="hover-lift"
+                      >
+                        Confirmar eliminación
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setDeleteConfirm(selectedOrder.id)}
+                        className="hover-lift"
+                      >
+                        Eliminar pedido
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
                       >
                         Confirmar
                       </Button>
