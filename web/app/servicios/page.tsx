@@ -219,28 +219,31 @@ export default function ServicesPage() {
       <Navbar />
 
       {/* Header */}
-      <section className="pt-32 pb-12 px-4">
+      <section className="pt-32 pb-12 px-4 hero-bg animated-gradient-bg">
         <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Nuestros Servicios</h1>
-          <p className="text-xl text-muted max-w-2xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text-primary animate-fade-in-up">Nuestros Servicios</h1>
+          <p className="text-xl md:text-2xl text-muted max-w-2xl mx-auto text-headline animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             Soluciones profesionales para optimizar tu experiencia de streaming, gaming y soporte técnico
           </p>
         </div>
       </section>
 
       {/* Category Filters */}
-      <section className="pb-8 px-4">
+      <section className="pb-8 px-4 relative z-30">
         <div className="container mx-auto">
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className="flex flex-wrap gap-3 justify-center">
             {categories.map((category) => (
-              <Button
+              <button
                 key={category.id}
-                variant={selectedCategory === category.id ? 'primary' : 'outline'}
-                size="sm"
+                className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 text-sm pointer-events-auto cursor-pointer ${
+                  selectedCategory === category.id 
+                    ? 'bg-primary text-white hover:bg-primary/90' 
+                    : 'border border-border bg-transparent hover:bg-card'
+                }`}
                 onClick={() => setSelectedCategory(category.id)}
               >
                 {category.name}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
@@ -249,35 +252,36 @@ export default function ServicesPage() {
       {/* Services Grid */}
       <section className="pb-20 px-4">
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredServices.map((service) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredServices.map((service, index) => (
               <Card
                 key={service.id}
-                className={`border-2 transition-all hover:scale-105 ${
+                className={`border-2 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up ${
                   service.featured
                     ? 'border-primary shadow-lg shadow-primary/20'
-                    : 'border-border hover:border-primary/50'
+                    : 'border-border/50 hover:border-primary/50'
                 }`}
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
                 {service.is_featured && (
-                  <div className="bg-primary text-white text-xs font-bold px-3 py-1 text-center">
-                    DESTACADO
+                  <div className="bg-primary text-white text-xs font-bold px-4 py-2 text-center rounded-b-xl">
+                    ⭐ DESTACADO
                   </div>
                 )}
                 <CardHeader>
-                  <CardTitle className="text-xl">{service.name}</CardTitle>
-                  <CardDescription>{service.description}</CardDescription>
+                  <CardTitle className="text-2xl mb-2">{service.name}</CardTitle>
+                  <CardDescription className="text-base">{service.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold text-sm mb-2">Beneficios:</h4>
-                      <ul className="space-y-1">
+                    <div className="p-4 border border-border/50 rounded-xl glass-card">
+                      <h4 className="font-semibold text-base mb-3">Beneficios:</h4>
+                      <ul className="space-y-2">
                         {service.benefits && service.benefits.length > 0 ? (
                           service.benefits.map((benefit, index) => (
                             <li key={index} className="text-sm text-muted flex items-start">
-                              <span className="text-primary mr-2">✓</span>
-                              {benefit}
+                              <span className="text-primary mr-2 text-base">✓</span>
+                              <span className="text-foreground">{benefit}</span>
                             </li>
                           ))
                         ) : (
@@ -286,14 +290,14 @@ export default function ServicesPage() {
                       </ul>
                     </div>
 
-                    <div>
-                      <h4 className="font-semibold text-sm mb-2">Incluye:</h4>
-                      <ul className="space-y-1">
+                    <div className="p-4 border border-border/50 rounded-xl glass-card">
+                      <h4 className="font-semibold text-base mb-3">Incluye:</h4>
+                      <ul className="space-y-2">
                         {service.includes && service.includes.length > 0 ? (
                           service.includes.map((item, index) => (
                             <li key={index} className="text-sm text-muted flex items-start">
-                              <span className="text-secondary mr-2">•</span>
-                              {item}
+                              <span className="text-secondary mr-2 text-base">•</span>
+                              <span className="text-foreground">{item}</span>
                             </li>
                           ))
                         ) : (
@@ -302,18 +306,24 @@ export default function ServicesPage() {
                       </ul>
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <div className="flex items-center justify-between pt-4 border-t border-border/50">
                       <div>
-                        <div className="text-2xl font-bold">${service.price}</div>
-                        <div className="text-xs text-muted">{service.duration_estimate}</div>
+                        <div className="text-3xl font-bold gradient-text-primary">${service.price}</div>
+                        <div className="text-sm text-muted">{service.duration_estimate}</div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" href={`/servicios/${service.slug}`}>
+                      <div className="flex gap-3">
+                        <a
+                          href={`/servicios/${service.slug}`}
+                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 border border-border bg-transparent hover:bg-card pointer-events-auto cursor-pointer"
+                        >
                           Ver detalles
-                        </Button>
-                        <Button variant="primary" size="sm" onClick={() => handleRequestService(service.id)}>
+                        </a>
+                        <button
+                          onClick={() => handleRequestService(service.id)}
+                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 bg-primary text-white hover:bg-primary/90 pointer-events-auto cursor-pointer shimmer-button"
+                        >
                           Solicitar
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -325,15 +335,20 @@ export default function ServicesPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-4 bg-card/50">
+      <section className="py-24 px-4 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10">
         <div className="container mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">¿No encuentras lo que buscas?</h2>
-          <p className="text-muted mb-8 max-w-2xl mx-auto">
-            Ofrecemos servicios personalizados adaptados a tus necesidades específicas. Contáctanos para discutir tu proyecto.
-          </p>
-          <Button variant="primary" size="lg" href="/contacto">
-            Contactar para Servicio Personalizado
-          </Button>
+          <div className="max-w-3xl mx-auto animate-fade-in-scale">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 gradient-text-secondary">¿No encuentras lo que buscas?</h2>
+            <p className="text-xl text-muted mb-8 max-w-2xl mx-auto text-headline">
+              Ofrecemos servicios personalizados adaptados a tus necesidades específicas. Contáctanos para discutir tu proyecto.
+            </p>
+            <a
+              href="/contacto"
+              className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-14 px-10 text-lg bg-primary text-white hover:bg-primary/90 pointer-events-auto cursor-pointer shimmer-button hover-lift"
+            >
+              Contactar para Servicio Personalizado
+            </a>
+          </div>
         </div>
       </section>
 
