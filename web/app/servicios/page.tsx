@@ -216,10 +216,13 @@ export default function ServicesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <div className="animated-bg"></div>
+      <div className="animated-bg-overlay"></div>
+      <div className="relative z-10">
+        <Navbar />
 
       {/* Header */}
-      <section className="pt-32 pb-12 px-4 hero-bg animated-gradient-bg">
+      <section className="pt-32 pb-12 px-4">
         <div className="container mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text-primary animate-fade-in-up">Nuestros Servicios</h1>
           <p className="text-xl md:text-2xl text-muted max-w-2xl mx-auto text-headline animate-fade-in-up" style={{ animationDelay: '0.1s' }}>

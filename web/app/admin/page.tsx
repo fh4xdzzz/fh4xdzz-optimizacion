@@ -194,10 +194,13 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <div className="animated-bg"></div>
+      <div className="animated-bg-overlay"></div>
+      <div className="relative z-10">
+        <Navbar />
 
       {/* Header */}
-      <section className="pt-32 pb-12 px-4 hero-bg animated-gradient-bg">
+      <section className="pt-32 pb-12 px-4">
         <div className="container mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>

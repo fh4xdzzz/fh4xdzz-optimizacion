@@ -6,11 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <div className="animated-bg"></div>
+      <div className="animated-bg-overlay"></div>
+      <div className="relative z-10">
+        <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 hero-bg animated-gradient-bg relative z-10">
-        <div className="container mx-auto text-center relative z-20">
+      <section className="pt-32 pb-20 px-4">
+        <div className="container mx-auto text-center">
           <div className="max-w-4xl mx-auto animate-fade-in-up">
             <h1 className="text-5xl md:text-7xl font-bold mb-6 text-display gradient-text-primary hero-title-glow hero-title-stroke">
               Optimización Profesional para Streaming y Gaming
