@@ -3,7 +3,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 
 export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'href'> {
-  variant?: "primary" | "secondary" | "outline" | "ghost"
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive"
   size?: "sm" | "md" | "lg"
   href?: string
   target?: string
@@ -19,6 +19,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         "bg-secondary text-white hover:bg-secondary/90": variant === "secondary",
         "border border-border bg-transparent hover:bg-card": variant === "outline",
         "hover:bg-card/50": variant === "ghost",
+        "bg-red-600 text-white hover:bg-red-700": variant === "destructive",
         "h-8 px-3 text-sm": size === "sm",
         "h-10 px-4": size === "md",
         "h-12 px-6 text-lg": size === "lg",

@@ -148,7 +148,7 @@ export default function AdminPage() {
         return
       }
 
-      await deleteSupabaseOrder(orderId, session.user.id, session.user.role)
+      await deleteSupabaseOrder(orderId, session.user.id, session.user.role || 'client')
 
       // Recargar pedidos
       await loadAdminData()
