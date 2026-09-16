@@ -14,18 +14,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Capturar el pago en PayPal
-    const response = await fetch(
-      `https://api-m.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from(
-            `${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
-          ).toString('base64')}`,
-        },
-      }
-    )
+    const paypalApiUrl = process.env.PAYPAL_MODE === 'sandbox'
+      ? `https://api-m.sandbox.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`
+      : `https://api-m.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`
+
+    const response = await fetch(paypalApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(
+          `${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+        ).toString('base64')}`,
+      },
+    })
 
     const data = await response.json()
 

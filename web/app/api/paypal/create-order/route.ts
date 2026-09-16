@@ -14,7 +14,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear orden en PayPal
-    const response = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
+    const paypalApiUrl = process.env.PAYPAL_MODE === 'sandbox'
+      ? 'https://api-m.sandbox.paypal.com/v2/checkout/orders'
+      : 'https://api-m.paypal.com/v2/checkout/orders'
+
+    const response = await fetch(paypalApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
