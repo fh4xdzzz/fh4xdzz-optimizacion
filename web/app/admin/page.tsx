@@ -51,6 +51,7 @@ export default function AdminPage() {
   const [newStatus, setNewStatus] = useState('')
   const [orderNote, setOrderNote] = useState('')
   const [userRole, setUserRole] = useState<'client' | 'admin' | 'staff' | 'owner'>('client')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const router = useRouter()
   const isDemo = isDemoMode()
 
@@ -126,6 +127,39 @@ export default function AdminPage() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      if (userRole !== 'owner') {
+        alert('Solo el owner puede eliminar pedidos')
+        return
+      }
+
+      const confirmed = confirm('¿Estás seguro de que quieres eliminar este pedido? Esta acción no se puede deshacer.')
+      if (!confirmed) return
+
+      // Importar la función de eliminación
+      const { deleteSupabaseOrder } = await import('@/lib/supabase/orders')
+
+      const session = await getSession()
+      if (!session) {
+        alert('Debes iniciar sesión para eliminar pedidos')
+        return
+      }
+
+      await deleteSupabaseOrder(orderId, session.user.id, session.user.role)
+
+      // Recargar pedidos
+      await loadAdminData()
+      setDeleteConfirm(null)
+      setShowOrderModal(false)
+      setSelectedOrder(null)
+      alert('Pedido eliminado exitosamente')
+    } catch (error) {
+      console.error('Error al eliminar pedido:', error)
+      alert('Error al eliminar pedido: ' + (error as Error).message)
+    }
   }
 
   const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -312,15 +346,17 @@ export default function AdminPage() {
                     {orders.map((order) => (
                       <div
                         key={order.id}
-                        className="flex items-center justify-between p-4 border border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => {
-                          setSelectedOrder(order)
-                          setNewStatus(order.status)
-                          setOrderNote('')
-                          setShowOrderModal(true)
-                        }}
+                        className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/50 transition-colors"
                       >
-                        <div className="flex-1">
+                        <div
+                          className="flex-1 cursor-pointer"
+                          onClick={() => {
+                            setSelectedOrder(order)
+                            setNewStatus(order.status)
+                            setOrderNote('')
+                            setShowOrderModal(true)
+                          }}
+                        >
                           <div className="flex items-center gap-3 mb-2">
                             <div className="font-medium">{order.order_number}</div>
                             <div className={`w-2 h-2 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'}`} />
@@ -330,7 +366,29 @@ export default function AdminPage() {
                             {order.service_name} • {formatDate(order.created_at)}
                           </div>
                         </div>
-                        <div className="text-sm text-muted">Click para ver detalles</div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedOrder(order)
+                              setNewStatus(order.status)
+                              setOrderNote('')
+                              setShowOrderModal(true)
+                            }}
+                          >
+                            Ver detalles
+                          </Button>
+                          {userRole === 'owner' && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteOrder(order.id)}
+                            >
+                              Eliminar
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -736,6 +794,25 @@ export default function AdminPage() {
                 >
                   Cancelar
                 </Button>
+                {userRole === 'owner' && (
+                  <>
+                    {deleteConfirm === selectedOrder.id ? (
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleDeleteOrder(selectedOrder.id)}
+                      >
+                        Confirmar
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setDeleteConfirm(selectedOrder.id)}
+                      >
+                        Eliminar
+                      </Button>
+                    )}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
