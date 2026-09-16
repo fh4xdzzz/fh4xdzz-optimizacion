@@ -52,8 +52,6 @@ export default function AdminPage() {
   const [orderNote, setOrderNote] = useState('')
   const [userRole, setUserRole] = useState<'client' | 'admin' | 'staff' | 'owner'>('client')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false)
-  const [maintenanceMessage, setMaintenanceMessage] = useState('Sitio en mantenimiento. Vuelve pronto.')
   const router = useRouter()
   const isDemo = isDemoMode()
 
@@ -113,13 +111,6 @@ export default function AdminPage() {
       // Cargar datos de administración
       if (!isDemo) {
         await loadAdminData()
-        // Cargar configuración de mantenimiento
-        const { getMaintenanceSettings } = await import('@/lib/maintenance')
-        const maintenanceSettings = await getMaintenanceSettings()
-        if (maintenanceSettings) {
-          setMaintenanceEnabled(maintenanceSettings.enabled)
-          setMaintenanceMessage(maintenanceSettings.message)
-        }
       }
 
       setLoading(false)
@@ -168,61 +159,6 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error al eliminar pedido:', error)
       alert('Error al eliminar pedido: ' + (error as Error).message)
-    }
-  }
-
-  const handleMaintenanceToggle = async () => {
-    try {
-      if (userRole !== 'owner') {
-        alert('Solo el owner puede cambiar el modo mantenimiento')
-        return
-      }
-
-      const { updateMaintenanceSettings } = await import('@/lib/maintenance')
-      const result = await updateMaintenanceSettings(
-        !maintenanceEnabled,
-        maintenanceMessage,
-        userRole
-      )
-
-      if (result.success) {
-        setMaintenanceEnabled(!maintenanceEnabled)
-        alert(!maintenanceEnabled ? 'Modo mantenimiento activado' : 'Modo mantenimiento desactivado')
-      } else {
-        alert(result.error || 'Error al actualizar modo mantenimiento')
-      }
-    } catch (error) {
-      console.error('Error al cambiar modo mantenimiento:', error)
-      alert('Error al cambiar modo mantenimiento')
-    }
-  }
-
-  const handleMaintenanceMessageChange = async (newMessage: string) => {
-    setMaintenanceMessage(newMessage)
-  }
-
-  const handleSaveMaintenanceSettings = async () => {
-    try {
-      if (userRole !== 'owner') {
-        alert('Solo el owner puede cambiar el modo mantenimiento')
-        return
-      }
-
-      const { updateMaintenanceSettings } = await import('@/lib/maintenance')
-      const result = await updateMaintenanceSettings(
-        maintenanceEnabled,
-        maintenanceMessage,
-        userRole
-      )
-
-      if (result.success) {
-        alert('Configuración de mantenimiento guardada')
-      } else {
-        alert(result.error || 'Error al guardar configuración')
-      }
-    } catch (error) {
-      console.error('Error al guardar configuración de mantenimiento:', error)
-      alert('Error al guardar configuración')
     }
   }
 
@@ -664,47 +600,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Modo de Mantenimiento</CardTitle>
-                  <CardDescription>Desactiva el sitio temporalmente</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Activar modo de mantenimiento</div>
-                      <div className="text-sm text-muted">El sitio mostrará un mensaje de mantenimiento</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={maintenanceEnabled}
-                      onChange={handleMaintenanceToggle}
-                      className="w-5 h-5"
-                      disabled={userRole !== 'owner'}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Mensaje de mantenimiento</label>
-                    <textarea
-                      value={maintenanceMessage}
-                      onChange={(e) => handleMaintenanceMessageChange(e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
-                      disabled={userRole !== 'owner'}
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSaveMaintenanceSettings}
-                    disabled={userRole !== 'owner'}
-                  >
-                    Guardar cambios
-                  </Button>
-                  {maintenanceEnabled && (
-                    <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 px-4 py-2 rounded-lg text-sm">
-                      ⚠️ El modo mantenimiento está activo. Los usuarios verán la página de mantenimiento.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+
 
               <Card>
                 <CardHeader>
