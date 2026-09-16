@@ -20,8 +20,8 @@ export default function Home() {
               Lleva tu setup al siguiente nivel.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="primary" size="lg" href="/contacto">
-                Solicitar Servicio
+              <Button variant="primary" size="lg" href="/servicios">
+                Ver Servicios
               </Button>
               <Button variant="secondary" size="lg" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
                 Unirse a Discord
@@ -261,11 +261,11 @@ export default function Home() {
               Únete a cientos de clientes satisfechos que han mejorado su experiencia de streaming y gaming.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="primary" size="lg" href="/contacto">
-                Solicitar Servicio Ahora
+              <Button variant="primary" size="lg" href="/servicios">
+                Ver Servicios
               </Button>
-              <Button variant="outline" size="lg" href="/servicios">
-                Ver Todos los Servicios
+              <Button variant="outline" size="lg" href="/contacto">
+                Contactar
               </Button>
             </div>
           </div>
