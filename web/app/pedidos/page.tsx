@@ -38,6 +38,8 @@ export default function OrdersPage() {
   const [showAllOrders, setShowAllOrders] = useState(false)
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   // Cargar pedidos del usuario desde Supabase
   const loadOrders = async () => {
@@ -78,7 +80,53 @@ export default function OrdersPage() {
 
   useEffect(() => {
     loadOrders()
+    checkUserRole()
   }, [])
+
+  const checkUserRole = async () => {
+    try {
+      const session = await getSession()
+      if (session?.user?.role === 'owner') {
+        setUserRole('owner')
+      }
+    } catch (error) {
+      console.error('Error checking user role:', error)
+    }
+  }
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      const session = await getSession()
+      if (!session) {
+        alert('Debes iniciar sesión para eliminar pedidos')
+        return
+      }
+
+      if (session.user.role !== 'owner') {
+        alert('Solo el owner puede eliminar pedidos')
+        return
+      }
+
+      const confirmed = confirm('¿Estás seguro de que quieres eliminar este pedido? Esta acción no se puede deshacer.')
+      if (!confirmed) return
+
+      // Importar la función de eliminación
+      const { deleteSupabaseOrder } = await import('@/lib/supabase/orders')
+
+      await deleteSupabaseOrder(orderId, session.user.id, session.user.role)
+
+      // Recargar pedidos
+      if (searchResult?.id === orderId) {
+        setSearchResult(null)
+      }
+      loadOrders()
+      setDeleteConfirm(null)
+      alert('Pedido eliminado exitosamente')
+    } catch (error) {
+      console.error('Error al eliminar pedido:', error)
+      alert('Error al eliminar pedido: ' + (error as Error).message)
+    }
+  }
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -235,6 +283,38 @@ export default function OrdersPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Botón de eliminar - solo para owner */}
+                  {userRole === 'owner' && (
+                    <div className="pt-4 border-t border-border">
+                      {deleteConfirm === searchResult.id ? (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteOrder(searchResult.id)}
+                          >
+                            Confirmar eliminación
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteConfirm(null)}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeleteConfirm(searchResult.id)}
+                        >
+                          Eliminar pedido
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -268,17 +348,28 @@ export default function OrdersPage() {
                         <div className="text-sm text-muted">{order.service_name || 'ID: ' + order.service_id}</div>
                         <div className="text-xs text-muted mt-1">{formatDate(order.created_at)}</div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setOrderNumber(order.order_number)
-                          setSearchResult(order)
-                          setShowAllOrders(false)
-                        }}
-                      >
-                        Ver detalles
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setOrderNumber(order.order_number)
+                            setSearchResult(order)
+                            setShowAllOrders(false)
+                          }}
+                        >
+                          Ver detalles
+                        </Button>
+                        {userRole === 'owner' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteOrder(order.id)}
+                          >
+                            Eliminar
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

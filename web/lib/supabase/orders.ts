@@ -163,6 +163,51 @@ function generateOrderNumber(): string {
   return `ORD${dateStr}${random}`
 }
 
+// Eliminar pedido (solo owner)
+export async function deleteSupabaseOrder(orderId: string, userId: string, userRole: string) {
+  try {
+    // Verificar si el usuario es owner
+    if (userRole !== 'owner') {
+      throw new Error('Solo el owner puede eliminar pedidos')
+    }
+
+    // Verificar que el pedido existe
+    const { data: order } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single()
+
+    if (!order) {
+      throw new Error('Pedido no encontrado')
+    }
+
+    // Eliminar eventos del pedido primero (por restricciones de clave foránea)
+    const { error: eventsError } = await supabase
+      .from('order_events')
+      .delete()
+      .eq('order_id', orderId)
+
+    if (eventsError) {
+      console.error('Error deleting order events:', eventsError)
+      // Continuar aunque falle la eliminación de eventos
+    }
+
+    // Eliminar el pedido
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId)
+
+    if (error) throw error
+
+    return { success: true, message: 'Pedido eliminado exitosamente' }
+  } catch (error) {
+    console.error('Error deleting order:', error)
+    throw error
+  }
+}
+
 // Verificar si Supabase está configurado
 export function isSupabaseConfigured(): boolean {
   return !!(
