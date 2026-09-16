@@ -33,13 +33,13 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-strong border-b border-border/50 glass-card">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src="/logo.png" alt="TheDulcanDesign Logo" width={32} height={32} className="rounded-lg" />
-            <span className="font-bold text-lg">TheDulcanDesign</span>
+          <Link href="/" className="flex items-center space-x-3 hover:scale-105 transition-transform duration-300">
+            <Image src="/logo.png" alt="TheDulcanDesign Logo" width={40} height={40} className="rounded-lg animate-float" />
+            <span className="font-bold text-xl gradient-text-primary">TheDulcanDesign</span>
           </Link>
 
           {/* Desktop Navigation */}
