@@ -28,8 +28,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     )
 
     if (href) {
+      // Check if it's an external link
+      const isExternal = href.startsWith('http://') || href.startsWith('https://')
+      
+      if (isExternal) {
+        return (
+          <a href={href} className={buttonClasses} target={target || '_blank'} rel={rel || 'noopener noreferrer'}>
+            {children}
+          </a>
+        )
+      }
+      
       return (
-        <Link href={href} className={buttonClasses} target={target} rel={rel}>
+        <Link href={href} className={buttonClasses}>
           {children}
         </Link>
       )
