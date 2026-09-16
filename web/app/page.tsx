@@ -23,9 +23,14 @@ export default function Home() {
               <Button variant="primary" size="lg" href="/servicios" className="shimmer-button animate-bounce-subtle text-lg px-8 py-4">
                 Ver Servicios
               </Button>
-              <Button variant="secondary" size="lg" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer" className="hover-lift text-lg px-8 py-4">
+              <a 
+                href="https://discord.gg/DXkEXrYRvM" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-secondary text-white hover:bg-secondary/90 h-12 px-6 text-lg"
+              >
                 Unirse a Discord
-              </Button>
+              </a>
             </div>
           </div>
         </div>
