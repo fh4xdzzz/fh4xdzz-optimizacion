@@ -466,7 +466,7 @@ export default function AdminPage() {
                       <label className="text-sm font-medium mb-2 block">Email de contacto</label>
                       <input
                         type="email"
-                        defaultValue="contact@thedulcandesign.com"
+                        defaultValue="thedulcandesign@gmail.com"
                         className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>

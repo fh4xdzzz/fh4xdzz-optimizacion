@@ -408,8 +408,8 @@ function ContactFormContent() {
                 <p className="text-muted mb-4">
                   Envíanos un email para consultas formales
                 </p>
-                <Button variant="outline" className="w-full" href="mailto:contact@fh4xdzz.com">
-                  contact@fh4xdzz.com
+                <Button variant="outline" className="w-full" href="mailto:thedulcandesign@gmail.com">
+                  thedulcandesign@gmail.com
                 </Button>
               </CardContent>
             </Card>

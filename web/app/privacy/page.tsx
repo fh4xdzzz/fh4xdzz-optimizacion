@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             <div className="bg-card border border-border rounded-lg p-6">
               <h2 className="text-2xl font-bold mb-4">7. Contacto</h2>
               <p className="text-muted">
-                Si tienes preguntas sobre esta política de privacidad, contáctanos en contact@fh4xdzz.com
+                Si tienes preguntas sobre esta política de privacidad, contáctanos en thedulcandesign@gmail.com
               </p>
             </div>
           </div>

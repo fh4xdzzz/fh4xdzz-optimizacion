@@ -76,8 +76,8 @@ export default function Footer() {
             <h3 className="font-semibold mb-4">Contacto</h3>
             <ul className="space-y-2 text-sm text-muted">
               <li>
-                <a href="mailto:contact@fh4xdzz.com" className="hover:text-foreground transition-colors">
-                  contact@fh4xdzz.com
+                <a href="mailto:thedulcandesign@gmail.com" className="hover:text-foreground transition-colors">
+                  thedulcandesign@gmail.com
                 </a>
               </li>
               <li>
