@@ -9,8 +9,8 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 hero-bg animated-gradient-bg">
-        <div className="container mx-auto text-center">
+      <section className="pt-32 pb-20 px-4 hero-bg animated-gradient-bg relative z-10">
+        <div className="container mx-auto text-center relative z-20">
           <div className="max-w-4xl mx-auto animate-fade-in-up">
             <h1 className="text-5xl md:text-7xl font-bold mb-6 text-display gradient-text-primary hero-title-glow hero-title-stroke">
               Optimización Profesional para Streaming y Gaming
@@ -19,7 +19,7 @@ export default function Home() {
               Expertos en configuración de OBS, streaming, optimización de PC y soporte técnico.
               Lleva tu setup al siguiente nivel con resultados profesionales.
             </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center relative z-30">
               <Button variant="primary" size="lg" href="/servicios" className="shimmer-button animate-bounce-subtle text-lg px-8 py-4">
                 Ver Servicios
               </Button>
@@ -27,7 +27,7 @@ export default function Home() {
                 href="https://discord.gg/DXkEXrYRvM" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-secondary text-white hover:bg-secondary/90 h-12 px-6 text-lg"
+                className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-secondary text-white hover:bg-secondary/90 h-12 px-6 text-lg cursor-pointer pointer-events-auto"
               >
                 Unirse a Discord
               </a>
