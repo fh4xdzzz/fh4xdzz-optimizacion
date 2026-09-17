@@ -7,9 +7,10 @@ import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSession, signOut, isDemoMode, isSupabaseMode } from '@/lib/auth-hybrid'
+import { createClient } from '@/lib/supabase/client'
 
 export default function ProfilePage() {
-  const [session, setSession] = useState<{ user: { full_name?: string; email: string; discord_id?: string; discord_username?: string; role?: string } } | null>(null)
+  const [session, setSession] = useState<{ user: { id?: string; full_name?: string; email: string; discord_id?: string; discord_username?: string; role?: string } } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -104,6 +105,11 @@ export default function ProfilePage() {
   }
 
   const handleUnlinkDiscord = async () => {
+    if (!session?.user?.id) {
+      setError('No hay sesión activa')
+      return
+    }
+
     setLoading(true)
     setError('')
     setSuccess('')
@@ -116,7 +122,7 @@ export default function ProfilePage() {
           discord_id: null,
           discord_username: null,
         })
-        .eq('id', session?.user?.id)
+        .eq('id', session.user.id)
 
       if (error) throw error
 
