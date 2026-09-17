@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -100,7 +101,8 @@ export async function GET(request: NextRequest) {
 
     // Crear nuevo usuario con Discord
     // Primero crear en Supabase Auth
-    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+    // Generar una contraseña segura que cumpla con los requisitos de Supabase (mínimo 6 caracteres)
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: discordUser.email || `${discordUser.username}@discord.temp`,
       password: tempPassword,
@@ -136,35 +138,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/register?error=create_error', request.url))
     }
 
-    // Crear sesión en Supabase Auth
-    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
-      email: discordUser.email || `${discordUser.username}@discord.temp`,
-      password: tempPassword,
+    // Esperar un momento para asegurar que el usuario esté completamente creado en Supabase
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // Crear sesión usando el admin API para auto-login confiable
+    const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
+      userId: authUser.user.id,
     })
 
-    if (sessionError) {
+    if (sessionError || !sessionData.session) {
       console.error('Error creating session:', sessionError)
       // Si falla la sesión, redirigir al login con mensaje
       return NextResponse.redirect(new URL('/auth/login?discord_registered=true', request.url))
     }
 
-    // Crear cookie de sesión
+    // Crear respuesta de redirección
     const response = NextResponse.redirect(new URL('/perfil', request.url))
-    const accessToken = sessionData.session.access_token
-    const refreshToken = sessionData.session.refresh_token
 
-    response.cookies.set('sb-access-token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 días
-    })
+    // Usar createServerClient con el patrón setAll para establecer las cookies
+    const supabaseSSR = createServerClient(
+      supabaseUrl,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set({ name, value, ...options })
+            })
+          },
+        },
+      }
+    )
 
-    response.cookies.set('sb-refresh-token', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 días
+    // Establecer la sesión usando los tokens
+    await supabaseSSR.auth.setSession({
+      access_token: sessionData.session.access_token,
+      refresh_token: sessionData.session.refresh_token,
     })
 
     return response
