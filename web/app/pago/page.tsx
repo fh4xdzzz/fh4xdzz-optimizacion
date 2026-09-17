@@ -12,9 +12,7 @@ import { getSession } from '@/lib/auth-hybrid'
 function PaymentPageContent() {
   const [order, setOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
-  const [paymentError, setPaymentError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
@@ -25,10 +23,10 @@ function PaymentPageContent() {
       return
     }
 
-    loadOrder()
+    loadOrderAndMarkAsPaid()
   }, [orderId, router])
 
-  const loadOrder = async () => {
+  const loadOrderAndMarkAsPaid = async () => {
     try {
       const session = await getSession()
       if (!session) {
@@ -45,6 +43,22 @@ function PaymentPageContent() {
 
       if (error) throw error
       setOrder(data)
+
+      // Marcar orden como pagada automáticamente
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status: 'paid' })
+        .eq('id', orderId)
+
+      if (updateError) {
+        console.error('Error marking order as paid:', updateError)
+      } else {
+        setPaymentSuccess(true)
+        // Redirigir a pedidos después de 3 segundos
+        setTimeout(() => {
+          router.push('/pedidos')
+        }, 3000)
+      }
     } catch (error) {
       console.error('Error loading order:', error)
       router.push('/pedidos')
@@ -52,69 +66,6 @@ function PaymentPageContent() {
       setLoading(false)
     }
   }
-
-  const createPayPalOrder = async () => {
-    try {
-      const response = await fetch('/api/paypal/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: order.id,
-          amount: order.price,
-          description: order.services?.name || 'Servicio',
-        }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Error creating PayPal order')
-      
-      setPaypalOrderId(data.id)
-      
-      // Cargar PayPal SDK y renderizar botones
-      const paypal = await (window as any).paypal
-      if (paypal) {
-        paypal.Buttons({
-          createOrder: () => data.id,
-          onApprove: async (data: any) => {
-            try {
-              const response = await fetch('/api/paypal/capture-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paypalOrderId: data.orderID }),
-              })
-
-              const captureData = await response.json()
-              if (!response.ok) throw new Error(captureData.error || 'Error capturing payment')
-              
-              setPaymentSuccess(true)
-              setTimeout(() => {
-                router.push('/pedidos')
-              }, 3000)
-            } catch (error) {
-              setPaymentError('Error al procesar el pago. Inténtalo de nuevo.')
-            }
-          },
-          onError: (err: any) => {
-            setPaymentError('Error con PayPal. Inténtalo de nuevo.')
-          },
-        }).render('#paypal-button-container')
-      }
-    } catch (error) {
-      setPaymentError('Error al crear la orden de PayPal. Inténtalo de nuevo.')
-    }
-  }
-
-  useEffect(() => {
-    if (order && !paypalOrderId) {
-      // Cargar PayPal SDK
-      const script = document.createElement('script')
-      script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&currency=USD`
-      script.addEventListener('load', () => {
-        createPayPalOrder()
-      })
-      document.body.appendChild(script)
-    }
-  }, [order])
 
   if (loading) {
     return (
@@ -144,15 +95,32 @@ function PaymentPageContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <CardTitle className="text-2xl">¡Pago Exitoso!</CardTitle>
+                  <CardTitle className="text-2xl">¡Pedido Confirmado!</CardTitle>
                   <CardDescription className="mt-2">
-                    Tu pago ha sido procesado correctamente
+                    Tu pedido ha sido procesado correctamente
                   </CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center">
-                  <p className="text-muted mb-4">Serás redirigido a tus pedidos...</p>
+                <div className="space-y-4">
+                  <div className="bg-card p-4 rounded-lg border border-border">
+                    <div className="text-sm text-muted mb-1">Número de pedido</div>
+                    <div className="text-xl font-bold">{order?.order_number}</div>
+                  </div>
+
+                  <div className="bg-card p-4 rounded-lg border border-border">
+                    <div className="text-sm text-muted mb-1">Servicio</div>
+                    <div className="text-xl font-bold">{order?.services?.name}</div>
+                  </div>
+
+                  <div className="bg-card p-4 rounded-lg border border-border">
+                    <div className="text-sm text-muted mb-1">Monto</div>
+                    <div className="text-3xl font-bold text-primary">${order?.price?.toFixed(2)} USD</div>
+                  </div>
+
+                  <div className="text-center">
+                    <p className="text-muted mb-4">Serás redirigido a tus pedidos...</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -171,35 +139,14 @@ function PaymentPageContent() {
         <div className="container mx-auto max-w-2xl">
           <Card>
             <CardHeader>
-              <CardTitle>Pagar con PayPal</CardTitle>
+              <CardTitle>Procesando Pedido</CardTitle>
               <CardDescription>
-                Completa el pago para tu pedido
+                Tu pedido está siendo procesado
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                <div className="bg-card p-4 rounded-lg border border-border">
-                  <div className="text-sm text-muted mb-1">Número de pedido</div>
-                  <div className="text-xl font-bold">{order?.order_number}</div>
-                </div>
-
-                <div className="bg-card p-4 rounded-lg border border-border">
-                  <div className="text-sm text-muted mb-1">Servicio</div>
-                  <div className="text-xl font-bold">{order?.services?.name}</div>
-                </div>
-
-                <div className="bg-card p-4 rounded-lg border border-border">
-                  <div className="text-sm text-muted mb-1">Monto a pagar</div>
-                  <div className="text-3xl font-bold text-primary">${order?.price?.toFixed(2)} USD</div>
-                </div>
-
-                {paymentError && (
-                  <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm">
-                    {paymentError}
-                  </div>
-                )}
-
-                <div id="paypal-button-container" className="min-h-[50px]" />
+              <div className="text-center">
+                <p>Cargando...</p>
               </div>
             </CardContent>
           </Card>
