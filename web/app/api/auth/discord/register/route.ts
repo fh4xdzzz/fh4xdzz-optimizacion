@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         client_secret: process.env.DISCORD_CLIENT_SECRET!,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI!,
+        redirect_uri: 'https://www.thedulcandesign.com/api/auth/discord/register',
       }),
     })
 
@@ -45,10 +45,16 @@ export async function GET(request: NextRequest) {
     })
 
     const discordUser = await userResponse.json()
+    console.log('Discord user info:', discordUser)
+
+    // Verificar si Discord proporcionó email
+    if (!discordUser.email) {
+      console.warn('Discord did not provide email for user:', discordUser.username)
+    }
 
     // Crear o actualizar usuario en Supabase
     // Verificar si el usuario ya existe por Discord ID
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('discord_id', discordUser.id)
@@ -56,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     if (existingUser) {
       // Usuario ya existe, actualizar datos y redirigir a login
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('users')
         .update({
           discord_username: `${discordUser.username}#${discordUser.discriminator}`,
@@ -74,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Verificar si existe usuario con el mismo email de Discord
     if (discordUser.email) {
-      const { data: emailUser } = await supabase
+      const { data: emailUser } = await supabaseAdmin
         .from('users')
         .select('*')
         .eq('email', discordUser.email)
@@ -82,7 +88,7 @@ export async function GET(request: NextRequest) {
 
       if (emailUser) {
         // Usuario existe con ese email, vincular Discord
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from('users')
           .update({
             discord_id: discordUser.id,
@@ -100,10 +106,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Crear nuevo usuario con Discord
-    // Primero crear en Supabase Auth
+    // Primero crear en Supabase Auth usando admin client
     // Generar una contraseña segura que cumpla con los requisitos de Supabase (mínimo 6 caracteres)
     const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: discordUser.email || `${discordUser.username}@discord.temp`,
       password: tempPassword,
       email_confirm: true,
@@ -116,11 +122,14 @@ export async function GET(request: NextRequest) {
 
     if (authError) {
       console.error('Error creating auth user:', authError)
+      console.error('Auth error details:', JSON.stringify(authError, null, 2))
       return NextResponse.redirect(new URL('/auth/register?error=create_error', request.url))
     }
 
+    console.log('Auth user created successfully:', authUser.user.id)
+
     // Luego crear en la tabla public.users
-    const { data: newUser, error } = await supabase
+    const { data: newUser, error } = await supabaseAdmin
       .from('users')
       .insert({
         id: authUser.user.id,
@@ -134,24 +143,15 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating user:', error)
+      console.error('Error creating user in public.users table:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
       return NextResponse.redirect(new URL('/auth/register?error=create_error', request.url))
     }
 
+    console.log('User created in public.users table successfully')
+
     // Esperar un momento para asegurar que el usuario esté completamente creado en Supabase
     await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Crear sesión usando signInWithPassword con la contraseña temporal
-    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
-      email: discordUser.email || `${discordUser.username}@discord.temp`,
-      password: tempPassword,
-    })
-
-    if (sessionError || !sessionData.session) {
-      console.error('Error creating session:', sessionError)
-      // Si falla la sesión, redirigir al login con mensaje
-      return NextResponse.redirect(new URL('/auth/login?discord_registered=true', request.url))
-    }
 
     // Crear respuesta de redirección
     const response = NextResponse.redirect(new URL('/perfil', request.url))
@@ -174,12 +174,24 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Establecer la sesión usando los tokens
-    await supabaseSSR.auth.setSession({
-      access_token: sessionData.session.access_token,
-      refresh_token: sessionData.session.refresh_token,
+    // Crear sesión usando signInWithPassword con la contraseña temporal
+    // IMPORTANTE: Usar el cliente SSR (anon key) no el admin client
+    const { data: sessionData, error: sessionError } = await supabaseSSR.auth.signInWithPassword({
+      email: discordUser.email || `${discordUser.username}@discord.temp`,
+      password: tempPassword,
     })
 
+    if (sessionError || !sessionData.session) {
+      console.error('Error creating session:', sessionError)
+      console.error('Session error details:', JSON.stringify(sessionError, null, 2))
+      // Si falla la sesión, redirigir al login con mensaje
+      return NextResponse.redirect(new URL('/auth/login?discord_registered=true', request.url))
+    }
+
+    console.log('Session created successfully, redirecting to /perfil')
+
+    // La sesión ya está establecida automáticamente por signInWithPassword
+    // No necesitamos llamar a setSession manualmente
     return response
   } catch (error) {
     console.error('Discord register error:', error)

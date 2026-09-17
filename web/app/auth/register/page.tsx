@@ -56,7 +56,7 @@ export default function RegisterPage() {
     }
 
     const scopes = ['identify', 'email']
-    const redirectUri = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || 'https://www.thedulcandesign.com/api/auth/discord/register'
+    const redirectUri = 'https://www.thedulcandesign.com/api/auth/discord/register'
     const authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join(' ')}`
 
     window.location.href = authUrl
