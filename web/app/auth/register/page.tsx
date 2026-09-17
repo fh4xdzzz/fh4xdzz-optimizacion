@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
@@ -19,12 +19,12 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const isDemo = isDemoMode()
   const isSupabase = isSupabaseMode()
 
   // Verificar mensajes de error de URL
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search)
     const errorParam = searchParams.get('error')
 
     if (errorParam) {
@@ -37,10 +37,8 @@ export default function RegisterPage() {
         oauth_error: 'Error en el proceso de OAuth de Discord',
       }
       setError(errorMessages[errorParam] || 'Error al vincular cuenta de Discord')
-      // Limpiar URL
-      window.history.replaceState({}, '', '/auth/register')
     }
-  }, [])
+  }, [searchParams])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
