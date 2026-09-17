@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [session, setSession] = useState<{ user: { full_name?: string; email: string; discord_id?: string; discord_username?: string; role?: string } } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     full_name: '',
@@ -21,6 +22,28 @@ export default function ProfilePage() {
   const router = useRouter()
   const isDemo = isDemoMode()
   const isSupabase = isSupabaseMode()
+
+  // Verificar mensajes de éxito/error de URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const success = searchParams.get('success')
+    const errorParam = searchParams.get('error')
+
+    if (success === 'discord_linked') {
+      setSuccess('¡Cuenta de Discord vinculada exitosamente!')
+      // Limpiar URL
+      window.history.replaceState({}, '', '/perfil')
+    } else if (errorParam) {
+      const errorMessages: Record<string, string> = {
+        no_code: 'Error de autenticación: Código no proporcionado',
+        token_error: 'Error al obtener token de Discord',
+        update_error: 'Error al actualizar tu perfil',
+        oauth_error: 'Error en el proceso de OAuth',
+      }
+      setError(errorMessages[errorParam] || 'Error al vincular cuenta de Discord')
+      window.history.replaceState({}, '', '/perfil')
+    }
+  }, [])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -65,6 +88,52 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     await signOut()
     router.push('/')
+  }
+
+  const handleLinkDiscord = () => {
+    if (!process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID) {
+      setError('Discord OAuth no está configurado')
+      return
+    }
+
+    const scopes = ['identify', 'email']
+    const redirectUri = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || 'http://localhost:3000/api/auth/discord/callback'
+    const authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join(' ')}`
+    
+    window.location.href = authUrl
+  }
+
+  const handleUnlinkDiscord = async () => {
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('users')
+        .update({
+          discord_id: null,
+          discord_username: null,
+        })
+        .eq('id', session?.user?.id)
+
+      if (error) throw error
+
+      setSuccess('Cuenta de Discord desvinculada')
+      setSession({
+        ...session,
+        user: {
+          ...session.user,
+          discord_id: null,
+          discord_username: null,
+        }
+      })
+    } catch (err) {
+      setError('Error al desvincular cuenta de Discord')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (loading) {
@@ -184,6 +253,27 @@ export default function ProfilePage() {
                     <div>
                       <div className="text-sm text-muted mb-1">Usuario Discord</div>
                       <div className="font-medium">{session?.user?.discord_username || 'No vinculado'}</div>
+                    </div>
+
+                    <div className="pt-4 border-t border-border">
+                      {session?.user?.discord_id ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleUnlinkDiscord}
+                          disabled={loading}
+                        >
+                          {loading ? 'Desvinculando...' : 'Desvincular Discord'}
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="primary" 
+                          size="sm" 
+                          onClick={handleLinkDiscord}
+                        >
+                          Vincular Discord
+                        </Button>
+                      )}
                     </div>
 
                     <div>
