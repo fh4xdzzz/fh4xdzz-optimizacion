@@ -22,7 +22,25 @@ export default function RegisterPage() {
   const isDemo = isDemoMode()
   const isSupabase = isSupabaseMode()
 
-  const handleRegister = async (e: React.FormEvent) => {
+  // Verificar mensajes de error de URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const errorParam = searchParams.get('error')
+
+    if (errorParam) {
+      const errorMessages: Record<string, string> = {
+        no_code: 'Error de autenticación: Código no proporcionado',
+        token_error: 'Error al obtener token de Discord. Por favor intenta nuevamente.',
+        update_error: 'Error al actualizar tu perfil',
+        link_error: 'Error al vincular tu cuenta de Discord',
+        create_error: 'Error al crear tu cuenta',
+        oauth_error: 'Error en el proceso de OAuth de Discord',
+      }
+      setError(errorMessages[errorParam] || 'Error al vincular cuenta de Discord')
+      // Limpiar URL
+      window.history.replaceState({}, '', '/auth/register')
+    }
+  }, [])
     e.preventDefault()
     setLoading(true)
     setError('')
