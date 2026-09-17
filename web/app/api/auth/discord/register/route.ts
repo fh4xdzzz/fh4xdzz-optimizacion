@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,8 +46,6 @@ export async function GET(request: NextRequest) {
     const discordUser = await userResponse.json()
 
     // Crear o actualizar usuario en Supabase
-    const supabase = createClient()
-    
     // Verificar si el usuario ya existe por Discord ID
     const { data: existingUser } = await supabase
       .from('users')
@@ -97,9 +99,29 @@ export async function GET(request: NextRequest) {
     }
 
     // Crear nuevo usuario con Discord
+    // Primero crear en Supabase Auth
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: discordUser.email || `${discordUser.username}@discord.temp`,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        full_name: discordUser.username,
+        discord_id: discordUser.id,
+        discord_username: `${discordUser.username}#${discordUser.discriminator}`,
+      },
+    })
+
+    if (authError) {
+      console.error('Error creating auth user:', authError)
+      return NextResponse.redirect(new URL('/auth/register?error=create_error', request.url))
+    }
+
+    // Luego crear en la tabla public.users
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({
+        id: authUser.user.id,
         email: discordUser.email || `${discordUser.username}@discord.temp`,
         full_name: discordUser.username,
         discord_id: discordUser.id,
@@ -115,10 +137,37 @@ export async function GET(request: NextRequest) {
     }
 
     // Crear sesión en Supabase Auth
-    // Nota: Esto requeriría configuración adicional de Supabase Auth
-    // Por ahora, redirigimos al login para que el usuario complete el proceso
-    
-    return NextResponse.redirect(new URL('/auth/login?discord_registered=true', request.url))
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+      email: discordUser.email || `${discordUser.username}@discord.temp`,
+      password: tempPassword,
+    })
+
+    if (sessionError) {
+      console.error('Error creating session:', sessionError)
+      // Si falla la sesión, redirigir al login con mensaje
+      return NextResponse.redirect(new URL('/auth/login?discord_registered=true', request.url))
+    }
+
+    // Crear cookie de sesión
+    const response = NextResponse.redirect(new URL('/perfil', request.url))
+    const accessToken = sessionData.session.access_token
+    const refreshToken = sessionData.session.refresh_token
+
+    response.cookies.set('sb-access-token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 días
+    })
+
+    response.cookies.set('sb-refresh-token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 días
+    })
+
+    return response
   } catch (error) {
     console.error('Discord register error:', error)
     return NextResponse.redirect(new URL('/auth/register?error=oauth_error', request.url))
