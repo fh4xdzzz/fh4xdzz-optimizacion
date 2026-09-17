@@ -41,6 +41,8 @@ export default function RegisterPage() {
       window.history.replaceState({}, '', '/auth/register')
     }
   }, [])
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
