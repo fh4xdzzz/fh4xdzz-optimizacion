@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -150,49 +149,9 @@ export async function GET(request: NextRequest) {
 
     console.log('User created in public.users table successfully')
 
-    // Esperar un momento para asegurar que el usuario esté completamente creado en Supabase
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Crear respuesta de redirección
-    const response = NextResponse.redirect(new URL('/perfil', request.url))
-
-    // Usar createServerClient con el patrón setAll para establecer las cookies
-    const supabaseSSR = createServerClient(
-      supabaseUrl,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set({ name, value, ...options })
-            })
-          },
-        },
-      }
-    )
-
-    // Crear sesión usando signInWithPassword con la contraseña temporal
-    // IMPORTANTE: Usar el cliente SSR (anon key) no el admin client
-    const { data: sessionData, error: sessionError } = await supabaseSSR.auth.signInWithPassword({
-      email: discordUser.email || `${discordUser.username}@discord.temp`,
-      password: tempPassword,
-    })
-
-    if (sessionError || !sessionData.session) {
-      console.error('Error creating session:', sessionError)
-      console.error('Session error details:', JSON.stringify(sessionError, null, 2))
-      // Si falla la sesión, redirigir al login con mensaje
-      return NextResponse.redirect(new URL('/auth/login?discord_registered=true', request.url))
-    }
-
-    console.log('Session created successfully, redirecting to /perfil')
-
-    // La sesión ya está establecida automáticamente por signInWithPassword
-    // No necesitamos llamar a setSession manualmente
-    return response
+    // Redirigir al login con un indicador de que el usuario fue creado
+    // El usuario debe iniciar sesión manualmente con su email de Discord
+    return NextResponse.redirect(new URL('/auth/login?discord_registered=true&email=' + encodeURIComponent(discordUser.email || ''), request.url))
   } catch (error) {
     console.error('Discord register error:', error)
     return NextResponse.redirect(new URL('/auth/register?error=oauth_error', request.url))
