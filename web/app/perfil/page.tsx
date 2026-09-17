@@ -10,7 +10,7 @@ import { getSession, signOut, isDemoMode, isSupabaseMode } from '@/lib/auth-hybr
 import { createClient } from '@/lib/supabase/client'
 
 export default function ProfilePage() {
-  const [session, setSession] = useState<{ user: { id?: string; full_name?: string; email: string; discord_id?: string; discord_username?: string; role?: string } } | null>(null)
+  const [session, setSession] = useState<{ user: { id?: string; full_name?: string; email: string; discord_id?: string | null; discord_username?: string | null; role?: string } } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
