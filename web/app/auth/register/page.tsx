@@ -143,30 +143,27 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="animated-bg"></div>
-      <div className="animated-bg-overlay"></div>
-      <div className="relative z-10">
-        <Navbar />
+      <Navbar />
 
-        <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto max-w-md">
-            <Card className="glass-card hover-glow animate-fade-in-up">
-              <CardHeader>
-                <CardTitle className="text-3xl gradient-text-primary">Crear Cuenta</CardTitle>
-                <CardDescription className="text-base">
-                  {isSupabase 
-                    ? (
-                      <div className="space-y-2">
-                        <p>Regístrate para comenzar a solicitar servicios</p>
-                        <div className="bg-blue-500/10 border border-blue-500/50 text-blue-500 px-4 py-2 rounded-lg text-sm">
-                          📧 <strong>Requiere verificación de correo electrónico</strong>
-                        </div>
+      <section className="pt-32 pb-20 px-4">
+        <div className="container mx-auto max-w-md">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-3xl">Crear Cuenta</CardTitle>
+              <CardDescription className="text-base">
+                {isSupabase 
+                  ? (
+                    <div className="space-y-2">
+                      <p>Regístrate para comenzar a solicitar servicios</p>
+                      <div className="bg-blue-500/10 border border-blue-500/50 text-blue-500 px-4 py-2 rounded-lg text-sm">
+                        📧 <strong>Requiere verificación de correo electrónico</strong>
                       </div>
-                    )
-                    : 'Modo demo: Crea una cuenta de prueba'
-                  }
-                </CardDescription>
-              </CardHeader>
+                    </div>
+                  )
+                  : 'Modo demo: Crea una cuenta de prueba'
+                }
+              </CardDescription>
+            </CardHeader>
               <CardContent>
                 <form onSubmit={handleRegister} className="space-y-6">
                   {error && (
@@ -275,6 +272,5 @@ export default function RegisterPage() {
         </section>
         <Footer />
       </div>
-    </div>
-  )
+    )
 }
