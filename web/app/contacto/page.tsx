@@ -140,11 +140,14 @@ function ContactFormContent() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            type: 'order_created',
-            data: {
+            event_id: `order_${orderData.id}_${Date.now()}`,
+            event_type: 'order.created',
+            created_at: new Date().toISOString(),
+            payload: {
               order_id: orderData.id,
               order_number: orderData.order_number,
-              user_email: formData.email,
+              customer_name: formData.name,
+              customer_email: formData.email,
               service_name: service.name,
               description: formData.description
             }

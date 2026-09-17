@@ -82,6 +82,9 @@ class EventProcessor:
         # Enviar al canal de pedidos
         await self.send_to_channel('pedidos', embed)
 
+        # Enviar notificación directa a admin y owner
+        await self.notify_admins_and_owners(embed)
+
     async def handle_order_paid(self, event: Dict[str, Any]):
         """Manejar evento de pedido pagado"""
         payload = event.get('payload', {})
@@ -272,3 +275,39 @@ class EventProcessor:
             logger.warning(f"Canal #{channel_name} no encontrado en ningún servidor")
         except Exception as e:
             logger.error(f"Error enviando a canal #{channel_name}: {e}")
+
+    async def notify_admins_and_owners(self, embed: discord.Embed):
+        """Enviar notificación directa a usuarios con roles admin y owner"""
+        try:
+            for guild in self.bot.guilds:
+                # Buscar roles admin y owner
+                admin_role = discord.utils.get(guild.roles, name='admin')
+                owner_role = discord.utils.get(guild.roles, name='owner')
+
+                if not admin_role and not owner_role:
+                    logger.warning(f"No se encontraron roles admin u owner en {guild.name}")
+                    continue
+
+                # Obtener miembros con estos roles
+                members_to_notify = set()
+
+                if admin_role:
+                    for member in guild.members:
+                        if admin_role in member.roles:
+                            members_to_notify.add(member)
+
+                if owner_role:
+                    for member in guild.members:
+                        if owner_role in member.roles:
+                            members_to_notify.add(member)
+
+                # Enviar DM a cada miembro
+                for member in members_to_notify:
+                    try:
+                        await member.send(embed=embed)
+                        logger.info(f"Notificación enviada a {member.name} ({member.id})")
+                    except Exception as e:
+                        logger.error(f"Error enviando DM a {member.name}: {e}")
+
+        except Exception as e:
+            logger.error(f"Error notificando admins y owners: {e}")
