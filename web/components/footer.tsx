@@ -9,7 +9,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center space-x-3 mb-6">
-              <Image src="/logo.png" alt="TheDulcanDesign Logo" width={40} height={40} className="rounded-lg animate-float" />
+              <Image src="/logo.png" alt="TheDulcanDesign Logo" width={40} height={40} className="rounded-lg animate-float" style={{ width: 'auto', height: 'auto' }} />
               <span className="font-bold text-xl gradient-text-primary">TheDulcanDesign</span>
             </div>
             <p className="text-muted text-base leading-relaxed">

@@ -38,7 +38,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 hover:scale-105 transition-transform duration-300">
-            <Image src="/logo.png" alt="TheDulcanDesign Logo" width={40} height={40} className="rounded-lg animate-float" />
+            <Image src="/logo.png" alt="TheDulcanDesign Logo" width={40} height={40} className="rounded-lg animate-float" style={{ width: 'auto', height: 'auto' }} />
             <span className="font-bold text-xl gradient-text-primary">TheDulcanDesign</span>
           </Link>
 

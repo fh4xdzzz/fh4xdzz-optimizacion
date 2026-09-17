@@ -56,9 +56,9 @@ export default function RegisterPage() {
     }
 
     const scopes = ['identify', 'email']
-    const redirectUri = 'https://www.thedulcandesign.com/api/auth/discord/register'
+    const redirectUri = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || 'https://www.thedulcandesign.com/api/auth/discord/register'
     const authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join(' ')}`
-    
+
     window.location.href = authUrl
   }
 
@@ -129,10 +129,10 @@ export default function RegisterPage() {
             <CardHeader>
               <CardTitle className="text-3xl">Crear Cuenta</CardTitle>
               <CardDescription className="text-base">
-                {isSupabase 
+                {isSupabase
                   ? (
                     <div className="space-y-2">
-                      <p>Regístrate para comenzar a solicitar servicios</p>
+                      <div>Regístrate para comenzar a solicitar servicios</div>
                       <div className="bg-blue-500/10 border border-blue-500/50 text-blue-500 px-4 py-2 rounded-lg text-sm">
                         📧 <strong>Requiere verificación de correo electrónico</strong>
                       </div>
