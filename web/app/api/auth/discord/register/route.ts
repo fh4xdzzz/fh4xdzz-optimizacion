@@ -141,9 +141,10 @@ export async function GET(request: NextRequest) {
     // Esperar un momento para asegurar que el usuario esté completamente creado en Supabase
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    // Crear sesión usando el admin API para auto-login confiable
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
-      userId: authUser.user.id,
+    // Crear sesión usando signInWithPassword con la contraseña temporal
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+      email: discordUser.email || `${discordUser.username}@discord.temp`,
+      password: tempPassword,
     })
 
     if (sessionError || !sessionData.session) {
