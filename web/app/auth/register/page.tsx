@@ -128,7 +128,7 @@ export default function RegisterPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-3xl">Crear Cuenta</CardTitle>
-              <CardDescription className="text-base">
+              <div className="text-base text-muted-foreground">
                 {isSupabase
                   ? (
                     <div className="space-y-2">
@@ -140,7 +140,7 @@ export default function RegisterPage() {
                   )
                   : 'Modo demo: Crea una cuenta de prueba'
                 }
-              </CardDescription>
+              </div>
             </CardHeader>
               <CardContent>
                 <form onSubmit={handleRegister} className="space-y-6">
