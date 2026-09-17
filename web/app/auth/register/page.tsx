@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
@@ -21,28 +21,6 @@ export default function RegisterPage() {
   const router = useRouter()
   const isDemo = isDemoMode()
   const isSupabase = isSupabaseMode()
-
-  // Verificar mensajes de error de URL solo en el cliente
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search)
-      const errorParam = searchParams.get('error')
-
-      if (errorParam) {
-        const errorMessages: Record<string, string> = {
-          no_code: 'Error de autenticación: Código no proporcionado',
-          token_error: 'Error al obtener token de Discord. Por favor intenta nuevamente.',
-          update_error: 'Error al actualizar tu perfil',
-          link_error: 'Error al vincular tu cuenta de Discord',
-          create_error: 'Error al crear tu cuenta',
-          oauth_error: 'Error en el proceso de OAuth de Discord',
-        }
-        setError(errorMessages[errorParam] || 'Error al vincular cuenta de Discord')
-        // Limpiar URL
-        window.history.replaceState({}, '', '/auth/register')
-      }
-    }
-  }, [])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
