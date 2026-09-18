@@ -429,6 +429,27 @@ export default function SupportChatWidget() {
     }
 
     loadOnlineAgents()
+
+    // Suscribirse a cambios en tiempo real de usuarios
+    const channel = supabase
+      .channel('users-online-status')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: 'role=in.(admin,staff,owner)'
+      }, (payload) => {
+        console.log('User online status changed:', payload)
+        // Recargar agentes cuando cambia el estado online
+        loadOnlineAgents()
+      })
+      .subscribe((status) => {
+        console.log('Users Realtime subscription status:', status)
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   if (!open) {
