@@ -118,33 +118,56 @@ export default function AdminPage() {
       .order('sort_order', { ascending: true })
     if (servicesData) setServices(servicesData)
 
-    // Cargar sesiones de chat (excluyendo closed)
+    // Cargar sesiones de chat (sin join primero para que el filtro funcione)
     console.log('Loading chat sessions (excluding closed)...')
-    const { data: chatSessionsData, error: chatError } = await supabase
-      .from('chat_sessions')
-      .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
-      .filter('status', 'neq', 'closed')
-      .order('created_at', { ascending: false })
 
-    if (chatError) {
-      console.error('Error loading chat sessions:', chatError)
+    // Primero cargar IDs de chats activos
+    const { data: activeSessionIds, error: idsError } = await supabase
+      .from('chat_sessions')
+      .select('id')
+      .not('status', 'eq', 'closed')
+
+    if (idsError) {
+      console.error('Error loading active session IDs:', idsError)
     } else {
-      console.log('Chat sessions loaded (active only):', chatSessionsData?.length || 0)
-      console.log('Session statuses:', chatSessionsData?.map((s: any) => s.status))
-      if (chatSessionsData) {
-        setChatSessions(chatSessionsData.map((session: any) => ({
-          id: session.id,
-          conversation_number: session.conversation_number,
-          status: session.status,
-          priority: session.priority,
-          assigned_agent_id: session.assigned_agent_id,
-          subject: session.subject,
-          created_at: session.created_at,
-          client_id: session.client_id,
-          client_name: session.users?.full_name || session.users?.email || 'Cliente',
-          client_email: session.users?.email || '',
-        })))
+      console.log('Active session IDs:', activeSessionIds?.length || 0)
+    }
+
+    // Si hay chats activos, cargar con join
+    let chatSessionsData = null
+    if (activeSessionIds && activeSessionIds.length > 0) {
+      const ids = activeSessionIds.map((s: any) => s.id)
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
+        .in('id', ids)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading chat sessions with join:', error)
+      } else {
+        chatSessionsData = data
       }
+    }
+
+    console.log('Chat sessions loaded (active only):', chatSessionsData?.length || 0)
+    console.log('Session statuses:', chatSessionsData?.map((s: any) => s.status))
+
+    if (chatSessionsData) {
+      setChatSessions(chatSessionsData.map((session: any) => ({
+        id: session.id,
+        conversation_number: session.conversation_number,
+        status: session.status,
+        priority: session.priority,
+        assigned_agent_id: session.assigned_agent_id,
+        subject: session.subject,
+        created_at: session.created_at,
+        client_id: session.client_id,
+        client_name: session.users?.full_name || session.users?.email || 'Cliente',
+        client_email: session.users?.email || '',
+      })))
+    } else {
+      setChatSessions([])
     }
 
     // Cargar historial de chats cerrados
