@@ -246,8 +246,10 @@ export default function ChatWidget() {
     try {
       const session = await getSession()
       console.log('Sesión:', session)
+      console.log('User ID:', session?.user?.id)
       if (!session) {
         console.log('No hay sesión')
+        alert('Debes iniciar sesión para enviar mensajes')
         return
       }
 
@@ -260,20 +262,24 @@ export default function ChatWidget() {
       }
       console.log('Datos del mensaje:', messageData)
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert(messageData)
+        .select()
 
       if (error) {
         console.error('Error de Supabase:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        alert('Error al enviar mensaje: ' + error.message)
         throw error
       }
 
-      console.log('Mensaje enviado exitosamente')
+      console.log('Mensaje enviado exitosamente:', data)
       setNewMessage('')
       loadMessages()
     } catch (error) {
       console.error('Error al enviar mensaje:', error)
+      alert('Error al enviar mensaje: ' + (error as Error).message)
     }
   }
 
