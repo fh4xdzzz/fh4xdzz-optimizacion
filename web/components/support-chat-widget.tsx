@@ -80,7 +80,7 @@ export default function SupportChatWidget() {
       console.log('User session found:', userSession.user.id, userSession.user.role)
       
       // No mostrar chat de soporte para admin, staff y owner
-      if (['admin', 'staff', 'owner'].includes(userSession.user.role)) {
+      if (userSession.user.role && ['admin', 'staff', 'owner'].includes(userSession.user.role)) {
         console.log('User is admin/staff/owner, hiding support chat')
         setAuthLoading(false)
         return
