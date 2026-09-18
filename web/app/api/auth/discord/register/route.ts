@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient, CookieOptions } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -100,7 +101,11 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(new URL('/auth/register?error=link_error', request.url))
         }
 
-        return NextResponse.redirect(new URL('/auth/login?discord_linked=true', request.url))
+        // Iniciar sesión automáticamente con Supabase Auth
+        // Primero necesitamos obtener o crear una contraseña temporal para este usuario
+        // Para usuarios existentes, necesitamos usar un flujo diferente - magic link o OTP
+        // Por ahora, redirigimos al login para que ingresen su contraseña
+        return NextResponse.redirect(new URL('/auth/login?discord_linked=true&email=' + encodeURIComponent(discordUser.email || ''), request.url))
       }
     }
 
@@ -149,9 +154,50 @@ export async function GET(request: NextRequest) {
 
     console.log('User created in public.users table successfully')
 
-    // Redirigir al login con un indicador de que el usuario fue creado
-    // El usuario debe iniciar sesión manualmente con su email de Discord
-    return NextResponse.redirect(new URL('/auth/login?discord_registered=true&email=' + encodeURIComponent(discordUser.email || ''), request.url))
+    // Iniciar sesión automáticamente usando el cliente de Supabase con SSR
+    const response = NextResponse.redirect(new URL('/perfil', request.url))
+
+    // Crear cliente de Supabase con cookies
+    const supabase = createServerClient(
+      supabaseUrl,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            })
+          },
+          remove(name: string, options: CookieOptions) {
+            response.cookies.delete({
+              name,
+              ...options,
+            })
+          },
+        },
+      }
+    )
+
+    // Iniciar sesión con el email y contraseña temporal
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: discordUser.email || `${discordUser.username}@discord.temp`,
+      password: tempPassword,
+    })
+
+    if (signInError) {
+      console.error('Error signing in user:', signInError)
+      // Si falla el inicio de sesión, redirigir al login manual
+      return NextResponse.redirect(new URL('/auth/login?discord_registered=true&email=' + encodeURIComponent(discordUser.email || ''), request.url))
+    }
+
+    console.log('User signed in successfully after Discord registration')
+
+    return response
   } catch (error) {
     console.error('Discord register error:', error)
     return NextResponse.redirect(new URL('/auth/register?error=oauth_error', request.url))
