@@ -128,17 +128,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insertar mensaje
+    // Insertar mensaje - adaptado a estructura existente de la tabla
     console.log('Inserting message...')
     const { data: newMessage, error: insertError } = await supabase
       .from('chat_messages')
       .insert({
         id: crypto.randomUUID(),
-        session_id,
-        sender_id: session.user.id,
-        sender_role: userRole,
+        user_id: session.user.id, // La tabla usa user_id en lugar de session_id
+        session_id: session_id,
         message,
-        message_type: message_type || 'text'
+        message_type: message_type || 'text',
+        sender_role: userRole,
+        is_from_admin: userRole !== 'client',
+        is_read: false
       })
       .select()
       .single()
