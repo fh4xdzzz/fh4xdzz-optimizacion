@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
+import { useNotificationStore } from '@/lib/notifications-store'
 
 interface Order {
   id: string
@@ -33,6 +34,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const isDemo = isDemoMode()
   const supabase = createClient()
+  const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
 
   const loadOrders = async () => {
     if (!session?.user?.id) return
@@ -76,6 +78,9 @@ export default function DashboardPage() {
 
       await loadOrders()
       setLoading(false)
+      
+      // Notificación de prueba para verificar el sistema
+      notifyInfo('Dashboard cargado exitosamente')
     }
 
     loadData()

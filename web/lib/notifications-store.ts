@@ -39,55 +39,43 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
     }))
   },
   success: (message, duration) => {
-    set((state) => {
-      const id = crypto.randomUUID()
-      const notification: Notification = { id, type: 'success', message, duration }
-      const notifications = [...state.notifications, notification]
-      setTimeout(() => {
-        set((s) => ({
-          notifications: s.notifications.filter((n) => n.id !== id)
-        }))
-      }, duration)
-      return { notifications }
-    })
+    const id = crypto.randomUUID()
+    const notification: Notification = { id, type: 'success', message, duration }
+    set((state) => ({ notifications: [...state.notifications, notification] }))
+    setTimeout(() => {
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id)
+      }))
+    }, duration)
   },
   error: (message, duration) => {
-    set((state) => {
-      const id = crypto.randomUUID()
-      const notification: Notification = { id, type: 'error', message, duration }
-      const notifications = [...state.notifications, notification]
-      setTimeout(() => {
-        set((s) => ({
-          notifications: s.notifications.filter((n) => n.id !== id)
-        }))
-      }, duration)
-      return { notifications }
-    })
+    const id = crypto.randomUUID()
+    const notification: Notification = { id, type: 'error', message, duration }
+    set((state) => ({ notifications: [...state.notifications, notification] }))
+    setTimeout(() => {
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id)
+      }))
+    }, duration)
   },
   warning: (message, duration) => {
-    set((state) => {
-      const id = crypto.randomUUID()
-      const notification: Notification = { id, type: 'warning', message, duration }
-      const notifications = [...state.notifications, notification]
-      setTimeout(() => {
-        set((s) => ({
-          notifications: s.notifications.filter((n) => n.id !== id)
-        }))
-      }, duration)
-      return { notifications }
-    })
+    const id = crypto.randomUUID()
+    const notification: Notification = { id, type: 'warning', message, duration }
+    set((state) => ({ notifications: [...state.notifications, notification] }))
+    setTimeout(() => {
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id)
+      }))
+    }, duration)
   },
   info: (message, duration) => {
-    set((state) => {
-      const id = crypto.randomUUID()
-      const notification: Notification = { id, type: 'info', message, duration }
-      const notifications = [...state.notifications, notification]
-      setTimeout(() => {
-        set((s) => ({
-          notifications: s.notifications.filter((n) => n.id !== id)
-        }))
-      }, duration)
-      return { notifications }
-    })
+    const id = crypto.randomUUID()
+    const notification: Notification = { id, type: 'info', message, duration }
+    set((state) => ({ notifications: [...state.notifications, notification] }))
+    setTimeout(() => {
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id)
+      }))
+    }, duration)
   }
 }))
