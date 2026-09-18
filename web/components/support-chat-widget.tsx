@@ -306,8 +306,8 @@ export default function SupportChatWidget() {
       })
 
       if (messageResponse.ok) {
-        const messageData = await messageResponse.json()
-        setMessages(prev => [...prev, messageData.message])
+        // No agregar manualmente, dejar que Realtime lo maneje
+        // setMessages(prev => [...prev, messageData.message])
       }
     } catch (error) {
       console.error('Error uploading file:', error)
