@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface Message {
   id: string
@@ -26,6 +27,7 @@ export default function ChatWidget() {
   const [users, setUsers] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   const supabase = createClient()
 
@@ -35,6 +37,13 @@ export default function ChatWidget() {
       loadMessages()
       // Marcar mensajes como leídos al abrir
       markAsRead()
+      setupRealtimeSubscription()
+    } else {
+      // Limpiar suscripción cuando se cierra
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [isOpen, selectedUserId])
 
@@ -153,6 +162,62 @@ export default function ChatWidget() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const setupRealtimeSubscription = () => {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    const session = getSession()
+    if (!session) return
+
+    const channel = supabase
+      .channel('chat_messages_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: isAdmin && selectedUserId
+            ? `user_id=eq.${selectedUserId}`
+            : `user_id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          console.log('Nuevo mensaje recibido en tiempo real:', payload)
+          const newMessage = payload.new as Message
+          setMessages((prev) => [...prev, newMessage])
+
+          // Actualizar contador de no leídos
+          if (newMessage.is_from_admin && !isAdmin) {
+            setUnreadCount((prev) => prev + 1)
+          } else if (!newMessage.is_from_admin && isAdmin) {
+            setUnreadCount((prev) => prev + 1)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: isAdmin && selectedUserId
+            ? `user_id=eq.${selectedUserId}`
+            : `user_id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          console.log('Mensaje actualizado en tiempo real:', payload)
+          const updatedMessage = payload.new as Message
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+          )
+        }
+      )
+      .subscribe()
+
+    channelRef.current = channel
   }
 
   const sendMessage = async (e: React.FormEvent) => {
