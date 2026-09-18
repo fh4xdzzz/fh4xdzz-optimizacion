@@ -115,31 +115,61 @@ export async function GET(request: NextRequest) {
 
         console.log('Found existing auth user:', existingAuthUser.id)
 
-        // Crear registro en tabla users con el ID existente
-        const { data: dbData, error: dbError } = await supabaseAdmin
+        // Verificar si el usuario ya existe en la tabla users
+        const { data: existingDbUser } = await supabaseAdmin
           .from('users')
-          .insert({
-            id: existingAuthUser.id,
-            email: userEmailToUse,
-            full_name: discordUser.global_name || discordUser.username,
-            discord_id: discordUser.id,
-            discord_username: discordUser.username,
-            discord_avatar: discordUser.avatar,
-            avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
-            role: 'client',
-          })
-          .select()
+          .select('*')
+          .eq('id', existingAuthUser.id)
+          .single()
 
-        console.log('DB insert result for existing auth user:', { dbData, dbError })
+        if (existingDbUser) {
+          // Usuario ya existe en tabla users, actualizar datos de Discord
+          console.log('User already exists in database, updating Discord data:', existingDbUser.id)
+          
+          const { error: updateError } = await supabaseAdmin
+            .from('users')
+            .update({
+              discord_id: discordUser.id,
+              discord_username: discordUser.username,
+              discord_avatar: discordUser.avatar,
+              avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
+            })
+            .eq('id', existingDbUser.id)
 
-        if (dbError) {
-          console.error('Error creating user in database:', dbError)
-          return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+          if (updateError) {
+            console.error('Error updating Discord data:', updateError)
+          }
+
+          userId = existingDbUser.id
+          userEmail = existingDbUser.email
+          console.log('Using existing database user with updated Discord data:', userId)
+        } else {
+          // Crear registro en tabla users con el ID existente
+          const { data: dbData, error: dbError } = await supabaseAdmin
+            .from('users')
+            .insert({
+              id: existingAuthUser.id,
+              email: userEmailToUse,
+              full_name: discordUser.global_name || discordUser.username,
+              discord_id: discordUser.id,
+              discord_username: discordUser.username,
+              discord_avatar: discordUser.avatar,
+              avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
+              role: 'client',
+            })
+            .select()
+
+          console.log('DB insert result for existing auth user:', { dbData, dbError })
+
+          if (dbError) {
+            console.error('Error creating user in database:', dbError)
+            return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+          }
+
+          userId = existingAuthUser.id
+          userEmail = userEmailToUse
+          console.log('User created successfully in database from existing auth user:', userId)
         }
-
-        userId = existingAuthUser.id
-        userEmail = userEmailToUse
-        console.log('User created successfully in database from existing auth user:', userId)
       } else if (signupError || !signupLink?.user?.id) {
         console.error('Error creating Supabase user via signup link:', signupError)
         console.error('Error details:', JSON.stringify(signupError, null, 2))
