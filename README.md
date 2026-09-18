@@ -9,6 +9,7 @@ Sistema completo integrado por:
 - **Bot de Discord** profesional para soporte y gestión de tickets
 - **Base de datos** con Supabase para gestión de usuarios, servicios y pedidos
 - **Sistema de chat de soporte** en tiempo real con Supabase Realtime
+- **Actualizaciones en tiempo real** para usuarios, pedidos, servicios y chats
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías
