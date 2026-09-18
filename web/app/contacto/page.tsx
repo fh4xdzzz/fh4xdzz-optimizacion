@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
-import ChatWidget from '@/components/chat-widget'
 
 function ContactFormContent() {
   const [formData, setFormData] = useState({
@@ -422,7 +421,6 @@ function ContactFormContent() {
       </section>
 
       <Footer />
-      <ChatWidget />
     </div>
   )
 }

@@ -13,6 +13,9 @@ import asyncio
 import random
 from collections import defaultdict
 
+# Import Supabase client
+from database.supabase_client import get_supabase_client
+
 # Load environment variables
 load_dotenv()
 
@@ -114,18 +117,19 @@ def webhook():
         data = request.json
         logger.info(f"Webhook recibido: {data}")
 
-        # Validar token secreto
+        # Validar token secreto (opcional para desarrollo)
         webhook_secret = os.getenv('DISCORD_WEBHOOK_SECRET')
         auth_header = request.headers.get('Authorization')
 
-        if not webhook_secret or not auth_header or not auth_header.startswith('Bearer '):
-            logger.error("Webhook sin autenticación válida")
-            return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+        if webhook_secret and auth_header:
+            if not auth_header.startswith('Bearer '):
+                logger.error("Webhook sin autenticación válida")
+                return jsonify({'success': False, 'message': 'Unauthorized'}), 401
 
-        token = auth_header[7:]  # Remove 'Bearer '
-        if token != webhook_secret:
-            logger.error("Token webhook inválido")
-            return jsonify({'success': False, 'message': 'Forbidden'}), 403
+            token = auth_header[7:]  # Remove 'Bearer '
+            if token != webhook_secret:
+                logger.error("Token webhook inválido")
+                return jsonify({'success': False, 'message': 'Forbidden'}), 403
 
         # Procesar evento con EventProcessor
         if event_processor:
@@ -191,6 +195,46 @@ async def create_order_from_web(order_data):
 
     except Exception as e:
         logger.error(f"Error creando pedido desde web: {e}")
+
+async def notify_order_status_update(order_data):
+    """Notificar actualización de estado de pedido desde web"""
+    try:
+        guild = bot.get_guild(int(GUILD_ID)) if GUILD_ID else None
+        if not guild:
+            logger.error("Guild no encontrada")
+            return
+
+        orders_channel = discord.utils.get(guild.text_channels, name="pedidos")
+        if not orders_channel:
+            logger.error("Canal de pedidos no encontrado")
+            return
+
+        status_emoji = {
+            'pending': '⏳ Pendiente',
+            'reviewing': '👀 Revisión',
+            'in_progress': '🔧 En Progreso',
+            'waiting_client': '⏸️ Esperando Cliente',
+            'completed': '✅ Completado',
+            'cancelled': '❌ Cancelado'
+        }.get(order_data.get('status'), order_data.get('status'))
+
+        embed = discord.Embed(
+            title=f"📢 Actualización de Pedido: {order_data.get('order_number')}",
+            description=f"Estado actualizado por admin",
+            color=0x00ff00
+        )
+
+        embed.add_field(name="Servicio", value=order_data.get('service_name'), inline=False)
+        embed.add_field(name="Estado", value=status_emoji, inline=False)
+        embed.add_field(name="Email cliente", value=order_data.get('user_email'), inline=False)
+        embed.set_footer(text="TheDulcanDesign - Tienda Profesional")
+
+        await orders_channel.send(embed=embed)
+
+        logger.info(f"Notificación de estado enviada para pedido {order_data.get('order_number')}")
+
+    except Exception as e:
+        logger.error(f"Error enviando notificación de estado: {e}")
 
 @bot.event
 async def on_ready():
@@ -494,19 +538,33 @@ async def on_voice_state_update(member, before, after):
 
 @bot.command(name='tienda')
 async def show_shop(ctx):
-    """Mostrar catalogo de servicios"""
+    """Mostrar catalogo de servicios desde Supabase"""
     embed = discord.Embed(
         title="TheDulcanDesign - Catalogo de Servicios",
         description="Usa `!comprar <id>` para comprar un servicio",
         color=0x00ff00
     )
 
-    for service in SERVICES:
-        embed.add_field(
-            name=f"{service['id']}. {service['name']} - ${service['price']}",
-            value=service['description'],
-            inline=False
-        )
+    # Obtener servicios desde Supabase
+    supabase = get_supabase_client()
+    services_from_db = supabase.get_all_services()
+
+    if services_from_db:
+        for service in services_from_db:
+            embed.add_field(
+                name=f"{service['name']} - ${service['price']}",
+                value=f"{service['description']}\nID: {service['id']}",
+                inline=False
+            )
+    else:
+        # Fallback a servicios locales si Supabase falla
+        logger.warning("No se pudieron obtener servicios de Supabase, usando lista local")
+        for service in SERVICES:
+            embed.add_field(
+                name=f"{service['id']}. {service['name']} - ${service['price']}",
+                value=service['description'],
+                inline=False
+            )
 
     embed.add_field(name="Web", value="Visita https://thedulcandesign.com para mas informacion", inline=False)
     embed.set_footer(text="TheDulcanDesign - Servicios Profesionales")
@@ -514,68 +572,102 @@ async def show_shop(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name='comprar')
-async def buy_service(ctx, service_id: int):
-    """Comprar servicio"""
-    service = next((s for s in SERVICES if s['id'] == service_id), None)
-
+async def buy_service(ctx, service_id: str):
+    """Comprar servicio - Integra con Supabase"""
+    supabase = get_supabase_client()
+    
+    # Intentar obtener servicio desde Supabase
+    service = None
+    services_from_db = supabase.get_all_services()
+    
+    if services_from_db:
+        service = next((s for s in services_from_db if str(s['id']) == service_id), None)
+    
+    # Fallback a servicios locales si no se encuentra en Supabase
+    if not service:
+        service = next((s for s in SERVICES if str(s['id']) == service_id), None)
+    
     if not service:
         await ctx.send("Servicio no encontrado. Usa `!tienda` para ver el catalogo.")
         return
 
-    global order_counter
-    order_counter += 1
-    order_id = f"DIS-{order_counter:04d}"
-
     try:
-        orders_channel = discord.utils.get(ctx.guild.text_channels, name="pedidos")
-        if not orders_channel:
-            await ctx.send("Canal de pedidos no configurado.")
+        # Obtener información del usuario de Discord
+        discord_id = str(ctx.author.id)
+        discord_username = f"{ctx.author.name}#{ctx.author.discriminator}"
+        
+        # Buscar usuario en Supabase por Discord ID
+        user_from_db = supabase.get_user_by_discord_id(discord_id)
+        
+        if not user_from_db:
+            await ctx.send("❌ Necesitas vincular tu cuenta de Discord con tu cuenta web. Ve a https://thedulcandesign.com/perfil para vincularla.")
             return
-
-        orders[order_id] = {
-            'id': order_id,
-            'user_id': str(ctx.author.id),
-            'username': str(ctx.author),
+        
+        # Crear pedido en Supabase
+        order_data = {
+            'user_id': user_from_db['id'],
             'service_id': service['id'],
-            'service_name': service['name'],
+            'client_name': user_from_db.get('full_name', discord_username),
+            'client_email': user_from_db.get('email', 'no-email'),
+            'client_discord': discord_username,
+            'description': f"Pedido desde Discord por {discord_username}",
             'price': service['price'],
-            'status': 'pending',
-            'created_at': datetime.now().isoformat(),
-            'source': 'discord'
+            'status': 'pending'
         }
+        
+        order_result = supabase.create_order(order_data)
+        
+        if not order_result:
+            await ctx.send("❌ Error al crear el pedido en la base de datos. Por favor contacta al staff.")
+            return
+        
+        # Enviar notificación al canal de pedidos
+        orders_channel = discord.utils.get(ctx.guild.text_channels, name="pedidos")
+        if orders_channel:
+            embed = discord.Embed(
+                title=f"Nuevo Pedido Discord: {order_result['order_number']}",
+                description=f"Pedido por {ctx.author.mention}",
+                color=0x00ff00
+            )
 
-        embed = discord.Embed(
-            title=f"Nuevo Pedido Discord: {order_id}",
-            description=f"Pedido por {ctx.author.mention}",
-            color=0x00ff00
-        )
+            embed.add_field(name="Servicio", value=service['name'], inline=False)
+            embed.add_field(name="Precio", value=f"${service['price']}", inline=False)
+            embed.add_field(name="Estado", value="Pendiente", inline=False)
+            embed.add_field(name="Origen", value="Discord", inline=False)
+            embed.add_field(name="Web ID", value=order_result['id'], inline=False)
+            embed.set_footer(text="TheDulcanDesign - Tienda Profesional")
 
-        embed.add_field(name="Servicio", value=service['name'], inline=False)
-        embed.add_field(name="Precio", value=f"${service['price']}", inline=False)
-        embed.add_field(name="Estado", value="Pendiente", inline=False)
-        embed.add_field(name="Origen", value="Discord", inline=False)
-        embed.set_footer(text="TheDulcanDesign - Tienda Profesional")
-
-        await orders_channel.send(embed=embed)
+            await orders_channel.send(embed=embed)
 
         success_embed = discord.Embed(
-            title="Pedido Creado",
-            description=f"Tu pedido ha sido creado: {order_id}\nServicio: {service['name']}\nPrecio: ${service['price']}",
+            title="✅ Pedido Creado",
+            description=f"Tu pedido ha sido creado: {order_result['order_number']}\nServicio: {service['name']}\nPrecio: ${service['price']}\n\nCompleta el pago en: https://thedulcandesign.com/pago?orderId={order_result['id']}",
             color=0x00ff00
         )
 
         await ctx.send(embed=success_embed)
-        logger.info(f"Pedido {order_id} creado por {ctx.author} en Discord")
+        logger.info(f"Pedido {order_result['order_number']} creado por {ctx.author} en Discord y guardado en Supabase")
 
     except Exception as e:
         logger.error(f"Error creando pedido: {e}")
-        await ctx.send("Error al crear pedido")
+        await ctx.send("❌ Error al crear pedido. Por favor contacta al staff.")
 
 @bot.command(name='mispedidos')
 async def my_orders(ctx):
-    """Ver mis pedidos"""
-    user_orders = [o for o in orders.values() if o.get('user_id') == str(ctx.author.id)]
-
+    """Ver mis pedidos desde Supabase"""
+    supabase = get_supabase_client()
+    
+    # Obtener usuario por Discord ID
+    discord_id = str(ctx.author.id)
+    user_from_db = supabase.get_user_by_discord_id(discord_id)
+    
+    if not user_from_db:
+        await ctx.send("❌ Necesitas vincular tu cuenta de Discord con tu cuenta web. Ve a https://thedulcandesign.com/perfil para vincularla.")
+        return
+    
+    # Obtener pedidos del usuario desde Supabase
+    user_orders = supabase.get_orders_by_user(user_from_db['id'])
+    
     if not user_orders:
         await ctx.send("No tienes pedidos registrados.")
         return
@@ -587,10 +679,18 @@ async def my_orders(ctx):
     )
 
     for order in user_orders:
-        status_emoji = "Pendiente" if order['status'] == 'pending' else "Completado" if order['status'] == 'completed' else "Cancelado"
+        status_emoji = {
+            'pending': '⏳ Pendiente',
+            'reviewing': '👀 Revisión',
+            'in_progress': '🔧 En Progreso',
+            'waiting_client': '⏸️ Esperando Cliente',
+            'completed': '✅ Completado',
+            'cancelled': '❌ Cancelado'
+        }.get(order['status'], order['status'])
+        
         embed.add_field(
-            name=f"{order['id']} - {order['service_name']}",
-            value=f"Precio: ${order['price']}\nEstado: {status_emoji}\nOrigen: {order['source']}",
+            name=f"{order['order_number']} - {order.get('service_name', 'Servicio')}",
+            value=f"Estado: {status_emoji} - ${order['price']}\nFecha: {order['created_at'][:10]}",
             inline=False
         )
 

@@ -57,5 +57,8 @@ bot/*.log
 # Supabase
 .supabase/
 
+# Discord Bot
+thedulcandesign-discord-bot/
+
 # OS
 Thumbs.db

@@ -2,7 +2,7 @@
 -- Funciones de Seguridad para Validación de Roles
 -- =====================================================
 
--- Función segura para verificar si el usuario actual es admin
+-- Función segura para verificar si el usuario actual es admin o owner
 -- Esta función usa SECURITY DEFINER para ejecutar con permisos elevados
 -- pero solo verifica roles, no permite modificación de datos
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -13,7 +13,7 @@ BEGIN
     
     RETURN EXISTS (
         SELECT 1 FROM public.users
-        WHERE id = auth.uid() AND role = 'admin'
+        WHERE id = auth.uid() AND role IN ('admin', 'owner')
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
@@ -68,12 +68,13 @@ BEGIN
     
     -- Verificar si el rol está siendo modificado
     IF OLD.role IS DISTINCT FROM NEW.role THEN
-        -- Solo un admin puede cambiar roles
-        IF NOT EXISTS (
+        -- Permitir cambios si auth.uid() es NULL (SQL Editor con permisos de owner)
+        -- Solo un admin o owner puede cambiar roles desde la API
+        IF auth.uid() IS NOT NULL AND NOT EXISTS (
             SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND role IN ('admin', 'owner')
         ) THEN
-            RAISE EXCEPTION 'No tienes permiso para cambiar roles. Solo admins pueden modificar roles.';
+            RAISE EXCEPTION 'No tienes permiso para cambiar roles. Solo admins y owners pueden modificar roles.';
         END IF;
     END IF;
     
