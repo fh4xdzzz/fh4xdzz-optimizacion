@@ -8,6 +8,15 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 // CRON para marcar offline a usuarios que no han enviado heartbeat
 export async function GET(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization')
+    const cronSecret = process.env.CRON_SECRET
+
+    // Solo requerir autenticación si CRON_SECRET está configurado
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      console.error('CRON authentication failed')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     // Marcar offline a usuarios que no han enviado heartbeat en los últimos 2 minutos
     const { error } = await supabase
       .from('users')

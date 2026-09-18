@@ -39,12 +39,21 @@ export default function PresenceTracker() {
     setOnline()
     intervalRef.current = setInterval(setOnline, 30000)
 
-    // Evento para detectar cierre de página
+    // Evento para detectar cierre de página o cambio de pestaña
     const handleBeforeUnload = () => {
       setOffline()
     }
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        setOffline()
+      } else if (document.visibilityState === 'visible') {
+        setOnline()
+      }
+    }
+
     window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     // Limpiar al desmontar
     return () => {
@@ -53,6 +62,7 @@ export default function PresenceTracker() {
       }
       setOffline()
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
