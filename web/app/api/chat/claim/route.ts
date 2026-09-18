@@ -63,6 +63,27 @@ export async function POST(request: NextRequest) {
       metadata: { assigned_to: session.user.id }
     })
 
+    // Obtener información del admin para el mensaje automático
+    const { data: adminData } = await supabase
+      .from('users')
+      .select('full_name, email')
+      .eq('id', session.user.id)
+      .single()
+
+    const adminName = adminData?.full_name || adminData?.email || 'Un agente de soporte'
+
+    // Enviar mensaje automático al cliente
+    await supabase
+      .from('chat_messages')
+      .insert({
+        id: crypto.randomUUID(),
+        session_id,
+        sender_id: session.user.id,
+        sender_role: userRole,
+        message: `¡Hola! 👋 Soy ${adminName}. He tomado tu caso y estoy aquí para ayudarte. ¿En qué puedo asistirte?`,
+        message_type: 'text'
+      })
+
     return NextResponse.json({ session: chatSession })
   } catch (error) {
     console.error('Error in POST /api/chat/claim:', error)
