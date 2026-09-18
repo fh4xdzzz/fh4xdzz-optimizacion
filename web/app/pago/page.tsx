@@ -47,7 +47,7 @@ function PaymentPageContent() {
       // Marcar orden como pagada automáticamente
       const { error: updateError } = await supabase
         .from('orders')
-        .update({ status: 'paid' })
+        .update({ status: 'reviewing' })
         .eq('id', orderId)
 
       if (updateError) {
