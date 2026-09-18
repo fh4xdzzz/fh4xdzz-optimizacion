@@ -252,9 +252,9 @@ export default function SupportChatWidget() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Verificar tamaño del archivo (máximo 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      notifyError('El archivo es demasiado grande. Máximo 10MB.')
+    // Verificar tamaño del archivo (máximo 4MB para Vercel)
+    if (file.size > 4 * 1024 * 1024) {
+      notifyError('El archivo es demasiado grande. Máximo 4MB.')
       return
     }
 
