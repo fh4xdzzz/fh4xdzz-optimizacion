@@ -140,9 +140,9 @@ export default function SupportChatWidget() {
     }
   }, [session?.id])
 
-  // Suscribirse a cambios en tiempo real para mensajes (solo cuando widget abierto)
+  // Suscribirse a cambios en tiempo real para mensajes (siempre activo para recibir notificaciones)
   useEffect(() => {
-    if (!session || !open) return
+    if (!session) return
 
     console.log('Setting up Realtime subscription for session:', session.id)
 
@@ -164,6 +164,12 @@ export default function SupportChatWidget() {
             return prev
           }
           
+          // Solo agregar mensajes al estado si el chat está abierto
+          if (!open) {
+            console.log('Chat is closed, not adding message to state')
+            return prev
+          }
+          
           // Extraer solo los campos necesarios para evitar errores
           const cleanMessage: Message = {
             id: newMessage.id,
@@ -180,6 +186,7 @@ export default function SupportChatWidget() {
           return [...prev, cleanMessage]
         })
 
+        // Incrementar contador si el chat está cerrado y el mensaje es del soporte
         if (newMessage.sender_role !== 'client' && !open) {
           setUnread(prev => prev + 1)
         }
