@@ -95,7 +95,40 @@ export default function SupportChatWidget() {
     }
   }
 
-  // Suscribirse a cambios en tiempo real
+  // Suscribirse a cambios en tiempo real para session (siempre activo)
+  useEffect(() => {
+    if (!session) return
+
+    console.log('Setting up Realtime subscription for session status (always active):', session.id)
+
+    const channel = supabase
+      .channel(`session-status:${session.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'chat_sessions',
+        filter: `id=eq.${session.id}`
+      }, (payload) => {
+        console.log('Session status changed:', payload.new.status)
+        const updatedSession = payload.new as ChatSession
+        setSession(updatedSession)
+        
+        // Si la sesión se cerró, limpiar mensajes
+        if (updatedSession.status === 'closed') {
+          setMessages([])
+        }
+      })
+      .subscribe((status) => {
+        console.log('Session status Realtime subscription status:', status)
+      })
+
+    return () => {
+      console.log('Cleaning up session status Realtime subscription')
+      supabase.removeChannel(channel)
+    }
+  }, [session?.id])
+
+  // Suscribirse a cambios en tiempo real para mensajes (solo cuando widget abierto)
   useEffect(() => {
     if (!session || !open) return
 
@@ -367,6 +400,22 @@ export default function SupportChatWidget() {
                 <p className="text-sm text-yellow-400">
                   ⚠️ Nuestro equipo está actualmente offline. Déjanos un mensaje y te responderemos lo antes posible.
                 </p>
+              </div>
+            ) : session?.status === 'closed' ? (
+              <div className="p-4 bg-[#1a1a1a] border border-green-500/50 rounded-2xl text-center">
+                <p className="text-sm text-green-400 font-bold mb-2">✅ Chat cerrado</p>
+                <p className="text-sm text-[#6b7280]">
+                  Este chat ha sido cerrado por nuestro equipo de soporte. Si necesitas más ayuda, puedes iniciar un nuevo chat.
+                </p>
+                <button
+                  onClick={() => {
+                    setSession(null)
+                    setMessages([])
+                  }}
+                  className="inline-block mt-3 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  Iniciar nuevo chat
+                </button>
               </div>
             ) : messages.length === 0 ? (
               <div className="p-4 bg-[#1a1a1a] rounded-2xl text-sm text-[#ededed] border border-[#333333]">
