@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
             request.cookies.set({ name, value, ...options })
           },
           remove(name: string, options: Record<string, unknown>) {
-            request.cookies.set({ name, value: '', ...options })
+            request.cookies.set({ name, value, '', ...options })
           },
         },
       }
@@ -37,13 +37,7 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith(path)
     )
 
-    // Excluir rutas de API de la protección (CRON, presencia, chat)
-    const apiExclusions = ['/api/cron', '/api/chat/presence', '/api/chat/queue']
-    const isApiExclusion = apiExclusions.some(path =>
-      request.nextUrl.pathname.startsWith(path)
-    )
-
-    if (isProtectedPath && !session && !isApiExclusion) {
+    if (isProtectedPath && !session) {
       // Redirigir a login con la URL original como redirect
       const redirectUrl = new URL('/auth/login', request.url)
       redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
@@ -76,7 +70,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - /api routes (API routes)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/).*)',
   ],
 }
