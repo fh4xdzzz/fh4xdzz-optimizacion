@@ -11,6 +11,7 @@ Sistema completo integrado por:
 - **Sistema de chat de soporte** en tiempo real con Supabase Realtime
 - **Actualizaciones en tiempo real** para usuarios, pedidos, servicios y chats
 - **Cierre de chat en tiempo real** para clientes sin necesidad de recargar página
+- **Mensajes de bienvenida** con nombre del admin al reclamar tickets
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías
