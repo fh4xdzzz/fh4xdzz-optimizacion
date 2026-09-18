@@ -58,10 +58,26 @@ export default function SupportChatWidget() {
 
   // Artículos de ayuda
   const articles = [
-    { title: 'Cómo configurar OBS para Twitch/Kick', description: 'Guía rápida del centro de ayuda.' },
-    { title: 'Optimizar Windows para gaming', description: 'Mejora el rendimiento de tu PC.' },
-    { title: 'Solucionar pérdida de frames', description: 'Tips para streaming estable.' },
-    { title: 'Configurar bitrate, encoder y audio', description: 'Configuración profesional.' }
+    { 
+      title: 'Cómo configurar OBS para Twitch/Kick', 
+      description: 'Guía rápida del centro de ayuda.',
+      message: 'Hola, necesito ayuda para configurar OBS para Twitch/Kick. ¿Podrías orientarme?'
+    },
+    { 
+      title: 'Optimizar Windows para gaming', 
+      description: 'Mejora el rendimiento de tu PC.',
+      message: 'Hola, necesito ayuda para optimizar Windows para gaming. ¿Qué me recomiendas?'
+    },
+    { 
+      title: 'Solucionar pérdida de frames', 
+      description: 'Tips para streaming estable.',
+      message: 'Hola, estoy experimentando pérdida de frames en mi stream. ¿Podrías ayudarme a solucionarlo?'
+    },
+    { 
+      title: 'Configurar bitrate, encoder y audio', 
+      description: 'Configuración profesional.',
+      message: 'Hola, necesito ayuda para configurar bitrate, encoder y audio. ¿Cuáles son los valores recomendados?'
+    }
   ]
 
   // Cargar sesión del usuario
@@ -554,6 +570,10 @@ export default function SupportChatWidget() {
           {articles.map((article, index) => (
             <article
               key={index}
+              onClick={() => {
+                setText(article.message)
+                setTab('chat')
+              }}
               className="p-4 bg-[#1a1a1a] rounded-2xl border border-[#333333] hover:border-blue-500 transition-colors cursor-pointer"
             >
               <h3 className="font-bold text-[#ededed]">{article.title}</h3>
