@@ -164,12 +164,12 @@ export default function ChatWidget() {
     }
   }
 
-  const setupRealtimeSubscription = () => {
+  const setupRealtimeSubscription = async () => {
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current)
     }
 
-    const session = getSession()
+    const session = await getSession()
     if (!session) return
 
     const channel = supabase
