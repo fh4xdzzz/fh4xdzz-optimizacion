@@ -41,7 +41,8 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const { success: notifySuccess, error: notifyError, warning: notifyWarning } = useNotificationStore()
+  const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
+  const supabase = createClient()
 
   // Cargar pedidos del usuario desde Supabase
   const loadOrders = async () => {
@@ -85,6 +86,42 @@ export default function OrdersPage() {
     loadOrders()
     checkUserRole()
   }, [])
+
+  // Suscribirse a cambios en tiempo real de pedidos
+  useEffect(() => {
+    const channel = supabase
+      .channel('orders-changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders'
+      }, (payload) => {
+        console.log('Order status changed:', payload)
+        const updatedOrder = payload.new as Order
+        
+        // Verificar si el pedido pertenece al usuario actual
+        if (allOrders.some(order => order.id === updatedOrder.id)) {
+          // Notificar cambio de estado
+          const oldStatus = payload.old.status
+          const newStatus = updatedOrder.status
+          
+          if (oldStatus !== newStatus) {
+            const statusLabel = STATUS_LABELS[newStatus]?.label || newStatus
+            notifyInfo(`El pedido ${updatedOrder.order_number} cambió a: ${statusLabel}`)
+          }
+          
+          // Recargar pedidos
+          loadOrders()
+        }
+      })
+      .subscribe((status) => {
+        console.log('Orders Realtime subscription status:', status)
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [allOrders, notifyInfo])
 
   const checkUserRole = async () => {
     try {
@@ -209,11 +246,11 @@ export default function OrdersPage() {
       {/* Search Section */}
       <section className="pb-20 px-4">
         <div className="container mx-auto max-w-2xl">
-          <Card>
+          <Card className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-900/10 to-blue-900/10">
             <CardHeader>
-              <CardTitle>Consultar Pedido</CardTitle>
+              <CardTitle className="text-2xl">Consultar Pedido</CardTitle>
               <CardDescription>
-                Ingresa el número de pedido para ver su estado
+                Ingresa el número de pedido para ver su estado actual
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -224,13 +261,13 @@ export default function OrdersPage() {
                     value={orderNumber}
                     onChange={(e) => setOrderNumber(e.target.value)}
                     placeholder="Número de pedido (ej: ORD202409120001)"
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-4 py-3 rounded-lg border border-purple-500/30 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                   />
                 </div>
                 {searchError && (
-                  <p className="text-red-500 text-sm">{searchError}</p>
+                  <p className="text-red-500 text-sm bg-red-500/10 border border-red-500/30 rounded-lg p-2">{searchError}</p>
                 )}
-                <Button type="submit" variant="primary" className="w-full">
+                <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all">
                   Consultar
                 </Button>
               </form>
@@ -239,47 +276,49 @@ export default function OrdersPage() {
 
           {/* Search Result */}
           {searchResult && (
-            <Card className="mt-6 border-primary/50">
+            <Card className="mt-6 border-2 border-purple-500/30 bg-gradient-to-br from-purple-900/20 to-blue-900/20">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Detalle del Pedido</CardTitle>
-                  <div className="text-sm text-muted">{searchResult.order_number}</div>
+                  <CardTitle className="text-xl">Detalle del Pedido</CardTitle>
+                  <div className="text-sm bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
+                    {searchResult.order_number}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                    <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
                       <div className="text-sm text-muted mb-1">Servicio</div>
-                      <div className="font-medium">{searchResult.service_name || 'ID: ' + searchResult.service_id}</div>
+                      <div className="font-medium text-foreground">{searchResult.service_name || 'ID: ' + searchResult.service_id}</div>
                     </div>
-                    <div>
+                    <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
                       <div className="text-sm text-muted mb-1">Precio</div>
-                      <div className="font-medium">{formatPrice(searchResult.price)}</div>
+                      <div className="font-medium text-green-400 text-lg">{formatPrice(searchResult.price)}</div>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
                     <div className="text-sm text-muted mb-1">Estado</div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[searchResult.status]?.color || 'bg-gray-500'}`} />
-                      <span className="font-medium">{STATUS_LABELS[searchResult.status]?.label || searchResult.status}</span>
+                      <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[searchResult.status]?.color || 'bg-gray-500'} animate-pulse`} />
+                      <span className="font-medium text-foreground">{STATUS_LABELS[searchResult.status]?.label || searchResult.status}</span>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
                     <div className="text-sm text-muted mb-1">Fecha de creación</div>
-                    <div className="font-medium">{formatDate(searchResult.created_at)}</div>
+                    <div className="font-medium text-foreground">{formatDate(searchResult.created_at)}</div>
                   </div>
 
-                  <div>
+                  <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
                     <div className="text-sm text-muted mb-1">Descripción</div>
                     <div className="text-sm text-muted">{searchResult.description}</div>
                   </div>
 
-                  <div className="pt-4 border-t border-border">
+                  <div className="pt-4 border-t border-purple-500/20">
                     <div className="text-sm text-muted mb-2">Información de contacto</div>
-                    <div className="space-y-1 text-sm">
+                    <div className="space-y-1 text-sm bg-background/30 p-3 rounded-lg">
                       <div><span className="text-muted">Nombre:</span> {searchResult.client_name}</div>
                       <div><span className="text-muted">Email:</span> {searchResult.client_email}</div>
                       {searchResult.client_discord && (
@@ -290,7 +329,7 @@ export default function OrdersPage() {
 
                   {/* Botón de eliminar - solo para owner */}
                   {userRole === 'owner' && (
-                    <div className="pt-4 border-t border-border">
+                    <div className="pt-4 border-t border-purple-500/20">
                       {deleteConfirm === searchResult.id ? (
                         <div className="flex gap-2">
                           <Button
@@ -330,6 +369,7 @@ export default function OrdersPage() {
               <Button
                 variant="outline"
                 onClick={() => setShowAllOrders(!showAllOrders)}
+                className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-all"
               >
                 {showAllOrders ? 'Ocultar todos los pedidos' : `Ver todos mis pedidos (${allOrders.length})`}
               </Button>
@@ -340,14 +380,14 @@ export default function OrdersPage() {
           {showAllOrders && allOrders.length > 0 && (
             <div className="mt-6 space-y-4">
               {allOrders.map((order) => (
-                <Card key={order.id} className="hover:border-primary/50 transition-colors">
+                <Card key={order.id} className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-900/10 to-blue-900/10 hover:border-purple-500/50 transition-all">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="font-medium">{order.order_number}</div>
-                          <div className={`w-2 h-2 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'}`} />
-                          <span className="text-sm text-muted">{STATUS_LABELS[order.status]?.label || order.status}</span>
+                          <div className="font-medium text-foreground">{order.order_number}</div>
+                          <div className={`w-2 h-2 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'} animate-pulse`} />
+                          <span className="text-sm text-purple-300">{STATUS_LABELS[order.status]?.label || order.status}</span>
                         </div>
                         <div className="text-sm text-muted">{order.service_name || 'ID: ' + order.service_id}</div>
                         <div className="text-xs text-muted mt-1">{formatDate(order.created_at)}</div>
@@ -361,6 +401,7 @@ export default function OrdersPage() {
                             setSearchResult(order)
                             setShowAllOrders(false)
                           }}
+                          className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-all"
                         >
                           Ver detalles
                         </Button>
@@ -383,12 +424,13 @@ export default function OrdersPage() {
 
           {/* No Orders */}
           {allOrders.length === 0 && (
-            <Card className="mt-6">
-              <CardContent className="p-8 text-center">
-                <div className="text-muted mb-4">
+            <Card className="mt-6 border-2 border-dashed border-purple-500/30 bg-gradient-to-br from-purple-900/5 to-blue-900/5">
+              <CardContent className="p-12 text-center">
+                <div className="text-6xl mb-4">📦</div>
+                <div className="text-muted mb-4 text-lg">
                   No tienes pedidos aún. Crea tu primera solicitud de servicio.
                 </div>
-                <Button variant="primary" href="/contacto">
+                <Button variant="primary" href="/contacto" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all">
                   Crear Pedido
                 </Button>
               </CardContent>
