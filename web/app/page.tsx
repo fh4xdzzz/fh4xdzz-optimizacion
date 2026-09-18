@@ -26,11 +26,11 @@ export default function Home() {
               <Button variant="primary" size="lg" href="/servicios" className="shimmer-button animate-bounce-subtle text-lg px-8 py-4">
                 Ver Servicios
               </Button>
-              <a 
-                href="https://discord.gg/DXkEXrYRvM" 
-                target="_blank" 
+              <a
+                href="https://discord.gg/DXkEXrYRvM"
+                target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-secondary text-white hover:bg-secondary/90 h-12 px-6 text-lg cursor-pointer pointer-events-auto"
+                className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-secondary text-white h-12 px-6 text-lg cursor-pointer pointer-events-auto"
               >
                 Unirse a Discord
               </a>
@@ -44,7 +44,7 @@ export default function Home() {
         <div className="container mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-primary animate-fade-in-up">Servicios Destacados</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="border-primary/50 hover:border-primary transition-all hover-lift hover-glow glowing-border glass-card">
+            <Card className="border-primary/50 transition-all glass-card">
               <CardHeader>
                 <CardTitle className="text-2xl mb-2">Optimización de OBS</CardTitle>
                 <CardDescription className="text-base">Configuración profesional para streaming de alta calidad</CardDescription>
@@ -65,7 +65,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-secondary/50 hover:border-secondary transition-all hover-lift hover-glow glowing-border glass-card">
+            <Card className="border-secondary/50 transition-all glass-card">
               <CardHeader>
                 <CardTitle className="text-2xl mb-2">Configuración de Streaming</CardTitle>
                 <CardDescription className="text-base">Setup completo para Twitch, YouTube u otras plataformas</CardDescription>
@@ -86,7 +86,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-accent/50 hover:border-accent transition-all hover-lift hover-glow glowing-border glass-card">
+            <Card className="border-accent/50 transition-all glass-card">
               <CardHeader>
                 <CardTitle className="text-2xl mb-2">Optimización de PC</CardTitle>
                 <CardDescription className="text-base">Mejora del rendimiento del sistema para gaming</CardDescription>
@@ -116,28 +116,28 @@ export default function Home() {
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-secondary animate-fade-in-up">Cómo Funciona</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
             <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform cursor-pointer glowing-border">
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 transition-transform cursor-pointer">
                 <span className="text-4xl md:text-5xl font-bold text-primary">1</span>
               </div>
               <h3 className="font-semibold mb-3 text-xl text-foreground">Selecciona Servicio</h3>
               <p className="text-sm md:text-base text-muted leading-relaxed px-4">Elige el servicio que necesitas de nuestro catálogo</p>
             </div>
             <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform cursor-pointer glowing-border">
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-6 transition-transform cursor-pointer">
                 <span className="text-4xl md:text-5xl font-bold text-secondary">2</span>
               </div>
               <h3 className="font-semibold mb-3 text-xl text-foreground">Completa Formulario</h3>
               <p className="text-sm md:text-base text-muted leading-relaxed px-4">Proporciona los detalles de lo que necesitas</p>
             </div>
             <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform cursor-pointer glowing-border">
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-6 transition-transform cursor-pointer">
                 <span className="text-4xl md:text-5xl font-bold text-accent">3</span>
               </div>
               <h3 className="font-semibold mb-3 text-xl text-foreground">Recibe Confirmación</h3>
               <p className="text-sm md:text-base text-muted leading-relaxed px-4">Te contactaremos para coordinar el servicio</p>
             </div>
             <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform cursor-pointer glowing-border">
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 transition-transform cursor-pointer">
                 <span className="text-4xl md:text-5xl font-bold text-primary">4</span>
               </div>
               <h3 className="font-semibold mb-3 text-xl text-foreground">Disfruta Resultados</h3>
@@ -152,17 +152,17 @@ export default function Home() {
         <div className="container mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-secondary animate-fade-in-up">¿Por Qué Elegirnos?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center glass-card p-8 rounded-2xl hover-lift hover-glow animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className="text-center glass-card p-8 rounded-2xl animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <div className="text-6xl mb-6 animate-float">🎯</div>
               <h3 className="font-semibold mb-3 text-xl text-foreground">Expertos Certificados</h3>
               <p className="text-base text-muted leading-relaxed">Equipo con años de experiencia en streaming y gaming</p>
             </div>
-            <div className="text-center glass-card p-8 rounded-2xl hover-lift hover-glow animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <div className="text-center glass-card p-8 rounded-2xl animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <div className="text-6xl mb-6 animate-float" style={{ animationDelay: '0.5s' }}>⚡</div>
               <h3 className="font-semibold mb-3 text-xl text-foreground">Resultados Rápidos</h3>
               <p className="text-base text-muted leading-relaxed">Optimizaciones eficientes en tiempo récord</p>
             </div>
-            <div className="text-center glass-card p-8 rounded-2xl hover-lift hover-glow animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <div className="text-center glass-card p-8 rounded-2xl animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
               <div className="text-6xl mb-6 animate-float" style={{ animationDelay: '1s' }}>🛡️</div>
               <h3 className="font-semibold mb-3 text-xl text-foreground">Soporte Dedicado</h3>
               <p className="text-base text-muted leading-relaxed">Asistencia continua antes, durante y después del servicio</p>
@@ -176,7 +176,7 @@ export default function Home() {
         <div className="container mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-primary animate-fade-in-up">Lo Que Dicen Nuestros Clientes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="glass-card hover-lift hover-glow glowing-border animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <CardHeader>
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center animate-float">
@@ -196,7 +196,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="glass-card hover-lift hover-glow glowing-border animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <CardHeader>
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center animate-float" style={{ animationDelay: '0.5s' }}>
@@ -224,7 +224,7 @@ export default function Home() {
         <div className="container mx-auto max-w-4xl">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-secondary animate-fade-in-up">Preguntas Frecuentes</h2>
           <div className="space-y-6">
-            <Card className="glass-card hover-lift hover-glow animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <CardHeader>
                 <CardTitle className="text-xl">¿Cuánto tiempo tardan los servicios?</CardTitle>
               </CardHeader>
@@ -235,7 +235,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="glass-card hover-lift hover-glow animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <CardHeader>
                 <CardTitle className="text-xl">¿Ofrecen soporte después del servicio?</CardTitle>
               </CardHeader>
@@ -246,7 +246,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="glass-card hover-lift hover-glow animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
               <CardHeader>
                 <CardTitle className="text-xl">¿Qué métodos de pago aceptan?</CardTitle>
               </CardHeader>
@@ -269,10 +269,10 @@ export default function Home() {
               Únete a cientos de clientes satisfechos que han mejorado su experiencia de streaming y gaming.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <Button variant="primary" size="lg" href="/servicios" className="shimmer-button text-lg px-10 py-5 hover-lift">
+              <Button variant="primary" size="lg" href="/servicios" className="shimmer-button text-lg px-10 py-5">
                 Ver Servicios
               </Button>
-              <Button variant="outline" size="lg" href="/contacto" className="text-lg px-10 py-5 hover-lift">
+              <Button variant="outline" size="lg" href="/contacto" className="text-lg px-10 py-5">
                 Contactar
               </Button>
             </div>

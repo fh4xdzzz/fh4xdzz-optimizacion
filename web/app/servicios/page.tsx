@@ -239,9 +239,9 @@ export default function ServicesPage() {
               <button
                 key={category.id}
                 className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 text-sm pointer-events-auto cursor-pointer ${
-                  selectedCategory === category.id 
-                    ? 'bg-primary text-white hover:bg-primary/90' 
-                    : 'border border-border bg-transparent hover:bg-card'
+                  selectedCategory === category.id
+                    ? 'bg-primary text-white'
+                    : 'border border-border bg-transparent'
                 }`}
                 onClick={() => setSelectedCategory(category.id)}
               >
@@ -259,10 +259,10 @@ export default function ServicesPage() {
             {filteredServices.map((service, index) => (
               <Card
                 key={service.id}
-                className={`border-2 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up ${
+                className={`border-2 transition-all glass-card animate-fade-in-up ${
                   service.featured
                     ? 'border-primary shadow-lg shadow-primary/20'
-                    : 'border-border/50 hover:border-primary/50'
+                    : 'border-border/50'
                 }`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
@@ -317,13 +317,13 @@ export default function ServicesPage() {
                       <div className="flex gap-3">
                         <a
                           href={`/servicios/${service.slug}`}
-                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 border border-border bg-transparent hover:bg-card pointer-events-auto cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 border border-border bg-transparent pointer-events-auto cursor-pointer"
                         >
                           Ver detalles
                         </a>
                         <button
                           onClick={() => handleRequestService(service.id)}
-                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 bg-primary text-white hover:bg-primary/90 pointer-events-auto cursor-pointer shimmer-button"
+                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 bg-primary text-white pointer-events-auto cursor-pointer shimmer-button"
                         >
                           Solicitar
                         </button>
@@ -347,7 +347,7 @@ export default function ServicesPage() {
             </p>
             <a
               href="/contacto"
-              className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-14 px-10 text-lg bg-primary text-white hover:bg-primary/90 pointer-events-auto cursor-pointer shimmer-button hover-lift"
+              className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-14 px-10 text-lg bg-primary text-white pointer-events-auto cursor-pointer shimmer-button"
             >
               Contactar para Servicio Personalizado
             </a>

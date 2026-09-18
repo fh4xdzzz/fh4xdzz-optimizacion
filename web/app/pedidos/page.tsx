@@ -267,7 +267,7 @@ export default function OrdersPage() {
                 {searchError && (
                   <p className="text-red-500 text-sm bg-red-500/10 border border-red-500/30 rounded-lg p-2">{searchError}</p>
                 )}
-                <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all">
+                <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all">
                   Consultar
                 </Button>
               </form>
@@ -369,7 +369,7 @@ export default function OrdersPage() {
               <Button
                 variant="outline"
                 onClick={() => setShowAllOrders(!showAllOrders)}
-                className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-all"
+                className="border-purple-500/30 text-purple-300 transition-all"
               >
                 {showAllOrders ? 'Ocultar todos los pedidos' : `Ver todos mis pedidos (${allOrders.length})`}
               </Button>
@@ -380,7 +380,7 @@ export default function OrdersPage() {
           {showAllOrders && allOrders.length > 0 && (
             <div className="mt-6 space-y-4">
               {allOrders.map((order) => (
-                <Card key={order.id} className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-900/10 to-blue-900/10 hover:border-purple-500/50 transition-all">
+                <Card key={order.id} className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-900/10 to-blue-900/10 transition-all">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -401,7 +401,7 @@ export default function OrdersPage() {
                             setSearchResult(order)
                             setShowAllOrders(false)
                           }}
-                          className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-all"
+                          className="border-purple-500/30 text-purple-300 transition-all"
                         >
                           Ver detalles
                         </Button>
@@ -430,7 +430,7 @@ export default function OrdersPage() {
                 <div className="text-muted mb-4 text-lg">
                   No tienes pedidos aún. Crea tu primera solicitud de servicio.
                 </div>
-                <Button variant="primary" href="/contacto" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all">
+                <Button variant="primary" href="/contacto" className="bg-gradient-to-r from-purple-600 to-blue-600 transition-all">
                   Crear Pedido
                 </Button>
               </CardContent>

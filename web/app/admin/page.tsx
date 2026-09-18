@@ -542,9 +542,9 @@ export default function AdminPage() {
           <div className="flex flex-wrap gap-3 mb-8 border-b border-border/50 pb-6 relative z-30">
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'overview' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'border border-border bg-transparent hover:bg-card'
+                activeTab === 'overview'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-transparent'
               }`}
               onClick={() => setActiveTab('overview')}
             >
@@ -552,9 +552,9 @@ export default function AdminPage() {
             </button>
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'users' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'border border-border bg-transparent hover:bg-card'
+                activeTab === 'users'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-transparent'
               }`}
               onClick={() => setActiveTab('users')}
             >
@@ -562,9 +562,9 @@ export default function AdminPage() {
             </button>
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'orders' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'border border-border bg-transparent hover:bg-card'
+                activeTab === 'orders'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-transparent'
               }`}
               onClick={() => setActiveTab('orders')}
             >
@@ -572,9 +572,9 @@ export default function AdminPage() {
             </button>
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'services' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'border border-border bg-transparent hover:bg-card'
+                activeTab === 'services'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-transparent'
               }`}
               onClick={() => setActiveTab('services')}
             >
@@ -583,8 +583,8 @@ export default function AdminPage() {
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'support'
-                  ? 'bg-primary text-white hover:bg-primary/90'
-                  : 'border border-border bg-transparent hover:bg-card'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-transparent'
               }`}
               onClick={() => setActiveTab('support')}
             >
@@ -593,8 +593,8 @@ export default function AdminPage() {
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'history'
-                  ? 'bg-primary text-white hover:bg-primary/90'
-                  : 'border border-border bg-transparent hover:bg-card'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-transparent'
               }`}
               onClick={() => setActiveTab('history')}
             >
@@ -604,8 +604,8 @@ export default function AdminPage() {
               <button
                 className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                   activeTab === 'settings'
-                    ? 'bg-primary text-white hover:bg-primary/90'
-                    : 'border border-border bg-transparent hover:bg-card'
+                    ? 'bg-primary text-white'
+                    : 'border border-border bg-transparent'
                 }`}
                 onClick={() => setActiveTab('settings')}
               >
@@ -617,7 +617,7 @@ export default function AdminPage() {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.1s' }} onClick={() => setActiveTab('users')}>
+              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }} onClick={() => setActiveTab('users')}>
                 <CardHeader>
                   <CardTitle className="text-xl mb-2">Total Usuarios</CardTitle>
                 </CardHeader>
@@ -627,7 +627,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.2s' }} onClick={() => setActiveTab('orders')}>
+              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.2s' }} onClick={() => setActiveTab('orders')}>
                 <CardHeader>
                   <CardTitle className="text-xl mb-2">Total Pedidos</CardTitle>
                 </CardHeader>
@@ -637,7 +637,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.3s' }} onClick={() => setActiveTab('orders')}>
+              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.3s' }} onClick={() => setActiveTab('orders')}>
                 <CardHeader>
                   <CardTitle className="text-xl mb-2">Pedidos Pendientes</CardTitle>
                 </CardHeader>
@@ -649,7 +649,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:border-primary/50 transition-all hover-lift hover-glow glass-card glowing-border animate-fade-in-up" style={{ animationDelay: '0.4s' }} onClick={() => setActiveTab('services')}>
+              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.4s' }} onClick={() => setActiveTab('services')}>
                 <CardHeader>
                   <CardTitle className="text-xl mb-2">Servicios Activos</CardTitle>
                 </CardHeader>
@@ -676,7 +676,7 @@ export default function AdminPage() {
                     {users.map((user, index) => (
                       <div
                         key={user.id}
-                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
                         style={{ animationDelay: `${index * 0.05}s` }}
                       >
                         <div className="flex-1">
@@ -714,7 +714,7 @@ export default function AdminPage() {
                     {orders.map((order, index) => (
                       <div
                         key={order.id}
-                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
                         style={{ animationDelay: `${index * 0.05}s` }}
                       >
                         <div
@@ -785,7 +785,7 @@ export default function AdminPage() {
                     {services.map((service, index) => (
                       <div
                         key={service.id}
-                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
                         style={{ animationDelay: `${index * 0.05}s` }}
                       >
                         <div className="flex-1">
@@ -860,13 +860,13 @@ export default function AdminPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => setSelectedChat(null)}
-                            className="px-4 py-2 bg-[#333333] text-[#ededed] rounded-lg hover:bg-[#444444] transition-colors"
+                            className="px-4 py-2 bg-[#333333] text-[#ededed] rounded-lg transition-colors"
                           >
                             Volver
                           </button>
                           <button
                             onClick={() => handleCloseChat(selectedChat.id)}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg transition-colors"
                           >
                             Cerrar
                           </button>
@@ -915,7 +915,7 @@ export default function AdminPage() {
                           />
                           <button
                             type="submit"
-                            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity"
+                            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg transition-opacity"
                           >
                             Enviar
                           </button>
@@ -928,7 +928,7 @@ export default function AdminPage() {
                         chatSessions.map((chat, index) => (
                           <div
                             key={chat.id}
-                            className="p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up cursor-pointer"
+                            className="p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer"
                             style={{ animationDelay: `${index * 0.05}s` }}
                             onClick={() => {
                               setSelectedChat(chat)
@@ -960,7 +960,7 @@ export default function AdminPage() {
                                     e.stopPropagation()
                                     handleClaimChat(chat.id)
                                   }}
-                                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity"
+                                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg transition-opacity"
                                 >
                                   Reclamar
                                 </button>
@@ -995,7 +995,7 @@ export default function AdminPage() {
                       chatHistory.map((chat, index) => (
                         <div
                           key={chat.id}
-                          className="p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                          className="p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <div className="flex items-center justify-between">
@@ -1015,7 +1015,7 @@ export default function AdminPage() {
                                 loadChatMessages(chat.id)
                                 setActiveTab('support')
                               }}
-                              className="px-4 py-2 bg-[#333333] text-[#ededed] rounded-lg hover:bg-[#444444] transition-colors"
+                              className="px-4 py-2 bg-[#333333] text-[#ededed] rounded-lg transition-colors"
                             >
                               Ver detalles
                             </button>

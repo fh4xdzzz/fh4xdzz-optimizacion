@@ -276,7 +276,7 @@ export default function DashboardPage() {
                   {orders.slice(0, 5).map((order: Order) => (
                     <div
                       key={order.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/50 transition-colors"
+                      className="flex items-center justify-between p-4 border border-border rounded-lg transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">

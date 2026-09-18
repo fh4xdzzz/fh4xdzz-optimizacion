@@ -57,7 +57,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-2 text-sm text-muted mb-4">
-              <Link href="/servicios" className="hover:text-foreground">
+              <Link href="/servicios" className="text-foreground">
                 Servicios
               </Link>
               <span>/</span>

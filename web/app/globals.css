@@ -298,23 +298,7 @@ body {
   animation: rotate-slow 20s linear infinite;
 }
 
-/* Sin hover effects - animaciones suaves automáticas */
-.hover-lift {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
 
-/* Sin hover activo - solo animaciones automáticas */
-.hover-lift:hover {
-  /* Sin hover effect - mantener estático */
-}
-
-.hover-glow {
-  transition: box-shadow 0.4s ease, border-color 0.4s ease;
-}
-
-.hover-glow:hover {
-  /* Sin hover effect - mantener estático */
-}
 
 /* Efecto shimmer para botones */
 .shimmer-button {
@@ -338,9 +322,7 @@ body {
   animation: shimmer 3s infinite;
 }
 
-.shimmer-button:hover::before {
-  animation: shimmer 1.5s infinite;
-}
+
 
 /* Efecto de glassmorphism mejorado */
 .glass-card {
@@ -401,9 +383,7 @@ body {
   filter: blur(8px);
 }
 
-.glowing-border:hover::before {
-  opacity: 1;
-}
+
 
 /* Efecto de backdrop blur mejorado */
 .backdrop-blur-strong {
