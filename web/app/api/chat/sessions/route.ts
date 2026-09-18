@@ -115,6 +115,8 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
+    console.log('Insert result:', { success: !insertError, error: insertError, session: newSession })
+
     if (insertError) {
       console.error('Error creating chat session:', insertError)
       console.error('Error details:', JSON.stringify(insertError))
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('Created new session successfully:', newSession.id, newSession.conversation_number)
+    console.log('Created new session successfully:', newSession.id, newSession.conversation_number, newSession.status)
 
     return NextResponse.json({ session: newSession, existing: false })
   } catch (error) {
