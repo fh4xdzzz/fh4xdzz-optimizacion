@@ -13,6 +13,7 @@ Sistema completo integrado por:
 - **Cierre de chat en tiempo real** para clientes sin necesidad de recargar página
 - **Mensajes de bienvenida** con nombre del admin al reclamar tickets
 - **Historial de chats** de solo lectura (no se pueden enviar mensajes)
+- **Sistema de notificaciones unificado** con toast UI en toda la plataforma
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías
