@@ -89,9 +89,14 @@ export default function ChatWidget() {
   useEffect(() => {
     const checkAdmin = async () => {
       const session = await getSession()
+      console.log('Session:', session)
+      console.log('User role:', session?.user?.role)
       if (session?.user?.role === 'admin' || session?.user?.role === 'owner') {
+        console.log('Usuario es admin u owner, activando modo admin')
         setIsAdmin(true)
         loadUsers()
+      } else {
+        console.log('Usuario no es admin ni owner, modo cliente')
       }
     }
     checkAdmin()
@@ -101,26 +106,35 @@ export default function ChatWidget() {
     console.log('Cargando usuarios que contactaron al soporte...')
     try {
       // Cargar usuarios que tienen mensajes NO cerrados en chat_messages
-      const { data: messages } = await supabase
+      const { data: messages, error: messagesError } = await supabase
         .from('chat_messages')
         .select('user_id')
         .eq('is_closed', false)
         .neq('is_from_admin', true)
 
+      if (messagesError) {
+        console.error('Error al cargar mensajes:', messagesError)
+        setUsers([])
+        return
+      }
+
+      console.log('Mensajes encontrados:', messages)
       if (!messages || messages.length === 0) {
+        console.log('No hay mensajes de clientes')
         setUsers([])
         return
       }
 
       // Obtener IDs únicos de usuarios
       const userIds = [...new Set(messages.map((m: any) => m.user_id))]
+      console.log('User IDs:', userIds)
 
-      // Cargar datos de esos usuarios
+      // Cargar datos de esos usuarios (excluir admin y owner)
       const { data: users, error } = await supabase
         .from('users')
-        .select('id, email, full_name')
+        .select('id, email, full_name, role')
         .in('id', userIds)
-        .neq('role', 'admin')
+        .not('role', 'in', '("admin","owner")')
 
       if (error) {
         console.error('Error al cargar usuarios:', error)
