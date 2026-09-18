@@ -134,7 +134,7 @@ function ContactFormContent() {
 
       // Enviar webhook al bot de Discord
       try {
-        await fetch('http://localhost:5000/webhook', {
+        await fetch('https://v-mfl-04.apollopanel.com:5000/webhook', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
