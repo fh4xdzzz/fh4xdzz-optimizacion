@@ -14,6 +14,8 @@ interface Message {
   message_type: string
   created_at: string
   read_at: string | null
+  attachment_path?: string
+  attachment_name?: string
 }
 
 interface ChatSession {
@@ -161,6 +163,8 @@ export default function SupportChatWidget() {
           message_type: newMessage.message_type,
           created_at: newMessage.created_at,
           read_at: newMessage.read_at,
+          attachment_path: newMessage.attachment_path,
+          attachment_name: newMessage.attachment_name,
         }
         setMessages(prev => [...prev, cleanMessage])
 
@@ -532,6 +536,9 @@ export default function SupportChatWidget() {
 
             {messages.map((message) => {
               const isClient = message.sender_role === 'client'
+              const isAttachment = message.message_type === 'attachment'
+              const isImage = isAttachment && message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+              
               return (
                 <div
                   key={message.id}
@@ -544,7 +551,23 @@ export default function SupportChatWidget() {
                         : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
                     }`}
                   >
-                    <p className="text-sm">{message.message}</p>
+                    {isImage && message.attachment_path && (
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-attachments/${message.attachment_path}`}
+                        alt={message.attachment_name}
+                        className="max-w-full rounded-lg mb-2"
+                        onError={(e) => {
+                          console.error('Error loading image:', e)
+                        }}
+                      />
+                    )}
+                    {isAttachment && !isImage && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <Paperclip size={16} />
+                        <span className="text-sm">{message.attachment_name}</span>
+                      </div>
+                    )}
+                    {!isAttachment && <p className="text-sm">{message.message}</p>}
                     <p
                       className={`text-xs mt-1 ${
                         isClient ? 'text-white/80' : 'text-[#6b7280]'
