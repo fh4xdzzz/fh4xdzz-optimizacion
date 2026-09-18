@@ -81,7 +81,7 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const router = useRouter()
   const isDemo = isDemoMode()
-  const { success, error, warning, info } = useNotificationStore()
+  const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
   const supabase = createClient()
 
   const loadAdminData = async () => {
@@ -341,7 +341,7 @@ export default function AdminPage() {
   const handleDeleteOrder = async (orderId: string) => {
     try {
       if (userRole !== 'owner') {
-        warning('Solo el owner puede eliminar pedidos')
+        notifyWarning('Solo el owner puede eliminar pedidos')
         return
       }
 
@@ -353,7 +353,7 @@ export default function AdminPage() {
 
       const session = await getSession()
       if (!session) {
-        warning('Debes iniciar sesión para eliminar pedidos')
+        notifyWarning('Debes iniciar sesión para eliminar pedidos')
         return
       }
 
@@ -364,10 +364,10 @@ export default function AdminPage() {
       setDeleteConfirm(null)
       setShowOrderModal(false)
       setSelectedOrder(null)
-      success('Pedido eliminado exitosamente')
+      notifySuccess('Pedido eliminado exitosamente')
     } catch (error) {
       console.error('Error al eliminar pedido:', error)
-      error('Error al eliminar pedido: ' + (error as Error).message)
+      notifyError('Error al eliminar pedido: ' + (error as Error).message)
     }
   }
 
@@ -396,11 +396,11 @@ export default function AdminPage() {
 
       if (response.ok) {
         await loadAdminData()
-        success('Chat reclamado exitosamente')
+        notifySuccess('Chat reclamado exitosamente')
       }
     } catch (error) {
       console.error('Error al reclamar chat:', error)
-      error('Error al reclamar chat')
+      notifyError('Error al reclamar chat')
     }
   }
 
@@ -428,15 +428,15 @@ export default function AdminPage() {
         setSelectedChat(null)
         setChatMessages([])
         
-        success('Chat cerrado exitosamente')
+        notifySuccess('Chat cerrado exitosamente')
       } else {
         const errorData = await response.json()
         console.error('Error closing chat:', errorData)
-        error('Error al cerrar chat: ' + errorData.error)
+        notifyError('Error al cerrar chat: ' + errorData.error)
       }
     } catch (error) {
       console.error('Error al cerrar chat:', error)
-      error('Error al cerrar chat')
+      notifyError('Error al cerrar chat')
     }
   }
 
@@ -445,7 +445,7 @@ export default function AdminPage() {
 
     // Verificar si el chat está cerrado
     if (selectedChat.status === 'closed') {
-      warning('No puedes enviar mensajes en chats cerrados. Por favor, selecciona un chat activo.')
+      notifyWarning('No puedes enviar mensajes en chats cerrados. Por favor, selecciona un chat activo.')
       return
     }
 
@@ -468,7 +468,7 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error('Error al enviar mensaje:', error)
-      error('Error al enviar mensaje')
+      notifyError('Error al enviar mensaje')
     }
   }
 

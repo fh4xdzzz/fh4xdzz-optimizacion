@@ -41,7 +41,7 @@ export default function SupportChatWidget() {
   const [authLoading, setAuthLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
-  const { warning, error, success } = useNotificationStore()
+  const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
   // Emojis predefinidos
   const emojis = ['😀', '👍', '🔥', '❤️', '🎮', '🖥️', '🎙️', '✅']
@@ -242,7 +242,7 @@ export default function SupportChatWidget() {
 
     // Verificar autenticación
     if (!isAuthenticated || !currentUser) {
-      warning('Debes iniciar sesión para enviar mensajes')
+      notifyWarning('Debes iniciar sesión para enviar mensajes')
       return
     }
 

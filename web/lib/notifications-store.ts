@@ -24,7 +24,7 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
   addNotification: (type, message, duration = 5000) => {
     const id = crypto.randomUUID()
     const notification: Notification = { id, type, message, duration }
-    set((state) => ({ notifications: [...state.notifications, notification }))
+    set((state) => ({ notifications: [...state.notifications, notification] }))
 
     // Auto-remove after duration
     setTimeout(() => {

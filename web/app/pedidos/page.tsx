@@ -41,7 +41,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const { success, error, warning } = useNotificationStore()
+  const { success: notifySuccess, error: notifyError, warning: notifyWarning } = useNotificationStore()
 
   // Cargar pedidos del usuario desde Supabase
   const loadOrders = async () => {
@@ -100,12 +100,12 @@ export default function OrdersPage() {
     try {
       const session = await getSession()
       if (!session) {
-        alert('Debes iniciar sesión para eliminar pedidos')
+        notifyWarning('Debes iniciar sesión para eliminar pedidos')
         return
       }
 
       if (session.user.role !== 'owner') {
-        alert('Solo el owner puede eliminar pedidos')
+        notifyWarning('Solo el owner puede eliminar pedidos')
         return
       }
 
@@ -123,10 +123,10 @@ export default function OrdersPage() {
       }
       loadOrders()
       setDeleteConfirm(null)
-      success('Pedido eliminado exitosamente')
+      notifySuccess('Pedido eliminado exitosamente')
     } catch (error) {
       console.error('Error al eliminar pedido:', error)
-      error('Error al eliminar pedido: ' + (error as Error).message)
+      notifyError('Error al eliminar pedido: ' + (error as Error).message)
     }
   }
 
