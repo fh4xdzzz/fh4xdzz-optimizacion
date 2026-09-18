@@ -43,22 +43,40 @@ export async function GET(request: NextRequest) {
 // POST /api/chat/sessions - Crear nueva sesión de chat
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/chat/sessions - Starting')
+
     const session = await getServerSession()
     if (!session) {
-      console.error('No session found')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.error('No session found - User not authenticated')
+      return NextResponse.json({ error: 'Unauthorized - Please login first' }, { status: 401 })
     }
 
-    console.log('User session:', session.user.id, session.user.role)
+    console.log('User authenticated:', session.user.id, session.user.role, session.user.email)
 
     const body = await request.json()
     const { subject, service_type, language } = body
+
+    console.log('Request body:', { subject, service_type, language })
 
     if (!subject) {
       return NextResponse.json({ error: 'Subject is required' }, { status: 400 })
     }
 
     const supabase = await createClient()
+
+    // Verificar si el usuario existe en la tabla users
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id, role')
+      .eq('id', session.user.id)
+      .single()
+
+    if (userError || !userRecord) {
+      console.error('User not found in users table:', userError)
+      return NextResponse.json({ error: 'User not found in database' }, { status: 400 })
+    }
+
+    console.log('User record found:', userRecord.id, userRecord.role)
 
     // Verificar si ya existe una sesión activa del cliente
     const { data: existingSession, error: existingError } = await supabase
@@ -77,12 +95,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ session: existingSession, existing: true })
     }
 
-    // Crear nueva sesión sin trigger primero
+    // Crear nueva sesión manualmente sin conversation_number trigger
+    const conversationNumber = 'CHAT-' + Date.now().toString().slice(-6)
+
+    console.log('Creating session with number:', conversationNumber)
+
     const { data: newSession, error: insertError } = await supabase
       .from('chat_sessions')
       .insert({
+        id: crypto.randomUUID(),
+        conversation_number: conversationNumber,
         client_id: session.user.id,
-        conversation_number: null, // Dejar que el trigger lo asigne
         subject: subject || 'Soporte',
         service_type: service_type || 'general',
         language: language || 'es',
@@ -94,27 +117,24 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Error creating chat session:', insertError)
-      return NextResponse.json({ error: 'Failed to create session', details: insertError.message }, { status: 500 })
+      console.error('Error details:', JSON.stringify(insertError))
+      return NextResponse.json({ 
+        error: 'Failed to create session', 
+        details: insertError.message,
+        code: insertError.code 
+      }, { status: 500 })
     }
 
-    console.log('Created new session:', newSession.id)
-
-    // Registrar en auditoría (sin requerir éxito)
-    try {
-      await supabase.from('chat_audit_logs').insert({
-        actor_id: session.user.id,
-        action: 'CHAT_CREATED',
-        session_id: newSession.id,
-        metadata: { subject, service_type, language }
-      })
-    } catch (auditError) {
-      console.error('Error creating audit log:', auditError)
-      // No fallar la petición si falla la auditoría
-    }
+    console.log('Created new session successfully:', newSession.id, newSession.conversation_number)
 
     return NextResponse.json({ session: newSession, existing: false })
   } catch (error) {
     console.error('Error in POST /api/chat/sessions:', error)
-    return NextResponse.json({ error: 'Internal server error', details: (error as Error).message }, { status: 500 })
+    console.error('Error stack:', (error as Error).stack)
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      details: (error as Error).message,
+      stack: (error as Error).stack
+    }, { status: 500 })
   }
 }
