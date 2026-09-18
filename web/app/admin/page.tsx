@@ -200,7 +200,7 @@ export default function AdminPage() {
 
   // Suscribirse a cambios en tiempo real para chat sessions
   useEffect(() => {
-    if (activeTab !== 'support' || isDemo) return
+    if (isDemo) return
 
     console.log('Setting up Realtime for chat sessions')
 
@@ -222,11 +222,11 @@ export default function AdminPage() {
       console.log('Cleaning up chat sessions Realtime')
       supabase.removeChannel(channel)
     }
-  }, [activeTab, isDemo])
+  }, [isDemo])
 
   // Suscribirse a cambios en tiempo real para usuarios
   useEffect(() => {
-    if (activeTab !== 'users' || isDemo) return
+    if (isDemo) return
 
     console.log('Setting up Realtime for users')
 
@@ -248,11 +248,11 @@ export default function AdminPage() {
       console.log('Cleaning up users Realtime')
       supabase.removeChannel(channel)
     }
-  }, [activeTab, isDemo])
+  }, [isDemo])
 
   // Suscribirse a cambios en tiempo real para pedidos
   useEffect(() => {
-    if (activeTab !== 'orders' || isDemo) return
+    if (isDemo) return
 
     console.log('Setting up Realtime for orders')
 
@@ -263,6 +263,8 @@ export default function AdminPage() {
         schema: 'public',
         table: 'orders'
       }, (payload) => {
+        console.log('Orders changed, payload:', payload)
+        
         // Recargar si cambia deleted_at (soft delete)
         if (payload.eventType === 'UPDATE' && payload.new?.deleted_at !== payload.old?.deleted_at) {
           console.log('Order deleted_at changed, reloading...')
@@ -280,11 +282,11 @@ export default function AdminPage() {
       console.log('Cleaning up orders Realtime')
       supabase.removeChannel(channel)
     }
-  }, [activeTab, isDemo])
+  }, [isDemo])
 
   // Suscribirse a cambios en tiempo real para servicios
   useEffect(() => {
-    if (activeTab !== 'services' || isDemo) return
+    if (isDemo) return
 
     console.log('Setting up Realtime for services')
 
@@ -306,7 +308,7 @@ export default function AdminPage() {
       console.log('Cleaning up services Realtime')
       supabase.removeChannel(channel)
     }
-  }, [activeTab, isDemo])
+  }, [isDemo])
 
   // Suscribirse a cambios en tiempo real para chat messages
   useEffect(() => {
