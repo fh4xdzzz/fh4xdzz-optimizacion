@@ -118,8 +118,8 @@ export default function AdminPage() {
       .order('sort_order', { ascending: true })
     if (servicesData) setServices(servicesData)
 
-    // Cargar sesiones de chat
-    console.log('Loading chat sessions...')
+    // Cargar sesiones de chat (solo activos: waiting, active, pending)
+    console.log('Loading chat sessions (excluding closed)...')
     const { data: chatSessionsData, error: chatError } = await supabase
       .from('chat_sessions')
       .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
@@ -129,7 +129,8 @@ export default function AdminPage() {
     if (chatError) {
       console.error('Error loading chat sessions:', chatError)
     } else {
-      console.log('Chat sessions loaded:', chatSessionsData?.length || 0)
+      console.log('Chat sessions loaded (active only):', chatSessionsData?.length || 0)
+      console.log('Session statuses:', chatSessionsData?.map((s: any) => s.status))
       if (chatSessionsData) {
         setChatSessions(chatSessionsData.map((session: any) => ({
           id: session.id,
