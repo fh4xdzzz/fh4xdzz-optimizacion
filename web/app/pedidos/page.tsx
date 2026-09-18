@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
+import { useNotificationStore } from '@/lib/notifications-store'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pendiente', color: 'bg-yellow-500' },
@@ -40,6 +41,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const { success, error, warning } = useNotificationStore()
 
   // Cargar pedidos del usuario desde Supabase
   const loadOrders = async () => {
@@ -121,10 +123,10 @@ export default function OrdersPage() {
       }
       loadOrders()
       setDeleteConfirm(null)
-      alert('Pedido eliminado exitosamente')
+      success('Pedido eliminado exitosamente')
     } catch (error) {
       console.error('Error al eliminar pedido:', error)
-      alert('Error al eliminar pedido: ' + (error as Error).message)
+      error('Error al eliminar pedido: ' + (error as Error).message)
     }
   }
 

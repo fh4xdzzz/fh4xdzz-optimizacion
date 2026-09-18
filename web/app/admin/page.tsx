@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
+import { useNotificationStore } from '@/lib/notifications-store'
 
 interface User {
   id: string
@@ -80,6 +81,7 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const router = useRouter()
   const isDemo = isDemoMode()
+  const { success, error, warning, info } = useNotificationStore()
   const supabase = createClient()
 
   const loadAdminData = async () => {
@@ -339,7 +341,7 @@ export default function AdminPage() {
   const handleDeleteOrder = async (orderId: string) => {
     try {
       if (userRole !== 'owner') {
-        alert('Solo el owner puede eliminar pedidos')
+        warning('Solo el owner puede eliminar pedidos')
         return
       }
 
@@ -351,7 +353,7 @@ export default function AdminPage() {
 
       const session = await getSession()
       if (!session) {
-        alert('Debes iniciar sesión para eliminar pedidos')
+        warning('Debes iniciar sesión para eliminar pedidos')
         return
       }
 
@@ -362,10 +364,10 @@ export default function AdminPage() {
       setDeleteConfirm(null)
       setShowOrderModal(false)
       setSelectedOrder(null)
-      alert('Pedido eliminado exitosamente')
+      success('Pedido eliminado exitosamente')
     } catch (error) {
       console.error('Error al eliminar pedido:', error)
-      alert('Error al eliminar pedido: ' + (error as Error).message)
+      error('Error al eliminar pedido: ' + (error as Error).message)
     }
   }
 
@@ -394,11 +396,11 @@ export default function AdminPage() {
 
       if (response.ok) {
         await loadAdminData()
-        alert('Chat reclamado exitosamente')
+        success('Chat reclamado exitosamente')
       }
     } catch (error) {
       console.error('Error al reclamar chat:', error)
-      alert('Error al reclamar chat')
+      error('Error al reclamar chat')
     }
   }
 
@@ -426,15 +428,15 @@ export default function AdminPage() {
         setSelectedChat(null)
         setChatMessages([])
         
-        alert('Chat cerrado exitosamente')
+        success('Chat cerrado exitosamente')
       } else {
-        const error = await response.json()
-        console.error('Error closing chat:', error)
-        alert('Error al cerrar chat: ' + error.error)
+        const errorData = await response.json()
+        console.error('Error closing chat:', errorData)
+        error('Error al cerrar chat: ' + errorData.error)
       }
     } catch (error) {
       console.error('Error al cerrar chat:', error)
-      alert('Error al cerrar chat')
+      error('Error al cerrar chat')
     }
   }
 
@@ -443,7 +445,7 @@ export default function AdminPage() {
 
     // Verificar si el chat está cerrado
     if (selectedChat.status === 'closed') {
-      alert('No puedes enviar mensajes en chats cerrados. Por favor, selecciona un chat activo.')
+      warning('No puedes enviar mensajes en chats cerrados. Por favor, selecciona un chat activo.')
       return
     }
 
@@ -466,7 +468,7 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error('Error al enviar mensaje:', error)
-      alert('Error al enviar mensaje')
+      error('Error al enviar mensaje')
     }
   }
 

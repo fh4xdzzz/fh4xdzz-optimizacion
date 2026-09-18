@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
 import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, User } from 'lucide-react'
+import { useNotificationStore } from '@/lib/notifications-store'
 
 interface Message {
   id: string
@@ -40,6 +41,7 @@ export default function SupportChatWidget() {
   const [authLoading, setAuthLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
+  const { warning, error, success } = useNotificationStore()
 
   // Emojis predefinidos
   const emojis = ['😀', '👍', '🔥', '❤️', '🎮', '🖥️', '🎙️', '✅']
@@ -240,7 +242,7 @@ export default function SupportChatWidget() {
 
     // Verificar autenticación
     if (!isAuthenticated || !currentUser) {
-      alert('Debes iniciar sesión para enviar mensajes')
+      warning('Debes iniciar sesión para enviar mensajes')
       return
     }
 
