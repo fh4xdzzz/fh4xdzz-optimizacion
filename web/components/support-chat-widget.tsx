@@ -43,6 +43,11 @@ export default function SupportChatWidget() {
   const channelRef = useRef<any>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
+  // Si el usuario es admin/staff/owner, no mostrar el widget de soporte
+  if (currentUser && ['admin', 'staff', 'owner'].includes(currentUser.role)) {
+    return null
+  }
+
   // Emojis predefinidos
   const emojis = ['😀', '👍', '🔥', '❤️', '🎮', '🖥️', '🎙️', '✅']
 
@@ -73,6 +78,14 @@ export default function SupportChatWidget() {
       }
 
       console.log('User session found:', userSession.user.id, userSession.user.role)
+      
+      // No mostrar chat de soporte para admin, staff y owner
+      if (['admin', 'staff', 'owner'].includes(userSession.user.role)) {
+        console.log('User is admin/staff/owner, hiding support chat')
+        setAuthLoading(false)
+        return
+      }
+
       setCurrentUser(userSession.user)
       setIsAuthenticated(true)
 
