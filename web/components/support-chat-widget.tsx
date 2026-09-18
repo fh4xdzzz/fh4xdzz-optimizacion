@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
-import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, User, Image as ImageIcon, FileText, XCircle } from 'lucide-react'
+import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, User } from 'lucide-react'
 import { useNotificationStore } from '@/lib/notifications-store'
 
 interface Message {
@@ -26,13 +26,6 @@ interface ChatSession {
   created_at: string
 }
 
-interface Attachment {
-  path: string
-  file_name: string
-  content_type: string
-  file_size: number
-}
-
 export default function SupportChatWidget() {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
@@ -48,25 +41,10 @@ export default function SupportChatWidget() {
   const [authLoading, setAuthLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
-  // Estados para funcionalidades adicionales
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [uploadingFile, setUploadingFile] = useState(false)
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null)
-
-  // Emojis organizados por categorías
-  const emojiCategories = {
-    smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐'],
-    gestures: ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '�', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤝', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄'],
-    hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝'],
-    activities: ['🎮', '🖥️', '🎙️', '🎧', '📸', '🎬', '🎨', '🎭', '🎪', '🎯', '🎲', '🎰', '🎳', '🏆', '🥇', '🥈', '🥉', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️', '🤺', '🤾', '🏌️', '🏇', '🧘'],
-    objects: ['💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '🔋', '🔌', '💡', '🔦', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮'],
-    symbols: ['✅', '❌', '⭕', '❓', '❔', '❕', '❗', '〰️', '‼️', '⁉️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁️‍🗨️', '💬', '💭', '🗯️', '🔥', '⭐', '🌟', '✨', '⚡', '💥', '💫', '🔮']
-  }
+  // Emojis predefinidos
+  const emojis = ['😀', '👍', '🔥', '❤️', '🎮', '🖥️', '🎙️', '✅']
 
   // Artículos de ayuda
   const articles = [
