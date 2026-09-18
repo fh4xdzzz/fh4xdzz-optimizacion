@@ -11,7 +11,7 @@ export interface User {
   avatar_url?: string
   discord_id?: string
   discord_username?: string
-  role?: 'client' | 'admin' | 'staff'
+  role?: 'client' | 'admin' | 'staff' | 'owner'
 }
 
 export interface Session {
@@ -78,18 +78,18 @@ export async function isStaffOrAdmin(): Promise<boolean> {
   if (isDemoMode()) {
     return false // En modo demo, no hay roles reales
   }
-  
+
   const session = await getServerSession()
   if (!session) return false
-  
+
   const supabase = await createClient()
   const { data } = await supabase
     .from('users')
     .select('role')
     .eq('id', session.user.id)
     .single()
-  
-  return data?.role === 'staff' || data?.role === 'admin'
+
+  return data?.role === 'staff' || data?.role === 'admin' || data?.role === 'owner'
 }
 
 // Middleware para verificar autenticación en Server Components
