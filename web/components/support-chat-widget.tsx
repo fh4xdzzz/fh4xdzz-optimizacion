@@ -99,6 +99,8 @@ export default function SupportChatWidget() {
   useEffect(() => {
     if (!session || !open) return
 
+    console.log('Setting up Realtime subscription for session:', session.id)
+
     const channel = supabase
       .channel(`messages:${session.id}`)
       .on('postgres_changes', {
@@ -107,6 +109,7 @@ export default function SupportChatWidget() {
         table: 'chat_messages',
         filter: `session_id=eq.${session.id}`
       }, (payload) => {
+        console.log('Realtime INSERT received:', payload)
         const newMessage = payload.new as Message
         setMessages(prev => [...prev, newMessage])
 
@@ -124,14 +127,18 @@ export default function SupportChatWidget() {
         table: 'chat_sessions',
         filter: `id=eq.${session.id}`
       }, (payload) => {
+        console.log('Realtime UPDATE received:', payload)
         const updatedSession = payload.new as ChatSession
         setSession(updatedSession)
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status)
+      })
 
     channelRef.current = channel
 
     return () => {
+      console.log('Cleaning up Realtime subscription')
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
