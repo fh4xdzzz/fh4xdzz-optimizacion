@@ -202,11 +202,6 @@ export async function GET(request: NextRequest) {
       }
 
       console.log('User created successfully in database:', userId)
-    } else {
-      // Usuario encontrado, usar existente
-      userId = existingUser.id
-      userEmail = existingUser.email
-      console.log('Using existing user:', userId)
     }
 
     // Crear respuesta de redirección
