@@ -37,7 +37,13 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith(path)
     )
 
-    if (isProtectedPath && !session) {
+    // Excluir rutas de API de la protección (CRON, presencia, chat)
+    const apiExclusions = ['/api/cron', '/api/chat/presence', '/api/chat/queue']
+    const isApiExclusion = apiExclusions.some(path =>
+      request.nextUrl.pathname.startsWith(path)
+    )
+
+    if (isProtectedPath && !session && !isApiExclusion) {
       // Redirigir a login con la URL original como redirect
       const redirectUrl = new URL('/auth/login', request.url)
       redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
