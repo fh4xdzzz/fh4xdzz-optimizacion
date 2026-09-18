@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const userRole = session.user.role
 
     // Solo admin/staff/owner pueden actualizar su estado online
-    if (!['admin', 'staff', 'owner'].includes(userRole)) {
+    if (!userRole || !['admin', 'staff', 'owner'].includes(userRole)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

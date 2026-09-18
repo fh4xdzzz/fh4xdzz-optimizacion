@@ -10,7 +10,7 @@ export default function PresenceTracker() {
     async function setOnline() {
       try {
         const session = await getSession()
-        if (session && ['admin', 'staff', 'owner'].includes(session.user.role)) {
+        if (session && session.user.role && ['admin', 'staff', 'owner'].includes(session.user.role)) {
           await fetch('/api/chat/presence', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -25,7 +25,7 @@ export default function PresenceTracker() {
     async function setOffline() {
       try {
         const session = await getSession()
-        if (session && ['admin', 'staff', 'owner'].includes(session.user.role)) {
+        if (session && session.user.role && ['admin', 'staff', 'owner'].includes(session.user.role)) {
           await fetch('/api/chat/presence', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
