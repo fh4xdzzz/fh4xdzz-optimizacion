@@ -10,6 +10,7 @@ Sistema completo integrado por:
 - **Base de datos** con Supabase para gestión de usuarios, servicios y pedidos
 - **Sistema de chat de soporte** en tiempo real con Supabase Realtime
 - **Actualizaciones en tiempo real** para usuarios, pedidos, servicios y chats
+- **Cierre de chat en tiempo real** para clientes sin necesidad de recargar página
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías
