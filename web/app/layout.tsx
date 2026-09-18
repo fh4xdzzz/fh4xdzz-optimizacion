@@ -41,6 +41,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <div className="animated-bg"></div>
+        <div className="animated-bg-overlay"></div>
         {children}
         <SupportChatWidget />
         <Notifications />
