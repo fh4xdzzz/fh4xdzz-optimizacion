@@ -41,6 +41,7 @@ export default function SupportChatWidget() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
+  const [onlineAgents, setOnlineAgents] = useState<any[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -413,6 +414,23 @@ export default function SupportChatWidget() {
   // Verificar si hay agentes online
   const isOnline = true // TODO: Verificar con API real
 
+  // Cargar agentes de soporte en línea
+  useEffect(() => {
+    async function loadOnlineAgents() {
+      try {
+        const response = await fetch('/api/chat/queue')
+        if (response.ok) {
+          const data = await response.json()
+          setOnlineAgents(data.agents || [])
+        }
+      } catch (error) {
+        console.error('Error loading online agents:', error)
+      }
+    }
+
+    loadOnlineAgents()
+  }, [])
+
   if (!open) {
     return (
       <button
@@ -441,9 +459,22 @@ export default function SupportChatWidget() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="flex -space-x-2">
-                <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">S</span>
-                <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">P</span>
-                <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">T</span>
+                {onlineAgents.length > 0 ? (
+                  onlineAgents.slice(0, 3).map((agent) => (
+                    <img
+                      key={agent.id}
+                      src={agent.avatar_url || `https://cdn.discordapp.com/embed/avatars/${agent.id.slice(0, 1)}.png`}
+                      alt={agent.full_name || 'Agente'}
+                      className="w-9 h-9 rounded-full border-2 border-white object-cover"
+                    />
+                  ))
+                ) : (
+                  <>
+                    <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">S</span>
+                    <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">P</span>
+                    <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">T</span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
