@@ -45,8 +45,11 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession()
     if (!session) {
+      console.error('No session found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log('User session:', session.user.id, session.user.role)
 
     const body = await request.json()
     const { subject, service_type, language } = body
@@ -58,22 +61,28 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Verificar si ya existe una sesión activa del cliente
-    const { data: existingSession } = await supabase
+    const { data: existingSession, error: existingError } = await supabase
       .from('chat_sessions')
       .select('*')
       .eq('client_id', session.user.id)
       .in('status', ['waiting', 'active', 'pending'])
-      .single()
+      .maybeSingle()
+
+    if (existingError) {
+      console.error('Error checking existing session:', existingError)
+    }
 
     if (existingSession) {
+      console.log('Found existing session:', existingSession.id)
       return NextResponse.json({ session: existingSession, existing: true })
     }
 
-    // Crear nueva sesión
-    const { data: newSession, error } = await supabase
+    // Crear nueva sesión sin trigger primero
+    const { data: newSession, error: insertError } = await supabase
       .from('chat_sessions')
       .insert({
         client_id: session.user.id,
+        conversation_number: null, // Dejar que el trigger lo asigne
         subject: subject || 'Soporte',
         service_type: service_type || 'general',
         language: language || 'es',
@@ -83,22 +92,29 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) {
-      console.error('Error creating chat session:', error)
-      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
+    if (insertError) {
+      console.error('Error creating chat session:', insertError)
+      return NextResponse.json({ error: 'Failed to create session', details: insertError.message }, { status: 500 })
     }
 
-    // Registrar en auditoría
-    await supabase.from('chat_audit_logs').insert({
-      actor_id: session.user.id,
-      action: 'CHAT_CREATED',
-      session_id: newSession.id,
-      metadata: { subject, service_type, language }
-    })
+    console.log('Created new session:', newSession.id)
+
+    // Registrar en auditoría (sin requerir éxito)
+    try {
+      await supabase.from('chat_audit_logs').insert({
+        actor_id: session.user.id,
+        action: 'CHAT_CREATED',
+        session_id: newSession.id,
+        metadata: { subject, service_type, language }
+      })
+    } catch (auditError) {
+      console.error('Error creating audit log:', auditError)
+      // No fallar la petición si falla la auditoría
+    }
 
     return NextResponse.json({ session: newSession, existing: false })
   } catch (error) {
     console.error('Error in POST /api/chat/sessions:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error', details: (error as Error).message }, { status: 500 })
   }
 }
