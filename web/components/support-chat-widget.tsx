@@ -41,10 +41,12 @@ export default function SupportChatWidget() {
   const [authLoading, setAuthLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
-  // Estado para emoji picker
+  // Estado para emoji picker y subida de archivos
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
 
   // Emojis simples
   const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '�', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '�👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '�', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤝', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '🎮', '🖥️', '🎙️', '🎧', '📸', '🎬', '🎨', '🎭', '🎪', '🎯', '🎲', '🎰', '🎳', '🏆', '🥇', '🥈', '🥉', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️', '🤺', '🤾', '🏌️', '🏇', '🧘', '💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '🔋', '🔌', '💡', '🔦', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '✅', '❌', '⭕', '❓', '❔', '❕', '❗', '〰️', '‼️', '⁉️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁️‍🗨️', '💬', '💭', '🗯️', '🔥', '⭐', '🌟', '✨', '⚡', '💥', '💫', '🔮']
@@ -243,6 +245,85 @@ export default function SupportChatWidget() {
   const handleEmojiSelect = (emoji: string) => {
     setText(prev => prev + emoji)
     setShowEmojiPicker(false)
+  }
+
+  // Manejar subida de archivo
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Verificar tamaño del archivo (máximo 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      notifyError('El archivo es demasiado grande. Máximo 10MB.')
+      return
+    }
+
+    try {
+      setUploadingFile(true)
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/chat/attachments/sign', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al subir archivo')
+      }
+
+      const data = await response.json()
+      
+      // Enviar mensaje con el archivo adjunto
+      const currentSession = session || await createSession()
+      if (!currentSession) return
+
+      const messageResponse = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: currentSession.id,
+          message: `📎 Archivo: ${file.name}`,
+          message_type: 'attachment',
+          attachment_path: data.path,
+          attachment_name: file.name,
+        }),
+      })
+
+      if (messageResponse.ok) {
+        const messageData = await messageResponse.json()
+        setMessages(prev => [...prev, messageData])
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      notifyError('Error al subir el archivo')
+    } finally {
+      setUploadingFile(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  // Manejar paste de imágenes
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile()
+        if (file) {
+          const event = {
+            target: {
+              files: [file]
+            }
+          } as unknown as React.ChangeEvent<HTMLInputElement>
+          handleFileUpload(event)
+        }
+      }
+    }
   }
 
   // Enviar mensaje
@@ -495,17 +576,27 @@ export default function SupportChatWidget() {
               </div>
             )}
             <form onSubmit={sendMessage} className="flex items-center gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx"
+              />
               <button
                 type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingFile}
                 className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#333333] transition-colors text-[#6b7280]"
                 aria-label="Adjuntar archivo"
               >
-                <Paperclip size={20} />
+                {uploadingFile ? '...' : <Paperclip size={20} />}
               </button>
               <input
                 type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                onPaste={handlePaste}
                 placeholder="Escribe tu mensaje..."
                 className="flex-1 px-4 py-2 bg-[#0a0a0a] rounded-full text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-blue-500 border border-[#333333]"
                 disabled={loading}
