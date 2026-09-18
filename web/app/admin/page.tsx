@@ -383,16 +383,22 @@ export default function AdminPage() {
 
   const toggleFeatured = async (serviceId: string, currentFeatured: boolean) => {
     try {
+      console.log('toggleFeatured called:', { serviceId, currentFeatured, userRole })
+      
       if (userRole !== 'owner') {
+        console.log('User is not owner, current role:', userRole)
         notifyWarning('Solo el owner puede cambiar servicios destacados')
         return
       }
 
+      console.log('Updating service featured status...')
       const supabase = createClient()
       const { error } = await supabase
         .from('services')
         .update({ is_featured: !currentFeatured })
         .eq('id', serviceId)
+
+      console.log('Update result:', { error })
 
       if (error) throw error
 
