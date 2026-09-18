@@ -91,7 +91,51 @@ export async function GET(request: NextRequest) {
 
       console.log('Signup link result:', { signupLink, signupError })
 
-      if (signupError || !signupLink?.user?.id) {
+      if (signupError && signupError.code === 'email_exists') {
+        // El usuario ya existe en Supabase Auth, buscarlo por email
+        console.log('User already exists in Supabase Auth, fetching by email:', userEmailToUse)
+        
+        const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+        
+        if (listError) {
+          console.error('Error listing users:', listError)
+          return NextResponse.redirect(new URL('/auth/login?error=list_users_error', request.url))
+        }
+
+        const existingAuthUser = users.users.find(u => u.email === userEmailToUse)
+        
+        if (!existingAuthUser) {
+          console.error('User not found in Supabase Auth despite email_exists error')
+          return NextResponse.redirect(new URL('/auth/login?error=user_not_found', request.url))
+        }
+
+        console.log('Found existing auth user:', existingAuthUser.id)
+
+        // Crear registro en tabla users con el ID existente
+        const { data: dbData, error: dbError } = await supabaseAdmin
+          .from('users')
+          .insert({
+            id: existingAuthUser.id,
+            email: userEmailToUse,
+            full_name: discordUser.global_name || discordUser.username,
+            discord_id: discordUser.id,
+            discord_username: discordUser.username,
+            discord_avatar: discordUser.avatar,
+            role: 'client',
+          })
+          .select()
+
+        console.log('DB insert result for existing auth user:', { dbData, dbError })
+
+        if (dbError) {
+          console.error('Error creating user in database:', dbError)
+          return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+        }
+
+        userId = existingAuthUser.id
+        userEmail = userEmailToUse
+        console.log('User created successfully in database from existing auth user:', userId)
+      } else if (signupError || !signupLink?.user?.id) {
         console.error('Error creating Supabase user via signup link:', signupError)
         console.error('Error details:', JSON.stringify(signupError, null, 2))
         return NextResponse.redirect(new URL('/auth/login?error=create_user_error', request.url))
