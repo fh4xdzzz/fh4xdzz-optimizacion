@@ -14,16 +14,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // Convertir archivo a base64
+    // Convertir archivo a ArrayBuffer
     const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
+    const buffer = Buffer.from(bytes)
 
     // Subir a Supabase Storage
     const fileName = `${Date.now()}-${file.name}`
     const { data, error } = await supabase
       .storage
       .from('chat-attachments')
-      .upload(fileName, base64, {
+      .upload(fileName, buffer, {
         contentType: file.type,
         upsert: false,
       })
