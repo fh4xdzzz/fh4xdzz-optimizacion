@@ -44,7 +44,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'support' | 'settings'>('overview')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -259,11 +259,21 @@ export default function AdminPage() {
             >
               Servicios ({services.length})
             </button>
+            <button
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
+                activeTab === 'support'
+                  ? 'bg-primary text-white hover:bg-primary/90'
+                  : 'border border-border bg-transparent hover:bg-card'
+              }`}
+              onClick={() => setActiveTab('support')}
+            >
+              Soporte
+            </button>
             {(userRole === 'owner') && (
               <button
                 className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                  activeTab === 'settings' 
-                    ? 'bg-primary text-white hover:bg-primary/90' 
+                  activeTab === 'settings'
+                    ? 'bg-primary text-white hover:bg-primary/90'
                     : 'border border-border bg-transparent hover:bg-card'
                 }`}
                 onClick={() => setActiveTab('settings')}
@@ -471,6 +481,42 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Support Tab */}
+          {activeTab === 'support' && (
+            <div className="space-y-6">
+              <Card className="glass-card hover-glow animate-fade-in-up">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Panel de Soporte</CardTitle>
+                  <CardDescription className="text-base">Gestión de chats de soporte en tiempo real</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                      <div className="text-sm text-yellow-800 mb-1">Chats esperando</div>
+                      <div className="text-2xl font-bold text-yellow-600">--</div>
+                    </div>
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                      <div className="text-sm text-green-800 mb-1">Chats activos</div>
+                      <div className="text-2xl font-bold text-green-600">--</div>
+                    </div>
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="text-sm text-blue-800 mb-1">Tiempo promedio respuesta</div>
+                      <div className="text-2xl font-bold text-blue-600">-- min</div>
+                    </div>
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                      <div className="text-sm text-purple-800 mb-1">Agentes online</div>
+                      <div className="text-2xl font-bold text-purple-600">--</div>
+                    </div>
+                  </div>
+                  <div className="text-center py-8">
+                    <p className="text-muted text-lg mb-4">El sistema de chat de soporte está disponible</p>
+                    <p className="text-sm text-muted">Los clientes pueden iniciar chats desde la burbuja de soporte en la esquina inferior derecha del sitio.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Settings Tab */}

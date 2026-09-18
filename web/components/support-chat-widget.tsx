@@ -1,0 +1,409 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { getSession } from '@/lib/auth-hybrid'
+import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, User } from 'lucide-react'
+
+interface Message {
+  id: string
+  sender_id: string
+  sender_role: string
+  message: string
+  message_type: string
+  created_at: string
+  read_at: string | null
+}
+
+interface ChatSession {
+  id: string
+  conversation_number: string
+  status: string
+  priority: string
+  assigned_agent_id: string | null
+  subject: string
+  created_at: string
+}
+
+export default function SupportChatWidget() {
+  const supabase = createClient()
+  const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<'chat' | 'articles'>('chat')
+  const [session, setSession] = useState<ChatSession | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [text, setText] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [unread, setUnread] = useState(0)
+  const [isTyping, setIsTyping] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const channelRef = useRef<any>(null)
+
+  // Emojis predefinidos
+  const emojis = ['😀', '👍', '🔥', '❤️', '🎮', '🖥️', '🎙️', '✅']
+
+  // Artículos de ayuda
+  const articles = [
+    { title: 'Cómo configurar OBS para Twitch/Kick', description: 'Guía rápida del centro de ayuda.' },
+    { title: 'Optimizar Windows para gaming', description: 'Mejora el rendimiento de tu PC.' },
+    { title: 'Solucionar pérdida de frames', description: 'Tips para streaming estable.' },
+    { title: 'Configurar bitrate, encoder y audio', description: 'Configuración profesional.' }
+  ]
+
+  // Cargar sesión del usuario
+  useEffect(() => {
+    loadUserSession()
+  }, [])
+
+  // Suscribirse a cambios en tiempo real
+  useEffect(() => {
+    if (!session || !open) return
+
+    const channel = supabase
+      .channel(`messages:${session.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `session_id=eq.${session.id}`
+      }, (payload) => {
+        const newMessage = payload.new as Message
+        setMessages(prev => [...prev, newMessage])
+
+        if (newMessage.sender_role !== 'client' && !open) {
+          setUnread(prev => prev + 1)
+        }
+
+        if (newMessage.sender_role !== 'client') {
+          setIsTyping(false)
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'chat_sessions',
+        filter: `id=eq.${session.id}`
+      }, (payload) => {
+        const updatedSession = payload.new as ChatSession
+        setSession(updatedSession)
+      })
+      .subscribe()
+
+    channelRef.current = channel
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
+    }
+  }, [session?.id, open])
+
+  // Scroll al último mensaje
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Cargar sesión del usuario
+  async function loadUserSession() {
+    try {
+      const userSession = await getSession()
+      if (!userSession) return
+
+      setCurrentUser(userSession.user)
+
+      const response = await fetch('/api/chat/sessions')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.sessions && data.sessions.length > 0) {
+          const activeSession = data.sessions.find((s: ChatSession) =>
+            ['waiting', 'active', 'pending'].includes(s.status)
+          )
+          if (activeSession) {
+            setSession(activeSession)
+            loadMessages(activeSession.id)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user session:', error)
+    }
+  }
+
+  // Cargar mensajes de una sesión
+  async function loadMessages(sessionId: string) {
+    try {
+      const response = await fetch(`/api/chat/messages?session_id=${sessionId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setMessages(data.messages || [])
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error)
+    }
+  }
+
+  // Crear nueva sesión de chat
+  async function createSession() {
+    if (session) return session
+
+    try {
+      setLoading(true)
+      const response = await fetch('/api/chat/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: 'Soporte web',
+          service_type: 'general',
+          language: 'es'
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSession(data.session)
+        loadMessages(data.session.id)
+        return data.session
+      }
+    } catch (error) {
+      console.error('Error creating session:', error)
+    } finally {
+      setLoading(false)
+    }
+    return null
+  }
+
+  // Enviar mensaje
+  async function sendMessage(e?: React.FormEvent) {
+    e?.preventDefault()
+    if (!text.trim() || loading) return
+
+    const currentSession = session || await createSession()
+    if (!currentSession) return
+
+    try {
+      setLoading(true)
+      const response = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: currentSession.id,
+          message: text.trim(),
+          message_type: 'text'
+        })
+      })
+
+      if (response.ok) {
+        setText('')
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Formatear tiempo
+  function formatTime(dateString: string) {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+
+    if (minutes < 1) return 'Ahora'
+    if (minutes < 60) return `Hace ${minutes} min`
+    if (minutes < 1440) return `Hace ${Math.floor(minutes / 60)} h`
+    return date.toLocaleDateString('es-ES')
+  }
+
+  // Verificar si hay agentes online
+  const isOnline = true // TODO: Verificar con API real
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => {
+          setOpen(true)
+          setUnread(0)
+        }}
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+        aria-label="Abrir chat de soporte"
+      >
+        <MessageCircle size={28} />
+        {unread > 0 && (
+          <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 min-w-6 rounded-full bg-red-600 text-xs font-bold text-white">
+            {unread}
+          </span>
+        )}
+      </button>
+    )
+  }
+
+  return (
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col w-[390px] max-w-[calc(100vw-24px)] h-[720px] max-h-[90vh] bg-white rounded-[28px] shadow-2xl overflow-hidden">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-yellow-400 to-amber-500 p-5 pb-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex -space-x-2">
+                <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">S</span>
+                <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">P</span>
+                <span className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white bg-black text-xs font-bold text-white">T</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-xs font-semibold text-white/90">
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+            </div>
+            <h2 className="text-xl font-black text-white">Soporte</h2>
+            <p className="mt-1 text-sm text-white/90">
+              Normalmente responde en menos de 5 minutos
+            </p>
+          </div>
+          <button
+            onClick={() => setOpen(false)}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+            aria-label="Cerrar chat"
+          >
+            <X size={18} className="text-white" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <nav className="mt-4 grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/10">
+          <button
+            onClick={() => setTab('chat')}
+            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-colors ${
+              tab === 'chat' ? 'bg-white text-gray-900' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            <MessagesSquare size={16} />
+            Conversación
+          </button>
+          <button
+            onClick={() => setTab('articles')}
+            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-colors ${
+              tab === 'articles' ? 'bg-white text-gray-900' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            <BookOpen size={16} />
+            Artículos
+          </button>
+        </nav>
+      </header>
+
+      {/* Content */}
+      {tab === 'articles' ? (
+        <div className="flex-1 overflow-auto p-5 space-y-3 bg-gray-50">
+          {articles.map((article, index) => (
+            <article
+              key={index}
+              className="p-4 bg-white rounded-2xl border border-gray-200 hover:border-amber-300 transition-colors cursor-pointer"
+            >
+              <h3 className="font-bold text-gray-900">{article.title}</h3>
+              <p className="mt-1 text-sm text-gray-500">{article.description}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Messages */}
+          <div className="flex-1 overflow-auto p-4 space-y-3 bg-gray-50">
+            {!isOnline && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-center">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Nuestro equipo está actualmente offline. Déjanos un mensaje y te responderemos lo antes posible.
+                </p>
+              </div>
+            )}
+
+            {messages.length === 0 && (
+              <div className="p-4 bg-white rounded-2xl text-sm text-gray-600 shadow-sm">
+                <p className="font-bold">¡Hola! 👋</p>
+                <p className="mt-2">
+                  Bienvenido a nuestro soporte. Estamos aquí para ayudarte con OBS, streaming, PC, gaming y soporte técnico.
+                </p>
+                <p className="mt-2">Cuéntanos qué problema tienes y te ayudaremos.</p>
+              </div>
+            )}
+
+            {messages.map((message) => {
+              const isClient = message.sender_role === 'client'
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl p-3 ${
+                      isClient
+                        ? 'bg-gray-100 border border-gray-200'
+                        : 'bg-gradient-to-r from-yellow-400 to-amber-500 text-white'
+                    }`}
+                  >
+                    <p className="text-sm">{message.message}</p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        isClient ? 'text-gray-500' : 'text-white/80'
+                      }`}
+                    >
+                      {formatTime(message.created_at)}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-2xl p-3">
+                  <p className="text-sm text-gray-500">Escribiendo...</p>
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input */}
+          <div className="p-4 bg-white border-t border-gray-200">
+            <form onSubmit={sendMessage} className="flex items-center gap-2">
+              <button
+                type="button"
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+                aria-label="Adjuntar archivo"
+              >
+                <Paperclip size={20} />
+              </button>
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Escribe tu mensaje..."
+                className="flex-1 px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+                aria-label="Emoji"
+              >
+                <Smile size={20} />
+              </button>
+              <button
+                type="submit"
+                disabled={!text.trim() || loading}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-white hover:from-yellow-500 hover:to-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Enviar mensaje"
+              >
+                <Send size={18} />
+              </button>
+            </form>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
