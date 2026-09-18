@@ -373,7 +373,7 @@ export default function ChatWidget() {
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 text-white rounded-full shadow-2xl flex items-center justify-center hover:from-primary/90 hover:to-primary/70 transition-all transform hover:scale-105 relative"
+          className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-full shadow-2xl flex items-center justify-center hover:from-amber-500 hover:to-amber-600 transition-all transform hover:scale-105 relative"
         >
           {isOpen ? '✕' : '💬'}
           {unreadCount > 0 && (
@@ -384,63 +384,96 @@ export default function ChatWidget() {
         </button>
 
         {isOpen && (
-          <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border border-primary/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 border-b border-primary/30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-lg text-white">Chat de Soporte - Admin</h3>
-                  <p className="text-sm text-white/70 mt-1">Gestiona conversaciones con clientes</p>
+          <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Header Premium */}
+            <div className="bg-gradient-to-r from-amber-400 to-amber-500 p-6 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-2">
+                  <button className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
+                    Conversación
+                  </button>
+                  <button className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
+                    Artículos
+                  </button>
                 </div>
-                {selectedUserId && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={claimChat}
-                      className="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors"
-                    >
-                      🎫 Reclamar
-                    </button>
-                    <button
-                      onClick={closeChat}
-                      className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors"
-                    >
-                      ❌ Cerrar Chat
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedUserId(null)
-                        setMessages([])
-                      }}
-                      className="px-3 py-1.5 bg-slate-500/20 text-slate-400 rounded-lg text-sm hover:bg-slate-500/30 transition-colors"
-                    >
-                      X
-                    </button>
-                  </div>
-                )}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+                >
+                  ✕
+                </button>
               </div>
-              <select
-                value={selectedUserId || ''}
-                onChange={(e) => setSelectedUserId(e.target.value || null)}
-                className="w-full mt-4 px-4 py-3 rounded-xl border border-primary/30 bg-slate-800/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Seleccionar usuario...</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.full_name || user.email}
-                  </option>
-                ))}
-              </select>
+
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex -space-x-2">
+                  <div className="w-10 h-10 bg-white/30 rounded-full border-2 border-white flex items-center justify-center text-sm font-bold">
+                    TD
+                  </div>
+                  <div className="w-10 h-10 bg-white/30 rounded-full border-2 border-white flex items-center justify-center text-sm font-bold">
+                    AD
+                  </div>
+                  <div className="w-10 h-10 bg-white/30 rounded-full border-2 border-white flex items-center justify-center text-sm font-bold">
+                    ST
+                  </div>
+                </div>
+                <div>
+                  <p className="font-bold text-lg">Chatea con nosotros</p>
+                  <p className="text-sm opacity-90">Normalmente responde en menos de 5 minutos</p>
+                </div>
+              </div>
+
+              {selectedUserId && (
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={claimChat}
+                    className="px-3 py-1.5 bg-white/20 text-white rounded-lg text-sm hover:bg-white/30 transition-colors"
+                  >
+                    🎫 Reclamar
+                  </button>
+                  <button
+                    onClick={closeChat}
+                    className="px-3 py-1.5 bg-white/20 text-white rounded-lg text-sm hover:bg-white/30 transition-colors"
+                  >
+                    ❌ Cerrar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedUserId(null)
+                      setMessages([])
+                    }}
+                    className="px-3 py-1.5 bg-white/20 text-white rounded-lg text-sm hover:bg-white/30 transition-colors"
+                  >
+                    ← Volver
+                  </button>
+                </div>
+              )}
+
+              {!selectedUserId && (
+                <select
+                  value={selectedUserId || ''}
+                  onChange={(e) => setSelectedUserId(e.target.value || null)}
+                  className="w-full mt-4 px-4 py-3 rounded-xl bg-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                >
+                  <option value="">Seleccionar usuario...</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id} className="text-gray-800">
+                      {user.full_name || user.email}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {selectedUserId ? (
               <>
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900/50">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
                   {loading ? (
-                    <div className="text-center text-white/50 py-8">
-                      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <div className="text-center text-gray-500 py-8">
+                      <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full mx-auto mb-2"></div>
                       <p>Cargando mensajes...</p>
                     </div>
                   ) : messages.length === 0 ? (
-                    <div className="text-center text-white/50 py-8">
+                    <div className="text-center text-gray-500 py-8">
                       <p className="text-4xl mb-2">💬</p>
                       <p>No hay mensajes</p>
                     </div>
@@ -451,14 +484,14 @@ export default function ChatWidget() {
                         className={`flex ${msg.is_from_admin ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[85%] p-4 rounded-2xl shadow-lg ${
+                          className={`max-w-[85%] p-4 rounded-2xl shadow-md ${
                             msg.is_from_admin
-                              ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-none'
-                              : 'bg-slate-700 text-white rounded-bl-none'
+                              ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-br-none'
+                              : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
                           }`}
                         >
                           <p className="text-sm leading-relaxed break-words overflow-wrap-anywhere">{msg.message}</p>
-                          <p className="text-xs opacity-70 mt-2 text-white/60">
+                          <p className="text-xs opacity-70 mt-2">
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                               hour: '2-digit',
                               minute: '2-digit'
@@ -471,26 +504,34 @@ export default function ChatWidget() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="p-6 border-t border-primary/30 bg-slate-800/50">
-                  <form onSubmit={sendMessage} className="flex gap-3">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Escribe un mensaje..."
-                      className="flex-1 px-4 py-3 rounded-xl border border-primary/30 bg-slate-700/50 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary/50"
-                    />
+                <div className="p-4 border-t border-gray-200 bg-white">
+                  <form onSubmit={sendMessage} className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Escribe aquí tu mensaje..."
+                        className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300 bg-gray-50 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        😊
+                      </button>
+                    </div>
                     <button
                       type="submit"
-                      className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                      className="px-4 py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-xl hover:from-amber-500 hover:to-amber-600 transition-all shadow-md hover:shadow-lg"
                     >
-                      Enviar
+                      ➤
                     </button>
                   </form>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-white/50">
+              <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50">
                 <div className="text-center">
                   <p className="text-4xl mb-2">👥</p>
                   <p>Selecciona un usuario para ver el chat</p>
@@ -507,7 +548,7 @@ export default function ChatWidget() {
     <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 text-white rounded-full shadow-2xl flex items-center justify-center hover:from-primary/90 hover:to-primary/70 transition-all transform hover:scale-105 relative"
+        className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-full shadow-2xl flex items-center justify-center hover:from-amber-500 hover:to-amber-600 transition-all transform hover:scale-105 relative"
       >
         {isOpen ? '✕' : '💬'}
         {unreadCount > 0 && (
@@ -518,32 +559,55 @@ export default function ChatWidget() {
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border border-primary/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-          <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 border-b border-primary/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-lg text-white">Chat de Soporte</h3>
-                <p className="text-sm text-white/70 mt-1">Habla con nuestro equipo de soporte</p>
+        <div className="absolute bottom-20 right-0 w-[450px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          {/* Header Premium */}
+          <div className="bg-gradient-to-r from-amber-400 to-amber-500 p-6 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex gap-2">
+                <button className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
+                  Conversación
+                </button>
+                <button className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
+                  Artículos
+                </button>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors"
+                className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
               >
-                Cerrar
+                ✕
               </button>
+            </div>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex -space-x-2">
+                <div className="w-10 h-10 bg-white/30 rounded-full border-2 border-white flex items-center justify-center text-sm font-bold">
+                  TD
+                </div>
+                <div className="w-10 h-10 bg-white/30 rounded-full border-2 border-white flex items-center justify-center text-sm font-bold">
+                  AD
+                </div>
+                <div className="w-10 h-10 bg-white/30 rounded-full border-2 border-white flex items-center justify-center text-sm font-bold">
+                  ST
+                </div>
+              </div>
+              <div>
+                <p className="font-bold text-lg">Chatea con nosotros</p>
+                <p className="text-sm opacity-90">Normalmente responde en menos de 5 minutos</p>
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900/50">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
             {loading ? (
-              <div className="text-center text-white/50 py-8">
-                <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+              <div className="text-center text-gray-500 py-8">
+                <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full mx-auto mb-2"></div>
                 <p>Cargando mensajes...</p>
               </div>
             ) : messages.length === 0 ? (
-              <div className="text-center text-white/50 py-8">
+              <div className="text-center text-gray-500 py-8">
                 <p className="text-4xl mb-2">👋</p>
-                <p className="text-lg">¡Hola! ¿En qué podemos ayudarte hoy?</p>
+                <p className="text-lg font-medium">¡Hola! ¿En qué podemos ayudarte hoy?</p>
                 <p className="text-sm mt-2">Estamos aquí para responder tus preguntas</p>
               </div>
             ) : (
@@ -553,14 +617,14 @@ export default function ChatWidget() {
                   className={`flex ${msg.is_from_admin ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] p-4 rounded-2xl shadow-lg ${
+                    className={`max-w-[85%] p-4 rounded-2xl shadow-md ${
                       msg.is_from_admin
-                        ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-none'
-                        : 'bg-slate-700 text-white rounded-bl-none'
+                        ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-br-none'
+                        : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
                     }`}
                   >
                     <p className="text-sm leading-relaxed break-words overflow-wrap-anywhere">{msg.message}</p>
-                    <p className="text-xs opacity-70 mt-2 text-white/60">
+                    <p className="text-xs opacity-70 mt-2">
                       {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                         hour: '2-digit',
                         minute: '2-digit'
@@ -573,20 +637,28 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-6 border-t border-primary/30 bg-slate-800/50">
-            <form onSubmit={sendMessage} className="flex gap-3">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Escribe un mensaje..."
-                className="flex-1 px-4 py-3 rounded-xl border border-primary/30 bg-slate-700/50 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary/50"
-              />
+          <div className="p-4 border-t border-gray-200 bg-white">
+            <form onSubmit={sendMessage} className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Escribe aquí tu mensaje..."
+                  className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300 bg-gray-50 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  😊
+                </button>
+              </div>
               <button
                 type="submit"
-                className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="px-4 py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-xl hover:from-amber-500 hover:to-amber-600 transition-all shadow-md hover:shadow-lg"
               >
-                Enviar
+                ➤
               </button>
             </form>
           </div>
