@@ -439,13 +439,15 @@ export default function SupportChatWidget() {
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'users',
-        filter: 'role=in.(admin,staff,owner)'
+        table: 'users'
       }, (payload) => {
         console.log('User online status changed:', payload)
         console.log('User ID:', payload.new.id, 'Online:', payload.new.online)
-        // Recargar agentes cuando cambia el estado online
-        loadOnlineAgents()
+        // Solo procesar si es admin/staff/owner
+        if (['admin', 'staff', 'owner'].includes(payload.new.role)) {
+          console.log('User is admin/staff/owner, reloading agents')
+          loadOnlineAgents()
+        }
       })
       .subscribe((status) => {
         console.log('Users Realtime subscription status:', status)
