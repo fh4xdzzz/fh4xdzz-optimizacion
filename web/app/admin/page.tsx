@@ -79,6 +79,7 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const router = useRouter()
   const isDemo = isDemoMode()
+  const supabase = createClient()
 
   const loadAdminData = async () => {
     const supabase = createClient()
@@ -170,6 +171,59 @@ export default function AdminPage() {
 
     loadData()
   }, [router, isDemo])
+
+  // Suscribirse a cambios en tiempo real para chat sessions
+  useEffect(() => {
+    if (activeTab !== 'support' || isDemo) return
+
+    console.log('Setting up Realtime for chat sessions')
+
+    const channel = supabase
+      .channel('admin-chat-sessions')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chat_sessions'
+      }, () => {
+        console.log('Chat sessions changed, reloading...')
+        loadAdminData()
+      })
+      .subscribe((status) => {
+        console.log('Chat sessions Realtime status:', status)
+      })
+
+    return () => {
+      console.log('Cleaning up chat sessions Realtime')
+      supabase.removeChannel(channel)
+    }
+  }, [activeTab, isDemo])
+
+  // Suscribirse a cambios en tiempo real para chat messages
+  useEffect(() => {
+    if (!selectedChat || isDemo) return
+
+    console.log('Setting up Realtime for chat messages:', selectedChat.id)
+
+    const channel = supabase
+      .channel(`admin-chat-messages-${selectedChat.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `session_id=eq.${selectedChat.id}`
+      }, () => {
+        console.log('New message received, reloading...')
+        loadChatMessages(selectedChat.id)
+      })
+      .subscribe((status) => {
+        console.log('Chat messages Realtime status:', status)
+      })
+
+    return () => {
+      console.log('Cleaning up chat messages Realtime')
+      supabase.removeChannel(channel)
+    }
+  }, [selectedChat?.id, isDemo])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
