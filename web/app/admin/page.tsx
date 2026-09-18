@@ -120,7 +120,7 @@ export default function AdminPage() {
     console.log('Loading chat sessions...')
     const { data: chatSessionsData, error: chatError } = await supabase
       .from('chat_sessions')
-      .select('*, users(email, full_name)')
+      .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
       .order('created_at', { ascending: false })
 
     if (chatError) {
