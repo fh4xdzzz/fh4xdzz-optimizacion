@@ -123,7 +123,7 @@ export default function AdminPage() {
     const { data: chatSessionsData, error: chatError } = await supabase
       .from('chat_sessions')
       .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
-      .not('status', 'eq', 'closed')
+      .filter('status', 'neq', 'closed')
       .order('created_at', { ascending: false })
 
     if (chatError) {
@@ -338,6 +338,8 @@ export default function AdminPage() {
       const session = await getSession()
       if (!session) return
 
+      console.log('Closing chat:', sessionId)
+
       const response = await fetch('/api/chat/close', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -345,10 +347,21 @@ export default function AdminPage() {
       })
 
       if (response.ok) {
+        const data = await response.json()
+        console.log('Chat closed successfully:', data.session.status)
+        
+        // Recargar datos para actualizar las listas
         await loadAdminData()
+        
+        // Limpiar selección
         setSelectedChat(null)
         setChatMessages([])
+        
         alert('Chat cerrado exitosamente')
+      } else {
+        const error = await response.json()
+        console.error('Error closing chat:', error)
+        alert('Error al cerrar chat: ' + error.error)
       }
     } catch (error) {
       console.error('Error al cerrar chat:', error)
