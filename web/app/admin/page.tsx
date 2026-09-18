@@ -98,6 +98,7 @@ export default function AdminPage() {
     const { data: ordersData } = await supabase
       .from('orders')
       .select('*, services(name)')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
     if (ordersData) {
       setOrders(ordersData.map((order: any) => ({
@@ -261,9 +262,15 @@ export default function AdminPage() {
         event: '*',
         schema: 'public',
         table: 'orders'
-      }, () => {
-        console.log('Orders changed, reloading...')
-        loadAdminData()
+      }, (payload) => {
+        // Recargar si cambia deleted_at (soft delete)
+        if (payload.eventType === 'UPDATE' && payload.new?.deleted_at !== payload.old?.deleted_at) {
+          console.log('Order deleted_at changed, reloading...')
+          loadAdminData()
+        } else {
+          console.log('Orders changed, reloading...')
+          loadAdminData()
+        }
       })
       .subscribe((status) => {
         console.log('Orders Realtime status:', status)
@@ -1324,6 +1331,7 @@ export default function AdminPage() {
                       const { data: updatedOrders } = await supabase
                         .from('orders')
                         .select('*, services(name)')
+                        .is('deleted_at', null)
                         .order('created_at', { ascending: false })
 
                       if (updatedOrders) {

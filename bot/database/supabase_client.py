@@ -25,7 +25,7 @@ class SupabaseClient:
             self.enabled = True
             logger.info("Supabase inicializado")
 
-    def _request(self, method: str, table: str, data: Optional[Dict] = None, 
+    def _request(self, method: str, table: str, data: Optional[Dict] = None,
                  filters: Optional[Dict] = None, table_id: Optional[str] = None) -> Dict:
         """Realizar petición a Supabase"""
         if not self.enabled:
@@ -44,7 +44,11 @@ class SupabaseClient:
         if filters:
             for key, value in filters.items():
                 if isinstance(value, str):
-                    url += f"&{key}=eq.{value}"
+                    # Soportar filtros especiales como 'is.null'
+                    if value == 'is.null':
+                        url += f"&{key}=is.null"
+                    else:
+                        url += f"&{key}=eq.{value}"
                 elif isinstance(value, list):
                     url += f"&{key}=in.({','.join(map(str, value))})"
                 else:
@@ -99,7 +103,7 @@ class SupabaseClient:
     def get_order(self, order_id: str) -> Optional[Dict]:
         """Obtener pedido por ID"""
         try:
-            result = self._request('GET', 'orders', filters={'id': order_id})
+            result = self._request('GET', 'orders', filters={'id': order_id, 'deleted_at': 'is.null'})
             if 'error' in result:
                 return None
             return result[0] if result else None
@@ -110,7 +114,7 @@ class SupabaseClient:
     def get_orders_by_user(self, user_id: str) -> List[Dict]:
         """Obtener pedidos de un usuario"""
         try:
-            result = self._request('GET', 'orders', filters={'user_id': user_id})
+            result = self._request('GET', 'orders', filters={'user_id': user_id, 'deleted_at': 'is.null'})
             if 'error' in result:
                 return []
             return result if result else []
@@ -121,7 +125,7 @@ class SupabaseClient:
     def get_all_orders(self) -> List[Dict]:
         """Obtener todos los pedidos"""
         try:
-            result = self._request('GET', 'orders')
+            result = self._request('GET', 'orders', filters={'deleted_at': 'is.null'})
             if 'error' in result:
                 return []
             return result if result else []

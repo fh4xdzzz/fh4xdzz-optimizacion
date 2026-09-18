@@ -58,6 +58,7 @@ export async function getSupabaseOrderByNumber(orderNumber: string) {
       .from('orders')
       .select('*')
       .eq('order_number', orderNumber)
+      .is('deleted_at', null)
       .single()
 
     if (error) throw error
@@ -76,6 +77,7 @@ export async function getSupabaseUserOrders(userId: string) {
       .from('orders')
       .select('*')
       .eq('user_id', userId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -99,6 +101,7 @@ export async function updateSupabaseOrderStatus(
       .from('orders')
       .select('status')
       .eq('id', orderId)
+      .is('deleted_at', null)
       .single()
 
     if (!currentOrder) throw new Error('Order not found')
@@ -163,7 +166,7 @@ function generateOrderNumber(): string {
   return `ORD${dateStr}${random}`
 }
 
-// Eliminar pedido (solo owner)
+// Eliminar pedido (solo owner) - Soft delete para habilitar Realtime
 export async function deleteSupabaseOrder(orderId: string, userId: string, userRole: string) {
   try {
     // Verificar si el usuario es owner
@@ -182,21 +185,11 @@ export async function deleteSupabaseOrder(orderId: string, userId: string, userR
       throw new Error('Pedido no encontrado')
     }
 
-    // Eliminar eventos del pedido primero (por restricciones de clave foránea)
-    const { error: eventsError } = await supabase
-      .from('order_events')
-      .delete()
-      .eq('order_id', orderId)
-
-    if (eventsError) {
-      console.error('Error deleting order events:', eventsError)
-      // Continuar aunque falle la eliminación de eventos
-    }
-
-    // Eliminar el pedido
+    // Soft delete: marcar como eliminado en lugar de borrar
+    // Esto permite que los cambios en tiempo real funcionen con RLS
     const { error } = await supabase
       .from('orders')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', orderId)
 
     if (error) throw error

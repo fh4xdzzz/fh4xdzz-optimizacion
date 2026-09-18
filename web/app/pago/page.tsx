@@ -39,6 +39,7 @@ function PaymentPageContent() {
         .from('orders')
         .select('*, services(*)')
         .eq('id', orderId)
+        .is('deleted_at', null)
         .single()
 
       if (error) throw error

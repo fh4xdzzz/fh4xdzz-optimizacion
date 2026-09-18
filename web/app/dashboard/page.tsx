@@ -50,6 +50,7 @@ export default function DashboardPage() {
       .from('orders')
       .select('*, services(name)')
       .eq('user_id', session.user.id)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     console.log('Orders query result:', { data, error })
@@ -124,9 +125,15 @@ export default function DashboardPage() {
         schema: 'public',
         table: 'orders',
         filter: `user_id=eq.${session.user.id}`
-      }, () => {
-        console.log('Client order updated, reloading...')
-        loadOrders()
+      }, (payload) => {
+        // Recargar si cambia deleted_at (soft delete)
+        if (payload.new?.deleted_at !== payload.old?.deleted_at) {
+          console.log('Client order deleted_at changed, reloading...')
+          loadOrders()
+        } else {
+          console.log('Client order updated, reloading...')
+          loadOrders()
+        }
       })
       .on('postgres_changes', {
         event: 'DELETE',

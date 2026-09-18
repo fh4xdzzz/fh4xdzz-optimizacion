@@ -44,10 +44,20 @@ export async function POST(request: NextRequest) {
       const customId = data.purchase_units[0]?.custom_id
 
       if (customId) {
-        await supabase
+        // Verificar que el pedido existe y no está soft-deleted
+        const { data: order } = await supabase
           .from('orders')
-          .update({ status: 'paid' })
+          .select('id')
           .eq('id', customId)
+          .is('deleted_at', null)
+          .single()
+
+        if (order) {
+          await supabase
+            .from('orders')
+            .update({ status: 'paid' })
+            .eq('id', customId)
+        }
       }
     }
 

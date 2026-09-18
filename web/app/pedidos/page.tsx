@@ -63,6 +63,7 @@ export default function OrdersPage() {
         .from('orders')
         .select('*, services(name)')
         .eq('user_id', session.user.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -153,6 +154,7 @@ export default function OrdersPage() {
         .select('*, services(name)')
         .eq('order_number', orderNumber.trim())
         .eq('user_id', session.user.id)
+        .is('deleted_at', null)
         .single()
 
       if (error) throw error
