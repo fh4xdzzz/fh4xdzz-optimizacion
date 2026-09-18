@@ -118,12 +118,12 @@ export default function AdminPage() {
       .order('sort_order', { ascending: true })
     if (servicesData) setServices(servicesData)
 
-    // Cargar sesiones de chat (solo activos: waiting, active, pending)
+    // Cargar sesiones de chat (excluyendo closed)
     console.log('Loading chat sessions (excluding closed)...')
     const { data: chatSessionsData, error: chatError } = await supabase
       .from('chat_sessions')
       .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
-      .in('status', ['waiting', 'active', 'pending'])
+      .not('status', 'eq', 'closed')
       .order('created_at', { ascending: false })
 
     if (chatError) {
