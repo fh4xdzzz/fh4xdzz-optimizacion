@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
     const discordUser = await userResponse.json()
     console.log('Discord user info:', discordUser)
 
-    // Buscar usuario por Discord ID primero
-    const { data: existingUserByDiscord } = await supabaseAdmin
+    // Buscar usuario por Discord ID
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('discord_id', discordUser.id)
@@ -62,11 +62,11 @@ export async function GET(request: NextRequest) {
     const userEmailToUse = discordUser.email || `${discordUser.id}@discord.temp`
     console.log('Email to use for user creation:', userEmailToUse)
 
-    if (existingUserByDiscord) {
-      // Usuario existe por Discord ID
-      userId = existingUserByDiscord.id
-      userEmail = existingUserByDiscord.email
-      console.log('Using existing user by Discord ID:', userId)
+    if (existingUser) {
+      // Usuario encontrado, usar existente
+      userId = existingUser.id
+      userEmail = existingUser.email
+      console.log('Using existing user:', userId)
     } else {
       // Usuario no encontrado, crear automáticamente usando generateLink con signup
       // Este método evita problemas de SMTP configuración en Supabase
@@ -170,7 +170,25 @@ export async function GET(request: NextRequest) {
       if (dbError) {
         console.error('Error creating user in database:', dbError)
         console.error('DB Error details:', JSON.stringify(dbError, null, 2))
-        return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+        
+        // Si el error es de duplicado (usuario ya existe en tabla users), buscarlo y usarlo
+        if (dbError.code === '23505') {
+          console.log('User already exists in database, fetching by ID:', userId)
+          const { data: existingDbUser } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single()
+          
+          if (existingDbUser) {
+            console.log('Found existing database user:', existingDbUser.id)
+            // Continuar con el usuario existente
+          } else {
+            return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+          }
+        } else {
+          return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+        }
       }
 
       console.log('User created successfully in database:', userId)
