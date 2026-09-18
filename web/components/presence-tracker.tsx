@@ -39,15 +39,14 @@ export default function PresenceTracker() {
     setOnline()
     intervalRef.current = setInterval(setOnline, 30000)
 
-    // Evento para detectar cierre de página o cambio de pestaña
+    // Evento para detectar cierre de página
     const handleBeforeUnload = () => {
       setOffline()
     }
 
+    // Evento para detectar cuando vuelve a la pestaña (solo marca online, no offline)
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        setOffline()
-      } else if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible') {
         setOnline()
       }
     }
