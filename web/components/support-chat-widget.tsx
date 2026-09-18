@@ -155,19 +155,29 @@ export default function SupportChatWidget() {
       }, (payload) => {
         console.log('Realtime INSERT received:', payload)
         const newMessage = payload.new as Message
-        // Extraer solo los campos necesarios para evitar errores
-        const cleanMessage: Message = {
-          id: newMessage.id,
-          sender_id: newMessage.sender_id,
-          sender_role: newMessage.sender_role,
-          message: newMessage.message,
-          message_type: newMessage.message_type,
-          created_at: newMessage.created_at,
-          read_at: newMessage.read_at,
-          attachment_path: newMessage.attachment_path,
-          attachment_name: newMessage.attachment_name,
-        }
-        setMessages(prev => [...prev, cleanMessage])
+        
+        // Verificar si el mensaje ya existe para evitar duplicados
+        setMessages(prev => {
+          if (prev.some(msg => msg.id === newMessage.id)) {
+            console.log('Message already exists, skipping:', newMessage.id)
+            return prev
+          }
+          
+          // Extraer solo los campos necesarios para evitar errores
+          const cleanMessage: Message = {
+            id: newMessage.id,
+            sender_id: newMessage.sender_id,
+            sender_role: newMessage.sender_role,
+            message: newMessage.message,
+            message_type: newMessage.message_type,
+            created_at: newMessage.created_at,
+            read_at: newMessage.read_at,
+            attachment_path: newMessage.attachment_path,
+            attachment_name: newMessage.attachment_name,
+          }
+          console.log('Adding new message:', cleanMessage.id)
+          return [...prev, cleanMessage]
+        })
 
         if (newMessage.sender_role !== 'client' && !open) {
           setUnread(prev => prev + 1)
