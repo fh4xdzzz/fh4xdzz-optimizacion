@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
@@ -36,8 +36,12 @@ export default function DashboardPage() {
   const supabase = createClient()
   const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
 
-  const loadOrders = async () => {
-    if (!session?.user?.id) return
+  // CAMBIO CRÍTICO: Envolver loadOrders en useCallback
+  const loadOrders = useCallback(async () => {
+    if (!session?.user?.id) {
+      console.log('loadOrders: No session or user ID')
+      return
+    }
 
     console.log('Loading orders for user:', session.user.id)
 
@@ -66,16 +70,19 @@ export default function DashboardPage() {
       setOrders(ordersMapped)
       console.log('Orders state set to:', ordersMapped.length, 'orders')
     }
-  }
+  }, [session?.user?.id])
 
   useEffect(() => {
     const loadData = async () => {
+      console.log('useEffect: Starting data load')
       const session = await getSession()
       if (!session) {
+        console.log('useEffect: No session, redirecting to login')
         router.push('/auth/login?redirect=/dashboard')
         return
       }
 
+      console.log('useEffect: Session found, setting session')
       setSession(session)
 
       // Limpiar localStorage para evitar datos mezclados
@@ -83,16 +90,21 @@ export default function DashboardPage() {
         localStorage.removeItem('orders')
       }
 
+      console.log('useEffect: Calling loadOrders')
       await loadOrders()
       setLoading(false)
+      console.log('useEffect: Data load complete')
     }
 
     loadData()
-  }, [router])
+  }, [router, loadOrders])
 
   // Suscribirse a cambios en tiempo real para pedidos del cliente
   useEffect(() => {
-    if (!session?.user?.id || isDemo) return
+    if (!session?.user?.id || isDemo) {
+      console.log('Realtime: Skipping - no session or demo mode')
+      return
+    }
 
     console.log('Setting up Realtime for client orders')
 
@@ -115,7 +127,7 @@ export default function DashboardPage() {
       console.log('Cleaning up client orders Realtime')
       supabase.removeChannel(channel)
     }
-  }, [session?.user?.id, isDemo, loadOrders])
+  }, [session?.user?.id, isDemo, loadOrders, supabase])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
