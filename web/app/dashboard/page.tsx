@@ -39,6 +39,8 @@ export default function DashboardPage() {
   const loadOrders = async () => {
     if (!session?.user?.id) return
 
+    console.log('Loading orders for user:', session.user.id)
+
     const supabase = createClient()
     const { data, error } = await supabase
       .from('orders')
@@ -46,10 +48,13 @@ export default function DashboardPage() {
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
 
+    console.log('Orders query result:', { data, error })
+
     if (error) {
       console.error('Error al cargar pedidos:', error)
       setOrders([])
     } else {
+      console.log('Orders data:', data)
       const ordersMapped = (data || []).map((order: any) => ({
         id: order.id,
         order_number: order.order_number,
@@ -57,6 +62,7 @@ export default function DashboardPage() {
         status: order.status,
         created_at: order.created_at,
       }))
+      console.log('Orders mapped:', ordersMapped)
       setOrders(ordersMapped)
     }
   }
