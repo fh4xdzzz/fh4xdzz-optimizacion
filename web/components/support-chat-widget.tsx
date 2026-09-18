@@ -44,12 +44,14 @@ export default function SupportChatWidget() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
   // Estado para emoji picker y subida de archivos
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [showScrollButton, setShowScrollButton] = useState(false)
 
   // Emojis simples
   const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '�', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '�👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '�', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤝', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '🎮', '🖥️', '🎙️', '🎧', '📸', '🎬', '🎨', '🎭', '🎪', '🎯', '🎲', '🎰', '🎳', '🏆', '🥇', '🥈', '🥉', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️', '🤺', '🤾', '🏌️', '🏇', '🧘', '💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '🔋', '🔌', '💡', '🔦', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '✅', '❌', '⭕', '❓', '❔', '❕', '❗', '〰️', '‼️', '⁉️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁️‍🗨️', '💬', '💭', '🗯️', '🔥', '⭐', '🌟', '✨', '⚡', '💥', '💫', '🔮']
@@ -156,6 +158,12 @@ export default function SupportChatWidget() {
         console.log('Realtime INSERT received:', payload)
         const newMessage = payload.new as Message
         
+        // Verificar si el usuario está en el fondo del scroll
+        const container = messagesContainerRef.current
+        const isAtBottom = container ? 
+          (container.scrollHeight - container.scrollTop - container.clientHeight < 100) : 
+          true
+        
         // Verificar si el mensaje ya existe para evitar duplicados
         setMessages(prev => {
           if (prev.some(msg => msg.id === newMessage.id)) {
@@ -176,6 +184,17 @@ export default function SupportChatWidget() {
             attachment_name: newMessage.attachment_name,
           }
           console.log('Adding new message:', cleanMessage.id)
+          
+          // Si el usuario está en el fondo, hacer scroll automático
+          if (isAtBottom) {
+            setTimeout(() => {
+              bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+            }, 100)
+          } else {
+            // Si no está en el fondo, mostrar botón de scroll
+            setShowScrollButton(true)
+          }
+          
           return [...prev, cleanMessage]
         })
 
@@ -213,8 +232,25 @@ export default function SupportChatWidget() {
 
   // Scroll al último mensaje
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (open) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, open])
+
+  // Detectar si el usuario está en el fondo del scroll
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100
+      setShowScrollButton(!isAtBottom)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Cargar mensajes de una sesión
   async function loadMessages(sessionId: string) {
@@ -495,7 +531,10 @@ export default function SupportChatWidget() {
       ) : (
         <>
           {/* Messages */}
-          <div className="flex-1 overflow-auto p-4 space-y-3 bg-[#0a0a0a]">
+          <div 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-auto p-4 space-y-3 bg-[#0a0a0a] relative"
+          >
             {authLoading ? (
               <div className="p-4 bg-[#1a1a1a] rounded-2xl text-sm text-[#ededed] border border-[#333333] text-center">
                 <p>Cargando...</p>
@@ -604,6 +643,19 @@ export default function SupportChatWidget() {
 
             <div ref={bottomRef} />
           </div>
+
+          {/* Botón para bajar scroll */}
+          {showScrollButton && (
+            <button
+              onClick={() => {
+                bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+                setShowScrollButton(false)
+              }}
+              className="absolute bottom-4 right-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
+              <span>↓ Nuevo mensaje</span>
+            </button>
+          )}
 
           {/* Input */}
           <div className="p-4 bg-[#1a1a1a] border-t border-[#333333]">
