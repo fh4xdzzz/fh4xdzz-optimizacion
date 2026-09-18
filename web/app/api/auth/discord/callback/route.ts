@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
             full_name: discordUser.global_name || discordUser.username,
             discord_id: discordUser.id,
             discord_username: discordUser.username,
-            discord_avatar: discordUser.avatar,
+            avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
             real_email: discordUser.email || null,
           },
         },
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
             full_name: discordUser.global_name || discordUser.username,
             discord_id: discordUser.id,
             discord_username: discordUser.username,
-            discord_avatar: discordUser.avatar,
+            avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
             role: 'client',
           })
           .select()
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
           full_name: discordUser.global_name || discordUser.username,
           discord_id: discordUser.id,
           discord_username: discordUser.username,
-          discord_avatar: discordUser.avatar,
+          avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
           role: 'client',
         })
         .select()
