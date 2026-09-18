@@ -43,8 +43,11 @@ export default function SupportChatWidget() {
   const channelRef = useRef<any>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
-  // Emojis predefinidos
-  const emojis = ['😀', '👍', '🔥', '❤️', '🎮', '🖥️', '🎙️', '✅']
+  // Estado para emoji picker
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  // Emojis simples
+  const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '�', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '�👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '�', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤝', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '🎮', '🖥️', '🎙️', '🎧', '📸', '🎬', '🎨', '🎭', '🎪', '🎯', '🎲', '🎰', '🎳', '🏆', '🥇', '🥈', '🥉', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️', '🤺', '🤾', '🏌️', '🏇', '🧘', '💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '🔋', '🔌', '💡', '🔦', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '✅', '❌', '⭕', '❓', '❔', '❕', '❗', '〰️', '‼️', '⁉️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁️‍🗨️', '💬', '💭', '🗯️', '🔥', '⭐', '🌟', '✨', '⚡', '💥', '💫', '🔮']
 
   // Artículos de ayuda
   const articles = [
@@ -234,6 +237,12 @@ export default function SupportChatWidget() {
       setLoading(false)
     }
     return null
+  }
+
+  // Manejar selección de emoji
+  const handleEmojiSelect = (emoji: string) => {
+    setText(prev => prev + emoji)
+    setShowEmojiPicker(false)
   }
 
   // Enviar mensaje
@@ -470,6 +479,21 @@ export default function SupportChatWidget() {
 
           {/* Input */}
           <div className="p-4 bg-[#1a1a1a] border-t border-[#333333]">
+            {showEmojiPicker && (
+              <div className="mb-4 p-4 bg-[#0a0a0a] border border-[#333333] rounded-2xl">
+                <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto">
+                  {emojis.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => handleEmojiSelect(emoji)}
+                      className="text-2xl hover:bg-[#333333] rounded p-1 transition-colors"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <form onSubmit={sendMessage} className="flex items-center gap-2">
               <button
                 type="button"
@@ -488,6 +512,7 @@ export default function SupportChatWidget() {
               />
               <button
                 type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#333333] transition-colors text-[#6b7280]"
                 aria-label="Emoji"
               >
