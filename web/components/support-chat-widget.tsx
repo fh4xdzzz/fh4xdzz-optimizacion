@@ -556,8 +556,10 @@ export default function SupportChatWidget() {
                         src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-attachments/${message.attachment_path}`}
                         alt={message.attachment_name}
                         className="max-w-full rounded-lg mb-2"
+                        onLoad={() => console.log('Image loaded successfully:', message.attachment_path)}
                         onError={(e) => {
-                          console.error('Error loading image:', e)
+                          console.error('Error loading image:', message.attachment_path)
+                          console.error('Image URL:', `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-attachments/${message.attachment_path}`)
                         }}
                       />
                     )}
