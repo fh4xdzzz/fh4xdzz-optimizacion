@@ -451,8 +451,8 @@ export default function SupportChatWidget() {
       >
         <MessageCircle size={28} />
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 min-w-6 rounded-full bg-red-600 text-xs font-bold text-white animate-pulse">
-            {unread}
+          <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 min-w-6 rounded-full bg-red-600 text-xs font-bold text-white border-2 border-white animate-pulse">
+            {unread > 9 ? '9+' : unread}
           </span>
         )}
       </button>
