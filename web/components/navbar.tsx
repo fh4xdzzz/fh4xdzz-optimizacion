@@ -76,11 +76,8 @@ export default function Navbar() {
                   Mis Pedidos
                 </Link>
                 <Link href="/auth/login" className="text-foreground/80 hover:text-foreground transition-colors hover:scale-105 transform transition-transform">
-                  Login
+                  Iniciar Sesión
                 </Link>
-                <Button variant="primary" href="/auth/register" className="hover:scale-105 transform transition-transform shimmer-button">
-                  Registrarse
-                </Button>
               </>
             )}
             <Button variant="primary" href="/servicios" className="hover:scale-105 transform transition-transform shimmer-button">
@@ -178,11 +175,8 @@ export default function Navbar() {
                   className="block text-foreground/80 hover:text-foreground transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
-                  Login
+                  Iniciar Sesión
                 </Link>
-                <Button variant="primary" href="/auth/register" className="w-full" onClick={() => setIsOpen(false)}>
-                  Registrarse
-                </Button>
               </>
             )}
             <Button variant="primary" href="/servicios" className="w-full" onClick={() => setIsOpen(false)}>

@@ -135,108 +135,18 @@ export async function getSession(): Promise<Session | null> {
   }
 }
 
-// Iniciar sesión (según modo configurado)
-export async function signIn(email: string, password: string): Promise<Session> {
-  if (isSupabaseMode()) {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
-    }
-    
-    const supabase = createClient()
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    
-    if (error) throw error
-    
-    if (!data.user) throw new Error('No user data returned')
-    
-    // Obtener perfil
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', data.user.id)
-      .single()
-    
-    return {
-      user: {
-        id: data.user.id,
-        email: data.user.email!,
-        full_name: profile?.full_name || data.user.user_metadata?.full_name,
-        avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url,
-        discord_id: profile?.discord_id,
-        discord_username: profile?.discord_username,
-        role: profile?.role || 'client',
-      },
-      access_token: data.session.access_token,
-    }
-  } else {
-    // Modo demo - sistema localStorage
-    const user = createDemoUser(email, email.split('@')[0])
-    const session: Session = {
-      user,
-      access_token: 'demo_token',
-    }
-    saveDemoUser(user)
-    saveDemoSession(session)
-    return session
+// Iniciar sesión con Discord OAuth
+export function signInWithDiscord() {
+  if (!process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID) {
+    throw new Error('Discord OAuth no está configurado')
   }
-}
 
-// Registrarse (según modo configurado)
-export async function signUp(email: string, password: string, full_name: string): Promise<Session> {
-  if (isSupabaseMode()) {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
-    }
-    
-    const supabase = createClient()
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name,
-        },
-        emailRedirectTo: `${window.location.origin}/auth/login`,
-      },
-    })
-    
-    if (error) throw error
-    
-    if (!data.user) throw new Error('No user data returned')
-    
-    // Obtener perfil
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', data.user.id)
-      .single()
-    
-    return {
-      user: {
-        id: data.user.id,
-        email: data.user.email!,
-        full_name: profile?.full_name || full_name,
-        avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url,
-        discord_id: profile?.discord_id,
-        discord_username: profile?.discord_username,
-        role: profile?.role || 'client',
-      },
-      access_token: data.session?.access_token || '',
-    }
-  } else {
-    // Modo demo - sistema localStorage
-    const user = createDemoUser(email, full_name)
-    const session: Session = {
-      user,
-      access_token: 'demo_token',
-    }
-    saveDemoUser(user)
-    saveDemoSession(session)
-    return session
-  }
+  const scopes = ['identify', 'email']
+  const redirectUri = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || 
+                      'https://www.thedulcandesign.com/api/auth/discord/callback'
+  const authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join(' ')}`
+
+  window.location.href = authUrl
 }
 
 // Cerrar sesión (según modo configurado)
@@ -250,41 +160,5 @@ export async function signOut(): Promise<void> {
     await supabase.auth.signOut()
   } else {
     clearDemoSession()
-  }
-}
-
-// Recuperar contraseña (solo modo Supabase)
-export async function resetPassword(email: string): Promise<void> {
-  if (isSupabaseMode()) {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
-    }
-    
-    const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
-    
-    if (error) throw error
-  } else {
-    throw new Error('La recuperación de contraseña solo está disponible en modo Supabase')
-  }
-}
-
-// Actualizar contraseña (solo modo Supabase)
-export async function updatePassword(newPassword: string): Promise<void> {
-  if (isSupabaseMode()) {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.')
-    }
-    
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    })
-    
-    if (error) throw error
-  } else {
-    throw new Error('La actualización de contraseña solo está disponible en modo Supabase')
   }
 }

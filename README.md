@@ -16,6 +16,7 @@ Sistema completo integrado por:
 - **Sistema de notificaciones unificado** con toast UI en toda la plataforma
 - **Soft deletes para pedidos** para habilitar Realtime con RLS
 - **Burbuja de soporte oculta** para admin/staff/owner (solo visible para clientes)
+- **Estado explícito** para control de visibilidad de widget de soporte
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías

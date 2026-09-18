@@ -55,17 +55,65 @@ export async function GET(request: NextRequest) {
       .eq('discord_id', discordUser.id)
       .single()
 
+    let userId: string
+    let userEmail: string
+
     if (!existingUser) {
-      // Usuario no encontrado con Discord ID, redirigir a registro
-      return NextResponse.redirect(new URL('/auth/register?error=discord_not_found', request.url))
+      // Usuario no encontrado, crear automáticamente
+      console.log('Creating new user from Discord OAuth')
+      
+      // Generar contraseña temporal
+      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
+      
+      // Crear usuario en Supabase Auth
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: discordUser.email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: discordUser.global_name || discordUser.username,
+          discord_id: discordUser.id,
+          discord_username: discordUser.username,
+          discord_avatar: discordUser.avatar,
+        },
+      })
+
+      if (authError || !authData.user) {
+        console.error('Error creating Supabase user:', authError)
+        return NextResponse.redirect(new URL('/auth/login?error=create_user_error', request.url))
+      }
+
+      // Crear usuario en la tabla users
+      const { error: dbError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: discordUser.email,
+          full_name: discordUser.global_name || discordUser.username,
+          discord_id: discordUser.id,
+          discord_username: discordUser.username,
+          discord_avatar: discordUser.avatar,
+          role: 'client',
+        })
+
+      if (dbError) {
+        console.error('Error creating user in database:', dbError)
+        return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+      }
+
+      userId = authData.user.id
+      userEmail = discordUser.email
+    } else {
+      // Usuario encontrado, usar existente
+      userId = existingUser.id
+      userEmail = existingUser.email
     }
 
-    // Usuario encontrado, crear sesión
-    // Generar una contraseña temporal (el usuario ya debería tener una del registro)
+    // Generar una contraseña temporal
     const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
 
-    // Actualizar la contraseña del usuario para asegurar que tenga una válida
-    await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+    // Actualizar la contraseña del usuario
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
       password: tempPassword,
     })
 
@@ -92,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     // Iniciar sesión con la contraseña temporal
     const { data: sessionData, error: sessionError } = await supabaseSSR.auth.signInWithPassword({
-      email: existingUser.email,
+      email: userEmail,
       password: tempPassword,
     })
 
