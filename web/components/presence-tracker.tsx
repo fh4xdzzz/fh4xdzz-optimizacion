@@ -5,12 +5,18 @@ import { getSession } from '@/lib/auth-hybrid'
 
 export default function PresenceTracker() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const userIdRef = useRef<string | null>(null)
+  const userRoleRef = useRef<string | null>(null)
 
   useEffect(() => {
     async function setOnline() {
       try {
         const session = await getSession()
         if (session && session.user.role && ['admin', 'staff', 'owner'].includes(session.user.role)) {
+          // Cache user data for offline detection
+          userIdRef.current = session.user.id
+          userRoleRef.current = session.user.role
+
           console.log('Setting online status: true')
           await fetch('/api/chat/presence', {
             method: 'POST',
@@ -23,14 +29,15 @@ export default function PresenceTracker() {
       }
     }
 
-    async function setOffline() {
+    function setOffline() {
       try {
-        const session = await getSession()
-        if (session && session.user.role && ['admin', 'staff', 'owner'].includes(session.user.role)) {
+        // Use cached user data for synchronous offline detection
+        if (userRoleRef.current && ['admin', 'staff', 'owner'].includes(userRoleRef.current)) {
           console.log('Setting online status: false')
-          // Usar sendBeacon para mayor confiabilidad
-          const data = JSON.stringify({ online: false })
-          navigator.sendBeacon('/api/chat/presence', new Blob([data], { type: 'application/json' }))
+          // Usar sendBeacon con FormData para mayor confiabilidad
+          const formData = new FormData()
+          formData.append('online', 'false')
+          navigator.sendBeacon('/api/chat/presence', formData)
         }
       } catch (error) {
         console.error('Error setting offline status:', error)

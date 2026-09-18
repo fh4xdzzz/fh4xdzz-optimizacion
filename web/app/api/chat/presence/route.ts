@@ -10,8 +10,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { online } = body
+    let online: boolean
+
+    // Try to parse as JSON first, then as FormData (for sendBeacon)
+    const contentType = request.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      const body = await request.json()
+      online = body.online
+    } else {
+      // FormData from sendBeacon
+      const formData = await request.formData()
+      online = formData.get('online') === 'true'
+    }
 
     if (typeof online !== 'boolean') {
       return NextResponse.json({ error: 'online must be a boolean' }, { status: 400 })
@@ -27,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const { error } = await supabase
       .from('users')
-      .update({ 
+      .update({
         online,
         last_seen: new Date().toISOString()
       })
