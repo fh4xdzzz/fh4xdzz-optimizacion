@@ -8,6 +8,7 @@ Sistema completo integrado por:
 - **Página web moderna** con Next.js para presentación de servicios y gestión de clientes
 - **Bot de Discord** profesional para soporte y gestión de tickets
 - **Base de datos** con Supabase para gestión de usuarios, servicios y pedidos
+- **Sistema de chat de soporte** en tiempo real con Supabase Realtime
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías
