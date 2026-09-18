@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
             request.cookies.set({ name, value, ...options })
           },
           remove(name: string, options: Record<string, unknown>) {
-            request.cookies.set({ name, value, '', ...options })
+            request.cookies.set({ name, value: '', ...options })
           },
         },
       }
