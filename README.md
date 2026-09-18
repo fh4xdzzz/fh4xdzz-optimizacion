@@ -12,6 +12,7 @@ Sistema completo integrado por:
 - **Actualizaciones en tiempo real** para usuarios, pedidos, servicios y chats
 - **Cierre de chat en tiempo real** para clientes sin necesidad de recargar página
 - **Mensajes de bienvenida** con nombre del admin al reclamar tickets
+- **Historial de chats** de solo lectura (no se pueden enviar mensajes)
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías
