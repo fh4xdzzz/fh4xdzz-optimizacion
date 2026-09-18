@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
 
     const { error } = await supabase
       .from('users')
-      .update({ online })
+      .update({ 
+        online,
+        last_seen: new Date().toISOString()
+      })
       .eq('id', session.user.id)
 
     if (error) {
