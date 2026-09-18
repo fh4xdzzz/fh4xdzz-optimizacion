@@ -133,30 +133,31 @@ function ContactFormContent() {
       if (orderError) throw orderError
 
       // Enviar webhook al bot de Discord
-      try {
-        await fetch('https://v-mfl-04.apollopanel.com:5000/webhook', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            event_id: `order_${orderData.id}_${Date.now()}`,
-            event_type: 'order.created',
-            created_at: new Date().toISOString(),
-            payload: {
-              order_id: orderData.id,
-              order_number: orderData.order_number,
-              customer_name: formData.name,
-              customer_email: formData.email,
-              service_name: service.name,
-              description: formData.description
-            }
-          })
-        })
-      } catch (webhookError) {
-        console.error('Error enviando webhook:', webhookError)
-        // No fallar el pedido si el webhook falla
-      }
+      // TODO: Configurar URL pública del webhook en Pterodactyl
+      // try {
+      //   await fetch('https://v-mfl-04.apollopanel.com:5000/webhook', {
+      //     method: 'POST',
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify({
+      //       event_id: `order_${orderData.id}_${Date.now()}`,
+      //       event_type: 'order.created',
+      //       created_at: new Date().toISOString(),
+      //       payload: {
+      //         order_id: orderData.id,
+      //         order_number: orderData.order_number,
+      //         customer_name: formData.name,
+      //         customer_email: formData.email,
+      //         service_name: service.name,
+      //         description: formData.description
+      //       }
+      //     })
+      //   })
+      // } catch (webhookError) {
+      //   console.error('Error enviando webhook:', webhookError)
+      //   // No fallar el pedido si el webhook falla
+      // }
 
       // Redirigir a la página de pago
       router.push(`/pago?orderId=${orderData.id}`)
