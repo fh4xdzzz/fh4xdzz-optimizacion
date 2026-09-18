@@ -252,12 +252,12 @@ export default function SupportChatWidget() {
           setOpen(true)
           setUnread(0)
         }}
-        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-110"
         aria-label="Abrir chat de soporte"
       >
         <MessageCircle size={28} />
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 min-w-6 rounded-full bg-red-600 text-xs font-bold text-white">
+          <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 min-w-6 rounded-full bg-red-600 text-xs font-bold text-white animate-pulse">
             {unread}
           </span>
         )}
@@ -266,9 +266,9 @@ export default function SupportChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col w-[390px] max-w-[calc(100vw-24px)] h-[720px] max-h-[90vh] bg-white rounded-[28px] shadow-2xl overflow-hidden">
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col w-[390px] max-w-[calc(100vw-24px)] h-[720px] max-h-[90vh] bg-[#1a1a1a] rounded-[28px] shadow-2xl overflow-hidden border border-[#333333]">
       {/* Header */}
-      <header className="bg-gradient-to-r from-yellow-400 to-amber-500 p-5 pb-4">
+      <header className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 p-5 pb-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -299,7 +299,7 @@ export default function SupportChatWidget() {
         </div>
 
         {/* Tabs */}
-        <nav className="mt-4 grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/10">
+        <nav className="mt-4 grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/20">
           <button
             onClick={() => setTab('chat')}
             className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-colors ${
@@ -323,46 +323,46 @@ export default function SupportChatWidget() {
 
       {/* Content */}
       {tab === 'articles' ? (
-        <div className="flex-1 overflow-auto p-5 space-y-3 bg-gray-50">
+        <div className="flex-1 overflow-auto p-5 space-y-3 bg-[#0a0a0a]">
           {articles.map((article, index) => (
             <article
               key={index}
-              className="p-4 bg-white rounded-2xl border border-gray-200 hover:border-amber-300 transition-colors cursor-pointer"
+              className="p-4 bg-[#1a1a1a] rounded-2xl border border-[#333333] hover:border-blue-500 transition-colors cursor-pointer"
             >
-              <h3 className="font-bold text-gray-900">{article.title}</h3>
-              <p className="mt-1 text-sm text-gray-500">{article.description}</p>
+              <h3 className="font-bold text-[#ededed]">{article.title}</h3>
+              <p className="mt-1 text-sm text-[#6b7280]">{article.description}</p>
             </article>
           ))}
         </div>
       ) : (
         <>
           {/* Messages */}
-          <div className="flex-1 overflow-auto p-4 space-y-3 bg-gray-50">
+          <div className="flex-1 overflow-auto p-4 space-y-3 bg-[#0a0a0a]">
             {authLoading ? (
-              <div className="p-4 bg-white rounded-2xl text-sm text-gray-600 shadow-sm text-center">
+              <div className="p-4 bg-[#1a1a1a] rounded-2xl text-sm text-[#ededed] border border-[#333333] text-center">
                 <p>Cargando...</p>
               </div>
             ) : !isAuthenticated ? (
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-center">
-                <p className="text-sm text-yellow-800 font-bold mb-2">🔒 Inicia sesión para chatear</p>
-                <p className="text-sm text-yellow-700">
+              <div className="p-4 bg-[#1a1a1a] border border-blue-500/50 rounded-2xl text-center">
+                <p className="text-sm text-blue-400 font-bold mb-2">🔒 Inicia sesión para chatear</p>
+                <p className="text-sm text-[#6b7280]">
                   Debes iniciar sesión para enviar mensajes a nuestro equipo de soporte.
                 </p>
                 <a
                   href="/auth/login"
-                  className="inline-block mt-3 px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors"
+                  className="inline-block mt-3 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                 >
                   Iniciar sesión
                 </a>
               </div>
             ) : !isOnline ? (
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-center">
-                <p className="text-sm text-yellow-800">
+              <div className="p-4 bg-[#1a1a1a] border border-yellow-500/50 rounded-2xl text-center">
+                <p className="text-sm text-yellow-400">
                   ⚠️ Nuestro equipo está actualmente offline. Déjanos un mensaje y te responderemos lo antes posible.
                 </p>
               </div>
             ) : messages.length === 0 ? (
-              <div className="p-4 bg-white rounded-2xl text-sm text-gray-600 shadow-sm">
+              <div className="p-4 bg-[#1a1a1a] rounded-2xl text-sm text-[#ededed] border border-[#333333]">
                 <p className="font-bold">¡Hola! 👋</p>
                 <p className="mt-2">
                   Bienvenido a nuestro soporte. Estamos aquí para ayudarte con OBS, streaming, PC, gaming y soporte técnico.
@@ -381,14 +381,14 @@ export default function SupportChatWidget() {
                   <div
                     className={`max-w-[80%] rounded-2xl p-3 ${
                       isClient
-                        ? 'bg-gray-100 border border-gray-200'
-                        : 'bg-gradient-to-r from-yellow-400 to-amber-500 text-white'
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                        : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
                     }`}
                   >
                     <p className="text-sm">{message.message}</p>
                     <p
                       className={`text-xs mt-1 ${
-                        isClient ? 'text-gray-500' : 'text-white/80'
+                        isClient ? 'text-white/80' : 'text-[#6b7280]'
                       }`}
                     >
                       {formatTime(message.created_at)}
@@ -400,8 +400,8 @@ export default function SupportChatWidget() {
 
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-2xl p-3">
-                  <p className="text-sm text-gray-500">Escribiendo...</p>
+                <div className="bg-[#1a1a1a] border border-[#333333] rounded-2xl p-3">
+                  <p className="text-sm text-[#6b7280]">Escribiendo...</p>
                 </div>
               </div>
             )}
@@ -410,11 +410,11 @@ export default function SupportChatWidget() {
           </div>
 
           {/* Input */}
-          <div className="p-4 bg-white border-t border-gray-200">
+          <div className="p-4 bg-[#1a1a1a] border-t border-[#333333]">
             <form onSubmit={sendMessage} className="flex items-center gap-2">
               <button
                 type="button"
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#333333] transition-colors text-[#6b7280]"
                 aria-label="Adjuntar archivo"
               >
                 <Paperclip size={20} />
@@ -424,12 +424,12 @@ export default function SupportChatWidget() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Escribe tu mensaje..."
-                className="flex-1 px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="flex-1 px-4 py-2 bg-[#0a0a0a] rounded-full text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-blue-500 border border-[#333333]"
                 disabled={loading}
               />
               <button
                 type="button"
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#333333] transition-colors text-[#6b7280]"
                 aria-label="Emoji"
               >
                 <Smile size={20} />
@@ -437,7 +437,7 @@ export default function SupportChatWidget() {
               <button
                 type="submit"
                 disabled={!text.trim() || loading}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-white hover:from-yellow-500 hover:to-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Enviar mensaje"
               >
                 <Send size={18} />
