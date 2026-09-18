@@ -80,6 +80,30 @@ export default function SupportChatWidget() {
     }
   ]
 
+  // Respuestas automáticas del bot
+  const botResponses = [
+    {
+      keywords: ['obs', 'streaming', 'twitch', 'kick', 'configurar'],
+      response: 'Para configurar OBS, te recomiendo: 1) Usar x264 encoder en nivel 5-6, 2) Bitrate de 4500-6000 kbps para 1080p60, 3) Keyframe interval de 2 segundos. ¿Necesitas ayuda más específica?'
+    },
+    {
+      keywords: ['windows', 'gaming', 'optimizar', 'rendimiento', 'pc'],
+      response: 'Para optimizar Windows para gaming: 1) Activa el modo de alto rendimiento, 2) Desactiva Game DVR, 3) Actualiza drivers de GPU, 4) Cierra apps en segundo plano. ¿Te ayudo con alguno de estos pasos?'
+    },
+    {
+      keywords: ['frames', 'lag', 'caída', 'stutter', 'perdida'],
+      response: 'Para solucionar pérdida de frames: 1) Verifica tu conexión a internet, 2) Reduce la resolución o bitrate, 3) Cierra programas que consuman CPU, 4) Actualiza OBS. ¿Cuál es tu configuración actual?'
+    },
+    {
+      keywords: ['precio', 'costo', 'servicio', 'pagar'],
+      response: 'Nuestros servicios incluyen: 1) Configuración OBS: $25, 2) Optimización PC: $30, 3) Soporte técnico: $20/hora. ¿Te interesa alguno de estos servicios?'
+    },
+    {
+      keywords: ['hola', 'buenos días', 'buenas tardes', 'buenas noches'],
+      response: '¡Hola! 👋 Soy el asistente virtual de TheDulcanDesign. Estoy aquí para ayudarte. Si no hay agentes disponibles, te daré respuestas básicas. ¿En qué puedo ayudarte?'
+    }
+  ]
+
   // Cargar sesión del usuario
   useEffect(() => {
     loadUserSession()
@@ -406,6 +430,38 @@ export default function SupportChatWidget() {
 
       if (response.ok) {
         setText('')
+
+        // Verificar si hay agentes online para respuesta automática del bot
+        if (onlineAgents.length === 0) {
+          setTimeout(() => {
+            const lowerMessage = text.trim().toLowerCase()
+            let botResponse = null
+
+            // Buscar respuesta basada en palabras clave
+            for (const bot of botResponses) {
+              if (bot.keywords.some(keyword => lowerMessage.includes(keyword))) {
+                botResponse = bot.response
+                break
+              }
+            }
+
+            // Si no hay respuesta específica, respuesta genérica
+            if (!botResponse) {
+              botResponse = 'He recibido tu mensaje. En este momento no hay agentes de soporte disponibles, pero te responderemos lo antes posible. Si es urgente, puedes revisar nuestros artículos de ayuda en la pestaña "Artículos".'
+            }
+
+            // Enviar respuesta del bot
+            fetch('/api/chat/messages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                session_id: currentSession.id,
+                message: botResponse,
+                message_type: 'text'
+              })
+            })
+          }, 1000) // 1 segundo de delay para simular respuesta
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error)
@@ -429,6 +485,25 @@ export default function SupportChatWidget() {
 
   // Verificar si hay agentes online
   const isOnline = onlineAgents.length > 0
+
+  // Enviar mensaje de bienvenida del bot si no hay agentes online
+  useEffect(() => {
+    if (open && isAuthenticated && session && messages.length === 0 && onlineAgents.length === 0) {
+      setTimeout(() => {
+        const welcomeMessage = '¡Hola! 👋 Soy el asistente virtual de TheDulcanDesign. En este momento no hay agentes de soporte disponibles, pero te ayudaré lo mejor que pueda. Si necesitas ayuda inmediata, puedes revisar nuestros artículos en la pestaña "Artículos" o esperar a que un agente esté disponible. ¿En qué puedo ayudarte?'
+        
+        fetch('/api/chat/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: session.id,
+            message: welcomeMessage,
+            message_type: 'text'
+          })
+        })
+      }, 500)
+    }
+  }, [open, isAuthenticated, session, messages.length, onlineAgents.length])
 
   // Cargar agentes de soporte en línea
   useEffect(() => {
