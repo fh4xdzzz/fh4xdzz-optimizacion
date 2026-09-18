@@ -70,7 +70,10 @@ export async function POST(request: NextRequest) {
       .eq('id', session.user.id)
       .single()
 
-    const adminName = adminData?.full_name || adminData?.email || 'Un agente de soporte'
+    // Priorizar full_name, si no existe usar email, si no existe usar nombre genérico
+    const adminName = adminData?.full_name || adminData?.email?.split('@')[0] || 'Un agente de soporte'
+
+    console.log('Admin claiming chat:', { id: session.user.id, adminName, fullName: adminData?.full_name, email: adminData?.email })
 
     // Enviar mensaje automático al cliente
     await supabase
