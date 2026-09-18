@@ -64,6 +64,7 @@ export default function DashboardPage() {
       }))
       console.log('Orders mapped:', ordersMapped)
       setOrders(ordersMapped)
+      console.log('Orders state set to:', ordersMapped.length, 'orders')
     }
   }
 
@@ -84,9 +85,6 @@ export default function DashboardPage() {
 
       await loadOrders()
       setLoading(false)
-      
-      // Notificación de prueba para verificar el sistema
-      notifyInfo('Dashboard cargado exitosamente')
     }
 
     loadData()
@@ -117,7 +115,7 @@ export default function DashboardPage() {
       console.log('Cleaning up client orders Realtime')
       supabase.removeChannel(channel)
     }
-  }, [session?.user?.id, isDemo])
+  }, [session?.user?.id, isDemo, loadOrders])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -143,6 +141,8 @@ export default function DashboardPage() {
       </div>
     )
   }
+
+  console.log('Rendering dashboard with orders:', orders.length, 'orders')
 
   return (
     <div className="min-h-screen bg-background">
