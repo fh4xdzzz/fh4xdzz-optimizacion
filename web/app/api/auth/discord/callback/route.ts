@@ -55,8 +55,8 @@ export async function GET(request: NextRequest) {
       .eq('discord_id', discordUser.id)
       .single()
 
-    let userId: string
-    let userEmail: string
+    let userId: string = ''
+    let userEmail: string = ''
 
     // Generar email temporal si Discord no proporciona email
     const userEmailToUse = discordUser.email || `${discordUser.id}@discord.temp`
@@ -94,6 +94,8 @@ export async function GET(request: NextRequest) {
       })
 
       console.log('Signup link result:', { signupLink, signupError })
+
+      let userHandled = false
 
       if (signupError && signupError.code === 'email_exists') {
         // El usuario ya existe en Supabase Auth, buscarlo por email
@@ -170,58 +172,64 @@ export async function GET(request: NextRequest) {
           userEmail = userEmailToUse
           console.log('User created successfully in database from existing auth user:', userId)
         }
+
+        // Mark user as handled to skip the second insert attempt
+        userHandled = true
       } else if (signupError || !signupLink?.user?.id) {
         console.error('Error creating Supabase user via signup link:', signupError)
         console.error('Error details:', JSON.stringify(signupError, null, 2))
         return NextResponse.redirect(new URL('/auth/login?error=create_user_error', request.url))
       }
 
-      userId = signupLink.user?.id || ''
-      userEmail = userEmailToUse
-      console.log('User created in Supabase Auth via signup:', userId)
+      // Only execute this block if user was NOT handled in the email_exists block
+      if (!userHandled) {
+        userId = signupLink.user?.id || ''
+        userEmail = userEmailToUse
+        console.log('User created in Supabase Auth via signup:', userId)
 
-      // Crear usuario en la tabla users
-      const { data: dbData, error: dbError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          id: userId,
-          email: userEmailToUse,
-          full_name: discordUser.global_name || discordUser.username,
-          discord_id: discordUser.id,
-          discord_username: discordUser.username,
-          discord_avatar: discordUser.avatar,
-          avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
-          role: 'client',
-        })
-        .select()
+        // Crear usuario en la tabla users
+        const { data: dbData, error: dbError } = await supabaseAdmin
+          .from('users')
+          .insert({
+            id: userId,
+            email: userEmailToUse,
+            full_name: discordUser.global_name || discordUser.username,
+            discord_id: discordUser.id,
+            discord_username: discordUser.username,
+            discord_avatar: discordUser.avatar,
+            avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
+            role: 'client',
+          })
+          .select()
 
-      console.log('DB insert result:', { dbData, dbError })
+        console.log('DB insert result:', { dbData, dbError })
 
-      if (dbError) {
-        console.error('Error creating user in database:', dbError)
-        console.error('DB Error details:', JSON.stringify(dbError, null, 2))
-        
-        // Si el error es de duplicado (usuario ya existe en tabla users), buscarlo y usarlo
-        if (dbError.code === '23505') {
-          console.log('User already exists in database, fetching by ID:', userId)
-          const { data: existingDbUser } = await supabaseAdmin
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single()
+        if (dbError) {
+          console.error('Error creating user in database:', dbError)
+          console.error('DB Error details:', JSON.stringify(dbError, null, 2))
           
-          if (existingDbUser) {
-            console.log('Found existing database user:', existingDbUser.id)
-            // Continuar con el usuario existente
+          // Si el error es de duplicado (usuario ya existe en tabla users), buscarlo y usarlo
+          if (dbError.code === '23505') {
+            console.log('User already exists in database, fetching by ID:', userId)
+            const { data: existingDbUser } = await supabaseAdmin
+              .from('users')
+              .select('*')
+              .eq('id', userId)
+              .single()
+            
+            if (existingDbUser) {
+              console.log('Found existing database user:', existingDbUser.id)
+              // Continuar con el usuario existente
+            } else {
+              return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+            }
           } else {
             return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
           }
-        } else {
-          return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
         }
-      }
 
-      console.log('User created successfully in database:', userId)
+        console.log('User created successfully in database:', userId)
+      }
     }
 
     // Crear respuesta de redirección
