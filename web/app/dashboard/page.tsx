@@ -111,13 +111,34 @@ export default function DashboardPage() {
     const channel = supabase
       .channel('client-orders')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'orders',
         filter: `user_id=eq.${session.user.id}`
       }, () => {
-        console.log('Client orders changed, reloading...')
+        console.log('Client order inserted, reloading...')
         loadOrders()
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `user_id=eq.${session.user.id}`
+      }, () => {
+        console.log('Client order updated, reloading...')
+        loadOrders()
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'orders'
+      }, (payload) => {
+        // Filtrar en el cliente usando el payload.old
+        // Esto es necesario porque REPLICA IDENTITY puede no incluir user_id
+        if (payload.old?.user_id === session.user.id) {
+          console.log('Client order deleted, reloading...')
+          loadOrders()
+        }
       })
       .subscribe((status) => {
         console.log('Client orders Realtime status:', status)
