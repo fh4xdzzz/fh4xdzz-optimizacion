@@ -117,23 +117,30 @@ export default function AdminPage() {
     if (servicesData) setServices(servicesData)
 
     // Cargar sesiones de chat
-    const { data: chatSessionsData } = await supabase
+    console.log('Loading chat sessions...')
+    const { data: chatSessionsData, error: chatError } = await supabase
       .from('chat_sessions')
       .select('*, users(email, full_name)')
       .order('created_at', { ascending: false })
-    if (chatSessionsData) {
-      setChatSessions(chatSessionsData.map((session: any) => ({
-        id: session.id,
-        conversation_number: session.conversation_number,
-        status: session.status,
-        priority: session.priority,
-        assigned_agent_id: session.assigned_agent_id,
-        subject: session.subject,
-        created_at: session.created_at,
-        client_id: session.client_id,
-        client_name: session.users?.full_name || session.users?.email || 'Cliente',
-        client_email: session.users?.email || '',
-      })))
+
+    if (chatError) {
+      console.error('Error loading chat sessions:', chatError)
+    } else {
+      console.log('Chat sessions loaded:', chatSessionsData?.length || 0)
+      if (chatSessionsData) {
+        setChatSessions(chatSessionsData.map((session: any) => ({
+          id: session.id,
+          conversation_number: session.conversation_number,
+          status: session.status,
+          priority: session.priority,
+          assigned_agent_id: session.assigned_agent_id,
+          subject: session.subject,
+          created_at: session.created_at,
+          client_id: session.client_id,
+          client_name: session.users?.full_name || session.users?.email || 'Cliente',
+          client_email: session.users?.email || '',
+        })))
+      }
     }
   }
 

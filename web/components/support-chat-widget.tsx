@@ -167,6 +167,7 @@ export default function SupportChatWidget() {
   async function createSession() {
     if (session) return session
 
+    console.log('Creating chat session...')
     try {
       setLoading(true)
       const response = await fetch('/api/chat/sessions', {
@@ -179,11 +180,17 @@ export default function SupportChatWidget() {
         })
       })
 
+      console.log('Session API response status:', response.status)
+
       if (response.ok) {
         const data = await response.json()
+        console.log('Session created:', data.session)
         setSession(data.session)
         loadMessages(data.session.id)
         return data.session
+      } else {
+        const error = await response.json()
+        console.error('Session creation failed:', error)
       }
     } catch (error) {
       console.error('Error creating session:', error)
