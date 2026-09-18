@@ -15,19 +15,28 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Eliminar mensajes de chats cerrados hace más de 24 horas
-    const { error: messagesError } = await supabase
-      .from('chat_messages')
-      .delete()
-      .in('session_id', supabase
-        .from('chat_sessions')
-        .select('id')
-        .eq('status', 'closed')
-        .lt('closed_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      )
+    // Primero obtener IDs de chats cerrados antiguos
+    const { data: oldSessions, error: fetchError } = await supabase
+      .from('chat_sessions')
+      .select('id')
+      .eq('status', 'closed')
+      .lt('closed_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
-    if (messagesError) {
-      console.error('Error deleting old messages:', messagesError)
+    if (fetchError) {
+      console.error('Error fetching old sessions:', fetchError)
+    }
+
+    // Eliminar mensajes de esos chats
+    if (oldSessions && oldSessions.length > 0) {
+      const sessionIds = oldSessions.map((s: any) => s.id)
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .in('session_id', sessionIds)
+
+      if (messagesError) {
+        console.error('Error deleting old messages:', messagesError)
+      }
     }
 
     // Eliminar chats cerrados hace más de 24 horas
