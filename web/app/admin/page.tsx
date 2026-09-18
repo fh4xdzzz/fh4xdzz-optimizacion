@@ -441,6 +441,12 @@ export default function AdminPage() {
   const handleSendChatMessage = async (message: string) => {
     if (!selectedChat || !message.trim()) return
 
+    // Verificar si el chat está cerrado
+    if (selectedChat.status === 'closed') {
+      alert('No puedes enviar mensajes en chats cerrados. Por favor, selecciona un chat activo.')
+      return
+    }
+
     try {
       const session = await getSession()
       if (!session) return

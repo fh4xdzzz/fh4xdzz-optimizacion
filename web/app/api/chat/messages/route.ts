@@ -107,24 +107,39 @@ export async function POST(request: NextRequest) {
 
       console.log('Session ownership verified:', chatSession.client_id)
 
-      // Si la sesión está cerrada, reabrirla
+      // Si la sesión está cerrada, bloquear el envío de mensajes
       if (chatSession.status === 'closed') {
-        console.log('Reopening closed session')
-        await supabase
-          .from('chat_sessions')
-          .update({ status: 'waiting' })
-          .eq('id', session_id)
+        console.log('Attempt to send message to closed session - blocked')
+        return NextResponse.json({ 
+          error: 'Cannot send message to closed session',
+          message: 'Este chat ha sido cerrado. Por favor, inicia un nuevo chat.'
+        }, { status: 403 })
+      }
+    } else if (userRole === 'admin' || userRole === 'staff' || userRole === 'owner') {
+      // Admin/staff también deben verificar que el chat no esté cerrado
+      const { data: chatSession, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .select('status')
+        .eq('id', session_id)
+        .maybeSingle()
 
-        // Auditoría opcional
-        try {
-          await supabase.from('chat_audit_logs').insert({
-            actor_id: session.user.id,
-            action: 'CHAT_REOPENED',
-            session_id
-          })
-        } catch (auditError) {
-          console.error('Error creating audit log:', auditError)
-        }
+      if (sessionError) {
+        console.error('Error checking session status:', sessionError)
+        return NextResponse.json({ error: 'Session not found', details: sessionError.message }, { status: 404 })
+      }
+
+      if (!chatSession) {
+        console.error('Session not found')
+        return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+      }
+
+      // Admin/staff no pueden enviar mensajes a chats cerrados
+      if (chatSession.status === 'closed') {
+        console.log('Attempt to send message to closed session by admin - blocked')
+        return NextResponse.json({ 
+          error: 'Cannot send message to closed session',
+          message: 'Este chat ha sido cerrado y está en el historial. No se pueden enviar mensajes.'
+        }, { status: 403 })
       }
     }
 
