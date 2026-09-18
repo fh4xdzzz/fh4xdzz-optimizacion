@@ -36,6 +36,8 @@ export default function SupportChatWidget() {
   const [unread, setUnread] = useState(0)
   const [isTyping, setIsTyping] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
 
@@ -54,6 +56,44 @@ export default function SupportChatWidget() {
   useEffect(() => {
     loadUserSession()
   }, [])
+
+  // Cargar sesión del usuario
+  async function loadUserSession() {
+    try {
+      setAuthLoading(true)
+      const userSession = await getSession()
+      if (!userSession) {
+        console.log('No user session found')
+        setIsAuthenticated(false)
+        setCurrentUser(null)
+        setAuthLoading(false)
+        return
+      }
+
+      console.log('User session found:', userSession.user.id, userSession.user.role)
+      setCurrentUser(userSession.user)
+      setIsAuthenticated(true)
+
+      const response = await fetch('/api/chat/sessions')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.sessions && data.sessions.length > 0) {
+          const activeSession = data.sessions.find((s: ChatSession) =>
+            ['waiting', 'active', 'pending'].includes(s.status)
+          )
+          if (activeSession) {
+            setSession(activeSession)
+            loadMessages(activeSession.id)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user session:', error)
+      setIsAuthenticated(false)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
 
   // Suscribirse a cambios en tiempo real
   useEffect(() => {
@@ -103,32 +143,6 @@ export default function SupportChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Cargar sesión del usuario
-  async function loadUserSession() {
-    try {
-      const userSession = await getSession()
-      if (!userSession) return
-
-      setCurrentUser(userSession.user)
-
-      const response = await fetch('/api/chat/sessions')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.sessions && data.sessions.length > 0) {
-          const activeSession = data.sessions.find((s: ChatSession) =>
-            ['waiting', 'active', 'pending'].includes(s.status)
-          )
-          if (activeSession) {
-            setSession(activeSession)
-            loadMessages(activeSession.id)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error loading user session:', error)
-    }
-  }
-
   // Cargar mensajes de una sesión
   async function loadMessages(sessionId: string) {
     try {
@@ -176,6 +190,12 @@ export default function SupportChatWidget() {
   async function sendMessage(e?: React.FormEvent) {
     e?.preventDefault()
     if (!text.trim() || loading) return
+
+    // Verificar autenticación
+    if (!isAuthenticated || !currentUser) {
+      alert('Debes iniciar sesión para enviar mensajes')
+      return
+    }
 
     const currentSession = session || await createSession()
     if (!currentSession) return
@@ -311,15 +331,30 @@ export default function SupportChatWidget() {
         <>
           {/* Messages */}
           <div className="flex-1 overflow-auto p-4 space-y-3 bg-gray-50">
-            {!isOnline && (
+            {authLoading ? (
+              <div className="p-4 bg-white rounded-2xl text-sm text-gray-600 shadow-sm text-center">
+                <p>Cargando...</p>
+              </div>
+            ) : !isAuthenticated ? (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-center">
+                <p className="text-sm text-yellow-800 font-bold mb-2">🔒 Inicia sesión para chatear</p>
+                <p className="text-sm text-yellow-700">
+                  Debes iniciar sesión para enviar mensajes a nuestro equipo de soporte.
+                </p>
+                <a
+                  href="/auth/login"
+                  className="inline-block mt-3 px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors"
+                >
+                  Iniciar sesión
+                </a>
+              </div>
+            ) : !isOnline ? (
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-center">
                 <p className="text-sm text-yellow-800">
                   ⚠️ Nuestro equipo está actualmente offline. Déjanos un mensaje y te responderemos lo antes posible.
                 </p>
               </div>
-            )}
-
-            {messages.length === 0 && (
+            ) : messages.length === 0 ? (
               <div className="p-4 bg-white rounded-2xl text-sm text-gray-600 shadow-sm">
                 <p className="font-bold">¡Hola! 👋</p>
                 <p className="mt-2">
@@ -327,7 +362,7 @@ export default function SupportChatWidget() {
                 </p>
                 <p className="mt-2">Cuéntanos qué problema tienes y te ayudaremos.</p>
               </div>
-            )}
+            ) : null}
 
             {messages.map((message) => {
               const isClient = message.sender_role === 'client'
