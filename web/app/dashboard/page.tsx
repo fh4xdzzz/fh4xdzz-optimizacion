@@ -27,11 +27,37 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 }
 
 export default function DashboardPage() {
-  const [session, setSession] = useState<{ user: { full_name?: string; email: string } } | null>(null)
+  const [session, setSession] = useState<{ user: { full_name?: string; email: string; id: string } } | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const isDemo = isDemoMode()
+  const supabase = createClient()
+
+  const loadOrders = async () => {
+    if (!session?.user?.id) return
+
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*, services(name)')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error al cargar pedidos:', error)
+      setOrders([])
+    } else {
+      const ordersMapped = (data || []).map((order: any) => ({
+        id: order.id,
+        order_number: order.order_number,
+        service_name: order.services?.name || 'Servicio desconocido',
+        status: order.status,
+        created_at: order.created_at,
+      }))
+      setOrders(ordersMapped)
+    }
+  }
 
   useEffect(() => {
     const loadData = async () => {
@@ -48,34 +74,39 @@ export default function DashboardPage() {
         localStorage.removeItem('orders')
       }
 
-      // Cargar pedidos desde Supabase
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, services(name)')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error al cargar pedidos:', error)
-        setOrders([])
-      } else {
-        // Mapear campos de Supabase a interfaz
-        const ordersMapped = (data || []).map((order: any) => ({
-          id: order.id,
-          order_number: order.order_number,
-          service_name: order.services?.name || 'Servicio desconocido',
-          status: order.status,
-          created_at: order.created_at,
-        }))
-        setOrders(ordersMapped)
-      }
-
+      await loadOrders()
       setLoading(false)
     }
 
     loadData()
   }, [router])
+
+  // Suscribirse a cambios en tiempo real para pedidos del cliente
+  useEffect(() => {
+    if (!session?.user?.id || isDemo) return
+
+    console.log('Setting up Realtime for client orders')
+
+    const channel = supabase
+      .channel('client-orders')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `user_id=eq.${session.user.id}`
+      }, () => {
+        console.log('Client orders changed, reloading...')
+        loadOrders()
+      })
+      .subscribe((status) => {
+        console.log('Client orders Realtime status:', status)
+      })
+
+    return () => {
+      console.log('Cleaning up client orders Realtime')
+      supabase.removeChannel(channel)
+    }
+  }, [session?.user?.id, isDemo])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

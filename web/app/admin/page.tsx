@@ -221,6 +221,84 @@ export default function AdminPage() {
     }
   }, [activeTab, isDemo])
 
+  // Suscribirse a cambios en tiempo real para usuarios
+  useEffect(() => {
+    if (activeTab !== 'users' || isDemo) return
+
+    console.log('Setting up Realtime for users')
+
+    const channel = supabase
+      .channel('admin-users')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'users'
+      }, () => {
+        console.log('Users changed, reloading...')
+        loadAdminData()
+      })
+      .subscribe((status) => {
+        console.log('Users Realtime status:', status)
+      })
+
+    return () => {
+      console.log('Cleaning up users Realtime')
+      supabase.removeChannel(channel)
+    }
+  }, [activeTab, isDemo])
+
+  // Suscribirse a cambios en tiempo real para pedidos
+  useEffect(() => {
+    if (activeTab !== 'orders' || isDemo) return
+
+    console.log('Setting up Realtime for orders')
+
+    const channel = supabase
+      .channel('admin-orders')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders'
+      }, () => {
+        console.log('Orders changed, reloading...')
+        loadAdminData()
+      })
+      .subscribe((status) => {
+        console.log('Orders Realtime status:', status)
+      })
+
+    return () => {
+      console.log('Cleaning up orders Realtime')
+      supabase.removeChannel(channel)
+    }
+  }, [activeTab, isDemo])
+
+  // Suscribirse a cambios en tiempo real para servicios
+  useEffect(() => {
+    if (activeTab !== 'services' || isDemo) return
+
+    console.log('Setting up Realtime for services')
+
+    const channel = supabase
+      .channel('admin-services')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'services'
+      }, () => {
+        console.log('Services changed, reloading...')
+        loadAdminData()
+      })
+      .subscribe((status) => {
+        console.log('Services Realtime status:', status)
+      })
+
+    return () => {
+      console.log('Cleaning up services Realtime')
+      supabase.removeChannel(channel)
+    }
+  }, [activeTab, isDemo])
+
   // Suscribirse a cambios en tiempo real para chat messages
   useEffect(() => {
     if (!selectedChat || isDemo) return
