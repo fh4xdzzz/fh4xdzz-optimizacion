@@ -61,9 +61,11 @@ export async function GET(request: NextRequest) {
     if (!existingUser) {
       // Usuario no encontrado, crear automáticamente
       console.log('Creating new user from Discord OAuth')
+      console.log('Discord user data:', discordUser)
       
       // Generar contraseña temporal
       const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
+      console.log('Temp password generated')
       
       // Crear usuario en Supabase Auth
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -78,13 +80,17 @@ export async function GET(request: NextRequest) {
         },
       })
 
+      console.log('Auth create result:', { authData, authError })
+
       if (authError || !authData.user) {
         console.error('Error creating Supabase user:', authError)
         return NextResponse.redirect(new URL('/auth/login?error=create_user_error', request.url))
       }
 
+      console.log('User created in Supabase Auth:', authData.user.id)
+
       // Crear usuario en la tabla users
-      const { error: dbError } = await supabaseAdmin
+      const { data: dbData, error: dbError } = await supabaseAdmin
         .from('users')
         .insert({
           id: authData.user.id,
@@ -95,6 +101,9 @@ export async function GET(request: NextRequest) {
           discord_avatar: discordUser.avatar,
           role: 'client',
         })
+        .select()
+
+      console.log('DB insert result:', { dbData, dbError })
 
       if (dbError) {
         console.error('Error creating user in database:', dbError)
@@ -103,6 +112,7 @@ export async function GET(request: NextRequest) {
 
       userId = authData.user.id
       userEmail = discordUser.email
+      console.log('User created successfully in database:', userId)
     } else {
       // Usuario encontrado, usar existente
       userId = existingUser.id
