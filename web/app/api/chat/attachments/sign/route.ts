@@ -1,48 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from '@/lib/auth-server'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
+// POST /api/chat/attachments/sign - Firmar URL para upload de archivo
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    const session = await getServerSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Convertir archivo a base64
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
+    const body = await request.json()
+    const { session_id, file_name, content_type, file_size } = body
 
-    // Subir a Supabase Storage
-    const fileName = `${Date.now()}-${file.name}`
-    const { data, error } = await supabase
+    if (!session_id || !file_name || !content_type || !file_size) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Validar tipo de archivo
+    const allowedTypes = [
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+      'image/gif',
+      'text/plain',
+      'application/json',
+      'application/zip'
+    ]
+
+    if (!allowedTypes.includes(content_type)) {
+      return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
+    }
+
+    // Validar tamaño (máximo 10MB)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file_size > maxSize) {
+      return NextResponse.json({ error: 'File size exceeds limit' }, { status: 400 })
+    }
+
+    const supabase = await createClient()
+
+    // Generar ruta única para el archivo
+    const fileExtension = file_name.split('.').pop()
+    const uniqueFileName = `${session_id}/${Date.now()}.${fileExtension}`
+    const path = uniqueFileName
+
+    // Crear signed URL para upload
+    const { data: signedUrlData, error: signedUrlError } = await supabase
       .storage
       .from('chat-attachments')
-      .upload(fileName, base64, {
-        contentType: file.type,
-        upsert: false,
+      .createSignedUploadUrl(path, {
+        upsert: false
       })
 
-    if (error) {
-      console.error('Error uploading to Supabase Storage:', error)
-      return NextResponse.json({ error: 'Error uploading file' }, { status: 500 })
+    if (signedUrlError) {
+      console.error('Error creating signed upload URL:', signedUrlError)
+      return NextResponse.json({ error: 'Failed to create signed URL' }, { status: 500 })
     }
-
-    const path = data.path
 
     return NextResponse.json({
       path,
-      file_name: file.name,
-      content_type: file.type,
-      file_size: file.size,
+      signedUrl: signedUrlData.signedUrl,
+      token: signedUrlData.token
     })
   } catch (error) {
-    console.error('Error in attachments sign endpoint:', error)
+    console.error('Error in POST /api/chat/attachments/sign:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
