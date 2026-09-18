@@ -152,7 +152,17 @@ export default function SupportChatWidget() {
       }, (payload) => {
         console.log('Realtime INSERT received:', payload)
         const newMessage = payload.new as Message
-        setMessages(prev => [...prev, newMessage])
+        // Extraer solo los campos necesarios para evitar errores
+        const cleanMessage: Message = {
+          id: newMessage.id,
+          sender_id: newMessage.sender_id,
+          sender_role: newMessage.sender_role,
+          message: newMessage.message,
+          message_type: newMessage.message_type,
+          created_at: newMessage.created_at,
+          read_at: newMessage.read_at,
+        }
+        setMessages(prev => [...prev, cleanMessage])
 
         if (newMessage.sender_role !== 'client' && !open) {
           setUnread(prev => prev + 1)
@@ -292,7 +302,7 @@ export default function SupportChatWidget() {
 
       if (messageResponse.ok) {
         const messageData = await messageResponse.json()
-        setMessages(prev => [...prev, messageData])
+        setMessages(prev => [...prev, messageData.message])
       }
     } catch (error) {
       console.error('Error uploading file:', error)
