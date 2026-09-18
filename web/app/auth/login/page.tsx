@@ -12,6 +12,31 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/dashboard'
+  const errorCode = searchParams.get('error')
+
+  // Mapear códigos de error a mensajes
+  const getErrorMessage = (code: string | null): string => {
+    switch (code) {
+      case 'no_code':
+        return 'No se recibió el código de autorización de Discord'
+      case 'token_error':
+        return 'Error al intercambiar el código por un token de acceso'
+      case 'create_user_error':
+        return 'Error al crear el usuario en Supabase. Contacta al soporte.'
+      case 'db_error':
+        return 'Error al guardar el usuario en la base de datos. Contacta al soporte.'
+      case 'magiclink_error':
+        return 'Error al generar el enlace de sesión. Inténtalo de nuevo.'
+      case 'otp_error':
+        return 'Error al verificar la sesión. Inténtalo de nuevo.'
+      case 'oauth_error':
+        return 'Error general en el proceso de OAuth. Inténtalo de nuevo.'
+      default:
+        return code ? `Error desconocido: ${code}` : ''
+    }
+  }
+
+  const errorMessage = getErrorMessage(errorCode)
 
   const handleDiscordLogin = () => {
     if (!process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID) {
@@ -35,9 +60,9 @@ function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
+        {(error || errorMessage) && (
           <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm mb-4">
-            {error}
+            {error || errorMessage}
           </div>
         )}
 

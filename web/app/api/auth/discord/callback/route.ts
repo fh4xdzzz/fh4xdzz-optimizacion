@@ -58,43 +58,55 @@ export async function GET(request: NextRequest) {
     let userId: string
     let userEmail: string
 
+    // Generar email temporal si Discord no proporciona email
+    // Esto es necesario porque Supabase requiere email para crear usuarios
+    // y algunos usuarios de Discord no tienen email público
+    const userEmailToUse = discordUser.email || `${discordUser.id}@discord.temp`
+    console.log('Email to use for user creation:', userEmailToUse)
+
     if (!existingUser) {
-      // Usuario no encontrado, crear automáticamente
-      console.log('Creating new user from Discord OAuth')
+      // Usuario no encontrado, crear automáticamente usando generateLink con signup
+      // Este método evita problemas de SMTP configuración en Supabase
+      console.log('Creating new user from Discord OAuth using generateLink signup')
       console.log('Discord user data:', discordUser)
       
       // Generar contraseña temporal
       const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
-      console.log('Temp password generated')
       
-      // Crear usuario en Supabase Auth
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: discordUser.email,
+      // Usar generateLink con tipo signup para crear usuario y obtener token
+      const { data: signupLink, error: signupError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email: userEmailToUse,
         password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: discordUser.global_name || discordUser.username,
-          discord_id: discordUser.id,
-          discord_username: discordUser.username,
-          discord_avatar: discordUser.avatar,
+        options: {
+          data: {
+            full_name: discordUser.global_name || discordUser.username,
+            discord_id: discordUser.id,
+            discord_username: discordUser.username,
+            discord_avatar: discordUser.avatar,
+            real_email: discordUser.email || null,
+          },
         },
       })
 
-      console.log('Auth create result:', { authData, authError })
+      console.log('Signup link result:', { signupLink, signupError })
 
-      if (authError || !authData.user) {
-        console.error('Error creating Supabase user:', authError)
+      if (signupError || !signupLink?.user?.id) {
+        console.error('Error creating Supabase user via signup link:', signupError)
+        console.error('Error details:', JSON.stringify(signupError, null, 2))
         return NextResponse.redirect(new URL('/auth/login?error=create_user_error', request.url))
       }
 
-      console.log('User created in Supabase Auth:', authData.user.id)
+      userId = signupLink.user.id
+      userEmail = userEmailToUse
+      console.log('User created in Supabase Auth via signup:', userId)
 
       // Crear usuario en la tabla users
       const { data: dbData, error: dbError } = await supabaseAdmin
         .from('users')
         .insert({
-          id: authData.user.id,
-          email: discordUser.email,
+          id: userId,
+          email: userEmailToUse,
           full_name: discordUser.global_name || discordUser.username,
           discord_id: discordUser.id,
           discord_username: discordUser.username,
@@ -107,25 +119,17 @@ export async function GET(request: NextRequest) {
 
       if (dbError) {
         console.error('Error creating user in database:', dbError)
+        console.error('DB Error details:', JSON.stringify(dbError, null, 2))
         return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
       }
 
-      userId = authData.user.id
-      userEmail = discordUser.email
       console.log('User created successfully in database:', userId)
     } else {
       // Usuario encontrado, usar existente
       userId = existingUser.id
       userEmail = existingUser.email
+      console.log('Using existing user:', userId)
     }
-
-    // Generar una contraseña temporal
-    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
-
-    // Actualizar la contraseña del usuario
-    await supabaseAdmin.auth.admin.updateUserById(userId, {
-      password: tempPassword,
-    })
 
     // Crear respuesta de redirección
     const response = NextResponse.redirect(new URL('/perfil', request.url))
@@ -148,15 +152,31 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Iniciar sesión con la contraseña temporal
-    const { data: sessionData, error: sessionError } = await supabaseSSR.auth.signInWithPassword({
+    // Método mejorado: Generar magic link y verificar OTP para crear sesión
+    // Esto es más robusto que signInWithPassword con contraseñas temporales
+    console.log('Generating magic link for session creation...')
+    const { data: magicLink, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
       email: userEmail,
-      password: tempPassword,
+    })
+
+    if (linkError || !magicLink?.properties?.hashed_token) {
+      console.error('Error generating magic link:', linkError)
+      console.error('Link error details:', JSON.stringify(linkError, null, 2))
+      return NextResponse.redirect(new URL('/auth/login?error=magiclink_error', request.url))
+    }
+
+    console.log('Magic link generated, verifying OTP...')
+    // Verificar OTP para crear la sesión
+    const { data: sessionData, error: sessionError } = await supabaseSSR.auth.verifyOtp({
+      token_hash: magicLink.properties.hashed_token,
+      type: 'email',
     })
 
     if (sessionError || !sessionData.session) {
-      console.error('Error creating session:', sessionError)
-      return NextResponse.redirect(new URL('/auth/login?error=session_error', request.url))
+      console.error('Error verifying OTP:', sessionError)
+      console.error('Session error details:', JSON.stringify(sessionError, null, 2))
+      return NextResponse.redirect(new URL('/auth/login?error=otp_error', request.url))
     }
 
     console.log('Session created successfully via Discord login')
