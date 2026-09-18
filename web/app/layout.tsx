@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SupportChatWidget from "@/components/support-chat-widget";
 import { Notifications } from "@/components/notifications";
+import PresenceTracker from "@/components/presence-tracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <SupportChatWidget />
         <Notifications />
+        <PresenceTracker />
       </body>
     </html>
   );
