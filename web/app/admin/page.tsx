@@ -16,6 +16,7 @@ interface User {
   full_name?: string
   role: 'client' | 'admin' | 'staff' | 'owner'
   created_at: string
+  online?: boolean
 }
 
 interface Order {
@@ -844,7 +845,7 @@ export default function AdminPage() {
                     <div className="p-4 bg-purple-500/10 border border-purple-500/50 rounded-xl">
                       <div className="text-sm text-purple-500 mb-1">Agentes online</div>
                       <div className="text-2xl font-bold text-purple-500">
-                        {users.filter(u => u.role === 'admin' || u.role === 'staff' || u.role === 'owner').length}
+                        {users.filter(u => (u.role === 'admin' || u.role === 'staff' || u.role === 'owner') && u.online).length}
                       </div>
                     </div>
                   </div>
