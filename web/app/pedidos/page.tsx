@@ -5,6 +5,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
 import { useNotificationStore } from '@/lib/notifications-store'
@@ -41,6 +42,8 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
   const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
   const supabase = createClient()
 
@@ -147,9 +150,6 @@ export default function OrdersPage() {
         return
       }
 
-      const confirmed = confirm('¿Estás seguro de que quieres eliminar este pedido? Esta acción no se puede deshacer.')
-      if (!confirmed) return
-
       // Importar la función de eliminación
       const { deleteSupabaseOrder } = await import('@/lib/supabase/orders')
 
@@ -161,11 +161,18 @@ export default function OrdersPage() {
       }
       loadOrders()
       setDeleteConfirm(null)
+      setOrderToDelete(null)
+      setShowDeleteModal(false)
       notifySuccess('Pedido eliminado exitosamente')
     } catch (error) {
       console.error('Error al eliminar pedido:', error)
       notifyError('Error al eliminar pedido: ' + (error as Error).message)
     }
+  }
+
+  const handleDeleteClick = (orderId: string) => {
+    setOrderToDelete(orderId)
+    setShowDeleteModal(true)
   }
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -330,32 +337,13 @@ export default function OrdersPage() {
                   {/* Botón de eliminar - solo para owner */}
                   {userRole === 'owner' && (
                     <div className="pt-4 border-t border-purple-500/20">
-                      {deleteConfirm === searchResult.id ? (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteOrder(searchResult.id)}
-                          >
-                            Confirmar eliminación
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setDeleteConfirm(null)}
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeleteConfirm(searchResult.id)}
-                        >
-                          Eliminar pedido
-                        </Button>
-                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteClick(searchResult.id)}
+                      >
+                        Eliminar pedido
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -409,7 +397,7 @@ export default function OrdersPage() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleDeleteOrder(order.id)}
+                            onClick={() => handleDeleteClick(order.id)}
                           >
                             Eliminar
                           </Button>
@@ -438,6 +426,21 @@ export default function OrdersPage() {
           )}
         </div>
       </section>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setOrderToDelete(null)
+        }}
+        onConfirm={() => orderToDelete && handleDeleteOrder(orderToDelete)}
+        title="Eliminar Pedido"
+        description="¿Estás seguro de que quieres eliminar este pedido? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
 
       <Footer />
     </div>
