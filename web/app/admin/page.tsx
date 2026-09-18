@@ -67,10 +67,11 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [chatHistory, setChatHistory] = useState<ChatSession[]>([])
   const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'support' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'support' | 'history' | 'settings'>('overview')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -122,6 +123,7 @@ export default function AdminPage() {
     const { data: chatSessionsData, error: chatError } = await supabase
       .from('chat_sessions')
       .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
+      .in('status', ['waiting', 'active', 'pending'])
       .order('created_at', { ascending: false })
 
     if (chatError) {
@@ -130,6 +132,35 @@ export default function AdminPage() {
       console.log('Chat sessions loaded:', chatSessionsData?.length || 0)
       if (chatSessionsData) {
         setChatSessions(chatSessionsData.map((session: any) => ({
+          id: session.id,
+          conversation_number: session.conversation_number,
+          status: session.status,
+          priority: session.priority,
+          assigned_agent_id: session.assigned_agent_id,
+          subject: session.subject,
+          created_at: session.created_at,
+          client_id: session.client_id,
+          client_name: session.users?.full_name || session.users?.email || 'Cliente',
+          client_email: session.users?.email || '',
+        })))
+      }
+    }
+
+    // Cargar historial de chats cerrados
+    console.log('Loading chat history...')
+    const { data: chatHistoryData, error: historyError } = await supabase
+      .from('chat_sessions')
+      .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
+      .eq('status', 'closed')
+      .order('closed_at', { ascending: false })
+      .limit(50)
+
+    if (historyError) {
+      console.error('Error loading chat history:', historyError)
+    } else {
+      console.log('Chat history loaded:', chatHistoryData?.length || 0)
+      if (chatHistoryData) {
+        setChatHistory(chatHistoryData.map((session: any) => ({
           id: session.id,
           conversation_number: session.conversation_number,
           status: session.status,
@@ -457,6 +488,16 @@ export default function AdminPage() {
               onClick={() => setActiveTab('support')}
             >
               Soporte
+            </button>
+            <button
+              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
+                activeTab === 'history'
+                  ? 'bg-primary text-white hover:bg-primary/90'
+                  : 'border border-border bg-transparent hover:bg-card'
+              }`}
+              onClick={() => setActiveTab('history')}
+            >
+              Historial ({chatHistory.length})
             </button>
             {(userRole === 'owner') && (
               <button
@@ -834,6 +875,59 @@ export default function AdminPage() {
                       )}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* History Tab */}
+          {activeTab === 'history' && (
+            <div className="space-y-6">
+              <Card className="glass-card hover-glow animate-fade-in-up">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Historial de Chats</CardTitle>
+                  <CardDescription className="text-base">Chats cerrados (se eliminan automáticamente después de 24 horas)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {chatHistory.length > 0 ? (
+                      chatHistory.map((chat, index) => (
+                        <div
+                          key={chat.id}
+                          className="p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up"
+                          style={{ animationDelay: `${index * 0.05}s` }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="font-medium text-lg text-[#ededed]">{chat.client_name}</div>
+                                <div className="w-3 h-3 rounded-full bg-gray-500" />
+                                <span className="text-sm text-[#6b7280] font-medium">Cerrado</span>
+                              </div>
+                              <div className="text-base text-[#6b7280]">
+                                {chat.conversation_number} • {formatDate(chat.created_at)}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSelectedChat(chat)
+                                loadChatMessages(chat.id)
+                                setActiveTab('support')
+                              }}
+                              className="px-4 py-2 bg-[#333333] text-[#ededed] rounded-lg hover:bg-[#444444] transition-colors"
+                            >
+                              Ver detalles
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-muted text-lg">No hay chats en el historial</p>
+                        <p className="text-sm text-muted mt-2">Los chats cerrados aparecerán aquí.</p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
