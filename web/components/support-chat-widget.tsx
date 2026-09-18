@@ -39,12 +39,14 @@ export default function SupportChatWidget() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
+  const [shouldShowWidget, setShouldShowWidget] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
-  // Si el usuario es admin/staff/owner, no mostrar el widget de soporte
-  if (currentUser && ['admin', 'staff', 'owner'].includes(currentUser.role)) {
+  // Si el widget no debe mostrarse, retornar null inmediatamente
+  if (!shouldShowWidget) {
+    console.log('Support chat widget hidden by role check')
     return null
   }
 
@@ -81,7 +83,8 @@ export default function SupportChatWidget() {
       
       // No mostrar chat de soporte para admin, staff y owner
       if (userSession.user.role && ['admin', 'staff', 'owner'].includes(userSession.user.role)) {
-        console.log('User is admin/staff/owner, hiding support chat')
+        console.log('User is admin/staff/owner, hiding support chat - Role:', userSession.user.role)
+        setShouldShowWidget(false)
         setAuthLoading(false)
         return
       }
