@@ -14,6 +14,7 @@ export interface ModalProps {
   cancelText?: string
   variant?: 'default' | 'destructive'
   children?: React.ReactNode
+  className?: string
 }
 
 const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
