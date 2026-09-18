@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     console.log('User authenticated:', session.user.id, session.user.role)
 
     const body = await request.json()
-    const { session_id, message, message_type } = body
+    const { session_id, message, message_type, attachment_path, attachment_name } = body
 
     if (!session_id || !message) {
       return NextResponse.json({ error: 'Session ID and message are required' }, { status: 400 })
@@ -145,16 +145,26 @@ export async function POST(request: NextRequest) {
 
     // Insertar mensaje - estructura correcta con session_id y sender_id
     console.log('Inserting message...')
+    const insertData: any = {
+      id: crypto.randomUUID(),
+      session_id,
+      sender_id: session.user.id,
+      sender_role: userRole,
+      message,
+      message_type: message_type || 'text'
+    }
+
+    // Agregar campos de attachment si existen
+    if (attachment_path) {
+      insertData.attachment_path = attachment_path
+    }
+    if (attachment_name) {
+      insertData.attachment_name = attachment_name
+    }
+
     const { data: newMessage, error: insertError } = await supabase
       .from('chat_messages')
-      .insert({
-        id: crypto.randomUUID(),
-        session_id,
-        sender_id: session.user.id,
-        sender_role: userRole,
-        message,
-        message_type: message_type || 'text'
-      })
+      .insert(insertData)
       .select()
       .single()
 
