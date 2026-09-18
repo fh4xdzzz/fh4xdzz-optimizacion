@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getSession } from '@/lib/auth-hybrid'
 
 function LoginForm() {
   const [error, setError] = useState('')
@@ -67,7 +66,9 @@ export default function LoginPage() {
 
       <section className="pt-32 pb-20 px-4">
         <div className="container mx-auto max-w-md">
-          <LoginForm />
+          <Suspense fallback={<div className="text-center">Cargando...</div>}>
+            <LoginForm />
+          </Suspense>
         </div>
       </section>
 
