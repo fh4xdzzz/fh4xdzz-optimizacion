@@ -381,6 +381,29 @@ export default function AdminPage() {
     }
   }
 
+  const toggleFeatured = async (serviceId: string, currentFeatured: boolean) => {
+    try {
+      if (userRole !== 'owner') {
+        notifyWarning('Solo el owner puede cambiar servicios destacados')
+        return
+      }
+
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('services')
+        .update({ is_featured: !currentFeatured })
+        .eq('id', serviceId)
+
+      if (error) throw error
+
+      await loadAdminData()
+      notifySuccess(currentFeatured ? 'Servicio quitado de destacados' : 'Servicio marcado como destacado')
+    } catch (error) {
+      console.error('Error al cambiar destacado:', error)
+      notifyError('Error al cambiar destacado: ' + (error as Error).message)
+    }
+  }
+
   const loadChatMessages = async (sessionId: string) => {
     const supabase = createClient()
     const { data: messagesData } = await supabase
@@ -801,6 +824,17 @@ export default function AdminPage() {
                           <div className="text-base text-muted">
                             {service.category} • ${service.price}
                           </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {userRole === 'owner' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleFeatured(service.id, service.is_featured)}
+                            >
+                              {service.is_featured ? 'Quitar destacado' : 'Marcar destacado'}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}

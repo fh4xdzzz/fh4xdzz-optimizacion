@@ -1,9 +1,47 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
+
+interface Service {
+  id: string
+  name: string
+  description: string
+  price: number
+  features: string[]
+  is_featured: boolean
+}
 
 export default function Home() {
+  const [featuredServices, setFeaturedServices] = useState<Service[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadFeaturedServices()
+  }, [])
+
+  const loadFeaturedServices = async () => {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_featured', true)
+        .limit(3)
+
+      if (error) throw error
+      setFeaturedServices(data || [])
+    } catch (error) {
+      console.error('Error loading featured services:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="animated-bg"></div>
@@ -43,70 +81,37 @@ export default function Home() {
       <section className="py-24 px-4 bg-card/30">
         <div className="container mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-primary animate-fade-in-up">Servicios Destacados</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="border-primary/50 transition-all glass-card">
-              <CardHeader>
-                <CardTitle className="text-2xl mb-2">Optimización de OBS</CardTitle>
-                <CardDescription className="text-base">Configuración profesional para streaming de alta calidad</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm text-muted">
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Mejor calidad de video</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Uso optimizado de CPU</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Configuración de escenas</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Transiciones suaves</span></li>
-                </ul>
-                <div className="mt-6 flex items-center justify-between">
-                  <span className="text-3xl font-bold gradient-text-primary">$29.99</span>
-                  <Button variant="outline" size="lg" href="/servicios" className="shimmer-button">
-                    Ver detalles
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-secondary/50 transition-all glass-card">
-              <CardHeader>
-                <CardTitle className="text-2xl mb-2">Configuración de Streaming</CardTitle>
-                <CardDescription className="text-base">Setup completo para Twitch, YouTube u otras plataformas</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm text-muted">
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Streaming estable</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Alertas personalizadas</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Chat integrado</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Overlay profesional</span></li>
-                </ul>
-                <div className="mt-6 flex items-center justify-between">
-                  <span className="text-3xl font-bold gradient-text-secondary">$49.99</span>
-                  <Button variant="outline" size="lg" href="/servicios" className="shimmer-button">
-                    Ver detalles
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-accent/50 transition-all glass-card">
-              <CardHeader>
-                <CardTitle className="text-2xl mb-2">Optimización de PC</CardTitle>
-                <CardDescription className="text-base">Mejora del rendimiento del sistema para gaming</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm text-muted">
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Sistema más rápido</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Menos latencia</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Mejor rendimiento en juegos</span></li>
-                  <li className="flex items-center gap-2">✓ <span className="text-foreground">Eliminación de bloatware</span></li>
-                </ul>
-                <div className="mt-6 flex items-center justify-between">
-                  <span className="text-3xl font-bold gradient-text-primary">$39.99</span>
-                  <Button variant="outline" size="lg" href="/servicios" className="shimmer-button">
-                    Ver detalles
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {loading ? (
+            <div className="text-center text-muted">Cargando servicios destacados...</div>
+          ) : featuredServices.length === 0 ? (
+            <div className="text-center text-muted">No hay servicios destacados aún.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {featuredServices.map((service, index) => (
+                <Card key={service.id} className={`border-${index === 0 ? 'primary' : index === 1 ? 'secondary' : 'accent'}/50 transition-all glass-card`}>
+                  <CardHeader>
+                    <CardTitle className="text-2xl mb-2">{service.name}</CardTitle>
+                    <CardDescription className="text-base">{service.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 text-sm text-muted">
+                      {service.features && service.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-2">✓ <span className="text-foreground">{feature}</span></li>
+                      ))}
+                    </ul>
+                    <div className="mt-6 flex items-center justify-between">
+                      <span className={`text-3xl font-bold gradient-text-${index === 0 ? 'primary' : index === 1 ? 'secondary' : 'accent'}`}>
+                        ${service.price.toFixed(2)}
+                      </span>
+                      <Button variant="outline" size="lg" href={`/servicios/${service.id}`} className="shimmer-button">
+                        Ver detalles
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
