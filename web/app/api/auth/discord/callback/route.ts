@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL('/auth/login?error=create_user_error', request.url))
       }
 
-      userId = signupLink.user.id
+      userId = signupLink.user?.id || ''
       userEmail = userEmailToUse
       console.log('User created in Supabase Auth via signup:', userId)
 
