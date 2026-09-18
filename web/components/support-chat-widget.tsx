@@ -412,7 +412,7 @@ export default function SupportChatWidget() {
   }
 
   // Verificar si hay agentes online
-  const isOnline = true // TODO: Verificar con API real
+  const isOnline = onlineAgents.length > 0
 
   // Cargar agentes de soporte en línea
   useEffect(() => {
