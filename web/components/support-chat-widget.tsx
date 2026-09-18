@@ -418,9 +418,11 @@ export default function SupportChatWidget() {
   useEffect(() => {
     async function loadOnlineAgents() {
       try {
+        console.log('Loading online agents...')
         const response = await fetch('/api/chat/queue')
         if (response.ok) {
           const data = await response.json()
+          console.log('Online agents loaded:', data.agents)
           setOnlineAgents(data.agents || [])
         }
       } catch (error) {
@@ -431,6 +433,7 @@ export default function SupportChatWidget() {
     loadOnlineAgents()
 
     // Suscribirse a cambios en tiempo real de usuarios
+    console.log('Setting up Realtime subscription for users table')
     const channel = supabase
       .channel('users-online-status')
       .on('postgres_changes', {
@@ -440,6 +443,7 @@ export default function SupportChatWidget() {
         filter: 'role=in.(admin,staff,owner)'
       }, (payload) => {
         console.log('User online status changed:', payload)
+        console.log('User ID:', payload.new.id, 'Online:', payload.new.online)
         // Recargar agentes cuando cambia el estado online
         loadOnlineAgents()
       })
@@ -448,6 +452,7 @@ export default function SupportChatWidget() {
       })
 
     return () => {
+      console.log('Cleaning up Users Realtime subscription')
       supabase.removeChannel(channel)
     }
   }, [])
