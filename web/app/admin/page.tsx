@@ -39,10 +39,36 @@ interface Service {
   is_featured: boolean
 }
 
+interface ChatSession {
+  id: string
+  conversation_number: string
+  status: string
+  priority: string
+  assigned_agent_id: string | null
+  subject: string
+  created_at: string
+  client_id: string
+  client_name?: string
+  client_email?: string
+}
+
+interface ChatMessage {
+  id: string
+  session_id: string
+  sender_id: string
+  sender_role: string
+  message: string
+  message_type: string
+  created_at: string
+}
+
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'support' | 'settings'>('overview')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -89,6 +115,26 @@ export default function AdminPage() {
       .select('*')
       .order('sort_order', { ascending: true })
     if (servicesData) setServices(servicesData)
+
+    // Cargar sesiones de chat
+    const { data: chatSessionsData } = await supabase
+      .from('chat_sessions')
+      .select('*, users(email, full_name)')
+      .order('created_at', { ascending: false })
+    if (chatSessionsData) {
+      setChatSessions(chatSessionsData.map((session: any) => ({
+        id: session.id,
+        conversation_number: session.conversation_number,
+        status: session.status,
+        priority: session.priority,
+        assigned_agent_id: session.assigned_agent_id,
+        subject: session.subject,
+        created_at: session.created_at,
+        client_id: session.client_id,
+        client_name: session.users?.full_name || session.users?.email || 'Cliente',
+        client_email: session.users?.email || '',
+      })))
+    }
   }
 
   useEffect(() => {
@@ -158,6 +204,88 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error al eliminar pedido:', error)
       alert('Error al eliminar pedido: ' + (error as Error).message)
+    }
+  }
+
+  const loadChatMessages = async (sessionId: string) => {
+    const supabase = createClient()
+    const { data: messagesData } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+    if (messagesData) {
+      setChatMessages(messagesData)
+    }
+  }
+
+  const handleClaimChat = async (sessionId: string) => {
+    try {
+      const session = await getSession()
+      if (!session) return
+
+      const response = await fetch('/api/chat/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId })
+      })
+
+      if (response.ok) {
+        await loadAdminData()
+        alert('Chat reclamado exitosamente')
+      }
+    } catch (error) {
+      console.error('Error al reclamar chat:', error)
+      alert('Error al reclamar chat')
+    }
+  }
+
+  const handleCloseChat = async (sessionId: string) => {
+    try {
+      const session = await getSession()
+      if (!session) return
+
+      const response = await fetch('/api/chat/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId })
+      })
+
+      if (response.ok) {
+        await loadAdminData()
+        setSelectedChat(null)
+        setChatMessages([])
+        alert('Chat cerrado exitosamente')
+      }
+    } catch (error) {
+      console.error('Error al cerrar chat:', error)
+      alert('Error al cerrar chat')
+    }
+  }
+
+  const handleSendChatMessage = async (message: string) => {
+    if (!selectedChat || !message.trim()) return
+
+    try {
+      const session = await getSession()
+      if (!session) return
+
+      const response = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: selectedChat.id,
+          message: message.trim(),
+          message_type: 'text'
+        })
+      })
+
+      if (response.ok) {
+        await loadChatMessages(selectedChat.id)
+      }
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error)
+      alert('Error al enviar mensaje')
     }
   }
 
@@ -493,27 +621,158 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                      <div className="text-sm text-yellow-800 mb-1">Chats esperando</div>
-                      <div className="text-2xl font-bold text-yellow-600">--</div>
+                    <div className="p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-xl">
+                      <div className="text-sm text-yellow-500 mb-1">Chats esperando</div>
+                      <div className="text-2xl font-bold text-yellow-500">
+                        {chatSessions.filter(s => s.status === 'waiting').length}
+                      </div>
                     </div>
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                      <div className="text-sm text-green-800 mb-1">Chats activos</div>
-                      <div className="text-2xl font-bold text-green-600">--</div>
+                    <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-xl">
+                      <div className="text-sm text-green-500 mb-1">Chats activos</div>
+                      <div className="text-2xl font-bold text-green-500">
+                        {chatSessions.filter(s => s.status === 'active').length}
+                      </div>
                     </div>
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                      <div className="text-sm text-blue-800 mb-1">Tiempo promedio respuesta</div>
-                      <div className="text-2xl font-bold text-blue-600">-- min</div>
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/50 rounded-xl">
+                      <div className="text-sm text-blue-500 mb-1">Total chats</div>
+                      <div className="text-2xl font-bold text-blue-500">
+                        {chatSessions.length}
+                      </div>
                     </div>
-                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                      <div className="text-sm text-purple-800 mb-1">Agentes online</div>
-                      <div className="text-2xl font-bold text-purple-600">--</div>
+                    <div className="p-4 bg-purple-500/10 border border-purple-500/50 rounded-xl">
+                      <div className="text-sm text-purple-500 mb-1">Agentes online</div>
+                      <div className="text-2xl font-bold text-purple-500">
+                        {users.filter(u => u.role === 'admin' || u.role === 'staff' || u.role === 'owner').length}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center py-8">
-                    <p className="text-muted text-lg mb-4">El sistema de chat de soporte está disponible</p>
-                    <p className="text-sm text-muted">Los clientes pueden iniciar chats desde la burbuja de soporte en la esquina inferior derecha del sitio.</p>
-                  </div>
+
+                  {selectedChat ? (
+                    <div className="border border-border/50 rounded-xl overflow-hidden">
+                      <div className="p-4 bg-[#1a1a1a] border-b border-[#333333] flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-lg text-[#ededed]">{selectedChat.client_name}</h3>
+                          <p className="text-sm text-[#6b7280]">{selectedChat.client_email}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setSelectedChat(null)}
+                            className="px-4 py-2 bg-[#333333] text-[#ededed] rounded-lg hover:bg-[#444444] transition-colors"
+                          >
+                            Volver
+                          </button>
+                          <button
+                            onClick={() => handleCloseChat(selectedChat.id)}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Cerrar
+                          </button>
+                        </div>
+                      </div>
+                      <div className="h-[400px] overflow-auto p-4 space-y-3 bg-[#0a0a0a]">
+                        {chatMessages.map((message) => {
+                          const isClient = message.sender_role === 'client'
+                          return (
+                            <div
+                              key={message.id}
+                              className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-[80%] rounded-2xl p-3 ${
+                                  isClient
+                                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                                    : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
+                                }`}
+                              >
+                                <p className="text-sm">{message.message}</p>
+                                <p className={`text-xs mt-1 ${isClient ? 'text-white/80' : 'text-[#6b7280]'}`}>
+                                  {new Date(message.created_at).toLocaleTimeString('es-ES')}
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="p-4 bg-[#1a1a1a] border-t border-[#333333]">
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            const form = e.target as HTMLFormElement
+                            const input = form.elements.namedItem('message') as HTMLInputElement
+                            handleSendChatMessage(input.value)
+                            input.value = ''
+                          }}
+                          className="flex gap-2"
+                        >
+                          <input
+                            name="message"
+                            type="text"
+                            placeholder="Escribe tu respuesta..."
+                            className="flex-1 px-4 py-2 bg-[#0a0a0a] rounded-lg text-[#ededed] border border-[#333333] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            type="submit"
+                            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity"
+                          >
+                            Enviar
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {chatSessions.length > 0 ? (
+                        chatSessions.map((chat, index) => (
+                          <div
+                            key={chat.id}
+                            className="p-6 border border-border/50 rounded-xl hover:border-primary/50 transition-all hover-lift glass-card animate-fade-in-up cursor-pointer"
+                            style={{ animationDelay: `${index * 0.05}s` }}
+                            onClick={() => {
+                              setSelectedChat(chat)
+                              loadChatMessages(chat.id)
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="font-medium text-lg text-[#ededed]">{chat.client_name}</div>
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    chat.status === 'waiting' ? 'bg-yellow-500' :
+                                    chat.status === 'active' ? 'bg-green-500' :
+                                    'bg-gray-500'
+                                  } animate-pulse`} />
+                                  <span className="text-sm text-[#6b7280] font-medium">
+                                    {chat.status === 'waiting' ? 'Esperando' :
+                                     chat.status === 'active' ? 'Activo' :
+                                     chat.status}
+                                  </span>
+                                </div>
+                                <div className="text-base text-[#6b7280]">
+                                  {chat.conversation_number} • {formatDate(chat.created_at)}
+                                </div>
+                              </div>
+                              {chat.status === 'waiting' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleClaimChat(chat.id)
+                                  }}
+                                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity"
+                                >
+                                  Reclamar
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-12">
+                          <p className="text-muted text-lg">No hay chats de soporte activos</p>
+                          <p className="text-sm text-muted mt-2">Los clientes pueden iniciar chats desde la burbuja de soporte en el sitio.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
