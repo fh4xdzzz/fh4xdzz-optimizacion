@@ -118,86 +118,54 @@ export default function AdminPage() {
       .order('sort_order', { ascending: true })
     if (servicesData) setServices(servicesData)
 
-    // Cargar sesiones de chat (sin join primero para que el filtro funcione)
-    console.log('Loading chat sessions (excluding closed)...')
-
-    // Primero cargar IDs de chats activos
-    const { data: activeSessionIds, error: idsError } = await supabase
-      .from('chat_sessions')
-      .select('id')
-      .not('status', 'eq', 'closed')
-
-    if (idsError) {
-      console.error('Error loading active session IDs:', idsError)
-    } else {
-      console.log('Active session IDs:', activeSessionIds?.length || 0)
-    }
-
-    // Si hay chats activos, cargar con join
-    let chatSessionsData = null
-    if (activeSessionIds && activeSessionIds.length > 0) {
-      const ids = activeSessionIds.map((s: any) => s.id)
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
-        .in('id', ids)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error loading chat sessions with join:', error)
-      } else {
-        chatSessionsData = data
-      }
-    }
-
-    console.log('Chat sessions loaded (active only):', chatSessionsData?.length || 0)
-    console.log('Session statuses:', chatSessionsData?.map((s: any) => s.status))
-
-    if (chatSessionsData) {
-      setChatSessions(chatSessionsData.map((session: any) => ({
-        id: session.id,
-        conversation_number: session.conversation_number,
-        status: session.status,
-        priority: session.priority,
-        assigned_agent_id: session.assigned_agent_id,
-        subject: session.subject,
-        created_at: session.created_at,
-        client_id: session.client_id,
-        client_name: session.users?.full_name || session.users?.email || 'Cliente',
-        client_email: session.users?.email || '',
-      })))
-    } else {
-      setChatSessions([])
-    }
-
-    // Cargar historial de chats cerrados
-    console.log('Loading chat history...')
-    const { data: chatHistoryData, error: historyError } = await supabase
+    // Cargar sesiones de chat (todas, filtrar en código)
+    console.log('Loading all chat sessions...')
+    const { data: allSessions, error: allError } = await supabase
       .from('chat_sessions')
       .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
-      .eq('status', 'closed')
-      .order('closed_at', { ascending: false })
-      .limit(50)
+      .order('created_at', { ascending: false })
 
-    if (historyError) {
-      console.error('Error loading chat history:', historyError)
+    if (allError) {
+      console.error('Error loading all chat sessions:', allError)
     } else {
-      console.log('Chat history loaded:', chatHistoryData?.length || 0)
-      if (chatHistoryData) {
-        setChatHistory(chatHistoryData.map((session: any) => ({
-          id: session.id,
-          conversation_number: session.conversation_number,
-          status: session.status,
-          priority: session.priority,
-          assigned_agent_id: session.assigned_agent_id,
-          subject: session.subject,
-          created_at: session.created_at,
-          client_id: session.client_id,
-          client_name: session.users?.full_name || session.users?.email || 'Cliente',
-          client_email: session.users?.email || '',
-        })))
-      }
+      console.log('All sessions loaded:', allSessions?.length || 0)
+      console.log('All session statuses:', allSessions?.map((s: any) => s.status))
     }
+
+    // Filtrar en código: solo no-closed para support tab
+    const activeSessions = allSessions?.filter((s: any) => s.status !== 'closed') || []
+    const closedSessions = allSessions?.filter((s: any) => s.status === 'closed') || []
+
+    console.log('Active sessions (after filter):', activeSessions.length)
+    console.log('Closed sessions (after filter):', closedSessions.length)
+
+    setChatSessions(activeSessions.map((session: any) => ({
+      id: session.id,
+      conversation_number: session.conversation_number,
+      status: session.status,
+      priority: session.priority,
+      assigned_agent_id: session.assigned_agent_id,
+      subject: session.subject,
+      created_at: session.created_at,
+      client_id: session.client_id,
+      client_name: session.users?.full_name || session.users?.email || 'Cliente',
+      client_email: session.users?.email || '',
+    })))
+
+    setChatHistory(closedSessions.map((session: any) => ({
+      id: session.id,
+      conversation_number: session.conversation_number,
+      status: session.status,
+      priority: session.priority,
+      assigned_agent_id: session.assigned_agent_id,
+      subject: session.subject,
+      created_at: session.created_at,
+      client_id: session.client_id,
+      client_name: session.users?.full_name || session.users?.email || 'Cliente',
+      client_email: session.users?.email || '',
+    })))
+
+
   }
 
   useEffect(() => {
