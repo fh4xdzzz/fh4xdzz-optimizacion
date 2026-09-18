@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { getServerSession } from '@/lib/auth-server'
+import { createClient } from '@supabase/supabase-js'
 
-// GET /api/chat/queue - Obtener agentes de soporte en línea
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+// GET /api/chat/queue - Obtener agentes de soporte en línea (público)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
     // Obtener usuarios con rol admin, staff o owner que están online
     const { data: agents, error } = await supabase
       .from('users')
