@@ -48,14 +48,7 @@ export async function GET(request: NextRequest) {
     const discordUser = await userResponse.json()
     console.log('Discord user info:', discordUser)
 
-    // Buscar usuario por ID de Supabase Auth primero
-    const { data: existingUserById } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('id', signupLink.user?.id)
-      .single()
-
-    // Buscar usuario por Discord ID
+    // Buscar usuario por Discord ID primero
     const { data: existingUserByDiscord } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -69,28 +62,7 @@ export async function GET(request: NextRequest) {
     const userEmailToUse = discordUser.email || `${discordUser.id}@discord.temp`
     console.log('Email to use for user creation:', userEmailToUse)
 
-    if (existingUserById) {
-      // Usuario existe en tabla users por ID, actualizar datos de Discord
-      console.log('User exists in database by ID, updating Discord data:', existingUserById.id)
-      
-      const { error: updateError } = await supabaseAdmin
-        .from('users')
-        .update({
-          discord_id: discordUser.id,
-          discord_username: discordUser.username,
-          discord_avatar: discordUser.avatar,
-          avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
-        })
-        .eq('id', existingUserById.id)
-
-      if (updateError) {
-        console.error('Error updating Discord data:', updateError)
-      }
-
-      userId = existingUserById.id
-      userEmail = existingUserById.email
-      console.log('Using existing user by ID:', userId)
-    } else if (existingUserByDiscord) {
+    if (existingUserByDiscord) {
       // Usuario existe por Discord ID
       userId = existingUserByDiscord.id
       userEmail = existingUserByDiscord.email
