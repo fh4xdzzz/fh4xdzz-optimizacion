@@ -14,6 +14,8 @@ Sistema completo integrado por:
 - **Mensajes de bienvenida** con nombre del admin al reclamar tickets
 - **Historial de chats** de solo lectura (no se pueden enviar mensajes)
 - **Sistema de notificaciones unificado** con toast UI en toda la plataforma
+- **Soft deletes para pedidos** para habilitar Realtime con RLS
+- **Burbuja de soporte oculta** para admin/staff/owner (solo visible para clientes)
 - **Sistema de autenticación** seguro para clientes y administradores
 
 ## 🛠️ Tecnologías
