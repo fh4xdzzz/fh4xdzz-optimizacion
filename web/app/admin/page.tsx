@@ -83,6 +83,12 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
+  
+  // Support tab filters and search
+  const [supportFilter, setSupportFilter] = useState<'all' | 'active' | 'waiting' | 'closed'>('all')
+  const [supportSearch, setSupportSearch] = useState('')
+  const [supportSort, setSupportSort] = useState<'date' | 'status' | 'number'>('date')
+  const [lastMessages, setLastMessages] = useState<Record<string, ChatMessage>>({})
   const router = useRouter()
   const isDemo = isDemoMode()
   const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
@@ -171,6 +177,23 @@ export default function AdminPage() {
       client_name: session.users?.full_name || session.users?.email || 'Cliente',
       client_email: session.users?.email || '',
     })))
+
+    // Cargar últimos mensajes para sesiones activas
+    if (activeSessions.length > 0) {
+      const mappedSessions = activeSessions.map((session: any) => ({
+        id: session.id,
+        conversation_number: session.conversation_number,
+        status: session.status,
+        priority: session.priority,
+        assigned_agent_id: session.assigned_agent_id,
+        subject: session.subject,
+        created_at: session.created_at,
+        client_id: session.client_id,
+        client_name: session.users?.full_name || session.users?.email || 'Cliente',
+        client_email: session.users?.email || '',
+      }))
+      await loadLastMessages(mappedSessions)
+    }
 
 
   }
@@ -429,6 +452,26 @@ export default function AdminPage() {
     }
   }
 
+  const loadLastMessages = async (sessions: ChatSession[]) => {
+    const supabase = createClient()
+    const lastMessagesMap: Record<string, ChatMessage> = {}
+    
+    for (const session of sessions) {
+      const { data: lastMessage } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      if (lastMessage && lastMessage.length > 0) {
+        lastMessagesMap[session.id] = lastMessage[0]
+      }
+    }
+    
+    setLastMessages(lastMessagesMap)
+  }
+
   const handleClaimChat = async (sessionId: string) => {
     try {
       const session = await getSession()
@@ -525,6 +568,70 @@ export default function AdminPage() {
     waiting_client: { label: 'Esperando cliente', color: 'bg-orange-500' },
     completed: { label: 'Completado', color: 'bg-green-500' },
     cancelled: { label: 'Cancelado', color: 'bg-red-500' },
+  }
+
+  const CHAT_STATUS_LABELS: Record<string, { label: string; color: string; bgColor: string }> = {
+    active: { label: 'Activo', color: 'bg-green-500', bgColor: 'bg-green-500/10' },
+    waiting: { label: 'Esperando', color: 'bg-yellow-500', bgColor: 'bg-yellow-500/10' },
+    closed: { label: 'Cerrado', color: 'bg-gray-500', bgColor: 'bg-gray-500/10' },
+  }
+
+  // Filtrar, buscar y ordenar sesiones de chat
+  const getFilteredAndSortedSessions = () => {
+    let filtered = [...chatSessions]
+    
+    // Filtrar por estado
+    if (supportFilter !== 'all') {
+      filtered = filtered.filter(s => s.status === supportFilter)
+    }
+    
+    // Buscar por número de conversación, nombre o email
+    if (supportSearch.trim()) {
+      const searchLower = supportSearch.toLowerCase()
+      filtered = filtered.filter(s => 
+        s.conversation_number.toLowerCase().includes(searchLower) ||
+        (s.client_name || '').toLowerCase().includes(searchLower) ||
+        (s.client_email || '').toLowerCase().includes(searchLower)
+      )
+    }
+    
+    // Ordenar
+    filtered.sort((a, b) => {
+      if (supportSort === 'date') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      } else if (supportSort === 'status') {
+        const statusOrder = { waiting: 0, active: 1, closed: 2 }
+        return (statusOrder[a.status as keyof typeof statusOrder] || 3) - (statusOrder[b.status as keyof typeof statusOrder] || 3)
+      } else if (supportSort === 'number') {
+        return a.conversation_number.localeCompare(b.conversation_number, undefined, { numeric: true })
+      }
+      return 0
+    })
+    
+    return filtered
+  }
+
+  const getTimeSinceLastMessage = (sessionId: string) => {
+    const lastMsg = lastMessages[sessionId]
+    if (!lastMsg) return null
+    
+    const now = new Date()
+    const lastMsgTime = new Date(lastMsg.created_at)
+    const diffMs = now.getTime() - lastMsgTime.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return 'Ahora'
+    if (diffMins < 60) return `${diffMins}m`
+    if (diffHours < 24) return `${diffHours}h`
+    return `${diffDays}d`
+  }
+
+  const getUnreadCount = (sessionId: string) => {
+    // En una implementación real, esto se calcularía basándose en mensajes no leídos
+    // Por ahora, devolvemos 0 o podríamos implementar lógica de lectura
+    return 0
   }
 
   const ROLE_LABELS: Record<string, { label: string; color: string }> = {
@@ -868,6 +975,7 @@ export default function AdminPage() {
                   <CardDescription className="text-base">Gestión de chats de soporte en tiempo real</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Stats Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <div className="p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-xl">
                       <div className="text-sm text-yellow-500 mb-1">Chats esperando</div>
@@ -892,6 +1000,73 @@ export default function AdminPage() {
                       <div className="text-2xl font-bold text-purple-500">
                         {users.filter(u => (u.role === 'admin' || u.role === 'staff' || u.role === 'owner') && u.online).length}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Filters and Search */}
+                  <div className="mb-6 space-y-4">
+                    {/* Filter Buttons */}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSupportFilter('all')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          supportFilter === 'all'
+                            ? 'bg-primary text-white'
+                            : 'border border-border bg-transparent text-muted-foreground'
+                        }`}
+                      >
+                        Todos ({chatSessions.length})
+                      </button>
+                      <button
+                        onClick={() => setSupportFilter('active')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          supportFilter === 'active'
+                            ? 'bg-green-500 text-white'
+                            : 'border border-border bg-transparent text-muted-foreground'
+                        }`}
+                      >
+                        Activos ({chatSessions.filter(s => s.status === 'active').length})
+                      </button>
+                      <button
+                        onClick={() => setSupportFilter('waiting')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          supportFilter === 'waiting'
+                            ? 'bg-yellow-500 text-white'
+                            : 'border border-border bg-transparent text-muted-foreground'
+                        }`}
+                      >
+                        Esperando ({chatSessions.filter(s => s.status === 'waiting').length})
+                      </button>
+                      <button
+                        onClick={() => setSupportFilter('closed')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          supportFilter === 'closed'
+                            ? 'bg-gray-500 text-white'
+                            : 'border border-border bg-transparent text-muted-foreground'
+                        }`}
+                      >
+                        Cerrados ({chatSessions.filter(s => s.status === 'closed').length})
+                      </button>
+                    </div>
+
+                    {/* Search and Sort */}
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <input
+                        type="text"
+                        placeholder="Buscar por número, nombre o email..."
+                        value={supportSearch}
+                        onChange={(e) => setSupportSearch(e.target.value)}
+                        className="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <select
+                        value={supportSort}
+                        onChange={(e) => setSupportSort(e.target.value as 'date' | 'status' | 'number')}
+                        className="px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="date">Ordenar por fecha</option>
+                        <option value="status">Ordenar por estado</option>
+                        <option value="number">Ordenar por número</option>
+                      </select>
                     </div>
                   </div>
 
@@ -968,55 +1143,204 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {chatSessions.length > 0 ? (
-                        chatSessions.map((chat, index) => (
-                          <div
-                            key={chat.id}
-                            className="p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer"
-                            style={{ animationDelay: `${index * 0.05}s` }}
-                            onClick={() => {
-                              setSelectedChat(chat)
-                              loadChatMessages(chat.id)
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="font-medium text-lg text-[#ededed]">{chat.client_name}</div>
-                                  <div className={`w-3 h-3 rounded-full ${
-                                    chat.status === 'waiting' ? 'bg-yellow-500' :
-                                    chat.status === 'active' ? 'bg-green-500' :
-                                    'bg-gray-500'
-                                  } animate-pulse`} />
-                                  <span className="text-sm text-[#6b7280] font-medium">
-                                    {chat.status === 'waiting' ? 'Esperando' :
-                                     chat.status === 'active' ? 'Activo' :
-                                     chat.status}
-                                  </span>
-                                </div>
-                                <div className="text-base text-[#6b7280]">
-                                  {chat.conversation_number} • {formatDate(chat.created_at)}
-                                </div>
+                    <div className="space-y-6">
+                      {getFilteredAndSortedSessions().length > 0 ? (
+                        <>
+                          {/* Active Sessions Group */}
+                          {getFilteredAndSortedSessions().filter(s => s.status === 'active').length > 0 && (
+                            <div>
+                              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                                Chats Activos ({getFilteredAndSortedSessions().filter(s => s.status === 'active').length})
+                              </h3>
+                              <div className="space-y-3">
+                                {getFilteredAndSortedSessions()
+                                  .filter(s => s.status === 'active')
+                                  .map((chat, index) => (
+                                    <div
+                                      key={chat.id}
+                                      className="p-5 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer hover:border-green-500/50"
+                                      style={{ animationDelay: `${index * 0.05}s` }}
+                                      onClick={() => {
+                                        setSelectedChat(chat)
+                                        loadChatMessages(chat.id)
+                                      }}
+                                    >
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-3 mb-2">
+                                            <div className="font-medium text-lg text-[#ededed]">{chat.client_name}</div>
+                                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${CHAT_STATUS_LABELS[chat.status]?.bgColor} ${CHAT_STATUS_LABELS[chat.status]?.color}`}>
+                                              {CHAT_STATUS_LABELS[chat.status]?.label || chat.status}
+                                            </div>
+                                            {getUnreadCount(chat.id) > 0 && (
+                                              <div className="px-2 py-1 rounded-full bg-red-500 text-white text-xs font-bold">
+                                                {getUnreadCount(chat.id)}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="text-sm text-[#6b7280] mb-2">
+                                            {chat.client_email}
+                                          </div>
+                                          <div className="flex items-center gap-3 text-sm text-[#6b7280]">
+                                            <span className="text-muted-foreground">#{chat.conversation_number}</span>
+                                            <span>•</span>
+                                            <span>{formatDate(chat.created_at)}</span>
+                                            {getTimeSinceLastMessage(chat.id) && (
+                                              <>
+                                                <span>•</span>
+                                                <span className="text-blue-400">Última actividad: {getTimeSinceLastMessage(chat.id)}</span>
+                                              </>
+                                            )}
+                                          </div>
+                                          {lastMessages[chat.id] && (
+                                            <div className="mt-3 p-3 bg-[#1a1a1a] rounded-lg text-sm text-[#6b7280] border border-[#333333]">
+                                              <span className="text-muted-foreground">Último mensaje: </span>
+                                              {lastMessages[chat.id].message.length > 50 
+                                                ? lastMessages[chat.id].message.substring(0, 50) + '...' 
+                                                : lastMessages[chat.id].message}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
                               </div>
-                              {chat.status === 'waiting' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleClaimChat(chat.id)
-                                  }}
-                                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg transition-opacity"
-                                >
-                                  Reclamar
-                                </button>
-                              )}
                             </div>
-                          </div>
-                        ))
+                          )}
+
+                          {/* Waiting Sessions Group */}
+                          {getFilteredAndSortedSessions().filter(s => s.status === 'waiting').length > 0 && (
+                            <div>
+                              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-yellow-500 animate-pulse" />
+                                Chats Esperando ({getFilteredAndSortedSessions().filter(s => s.status === 'waiting').length})
+                              </h3>
+                              <div className="space-y-3">
+                                {getFilteredAndSortedSessions()
+                                  .filter(s => s.status === 'waiting')
+                                  .map((chat, index) => (
+                                    <div
+                                      key={chat.id}
+                                      className="p-5 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer hover:border-yellow-500/50"
+                                      style={{ animationDelay: `${index * 0.05}s` }}
+                                      onClick={() => {
+                                        setSelectedChat(chat)
+                                        loadChatMessages(chat.id)
+                                      }}
+                                    >
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-3 mb-2">
+                                            <div className="font-medium text-lg text-[#ededed]">{chat.client_name}</div>
+                                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${CHAT_STATUS_LABELS[chat.status]?.bgColor} ${CHAT_STATUS_LABELS[chat.status]?.color}`}>
+                                              {CHAT_STATUS_LABELS[chat.status]?.label || chat.status}
+                                            </div>
+                                            {getUnreadCount(chat.id) > 0 && (
+                                              <div className="px-2 py-1 rounded-full bg-red-500 text-white text-xs font-bold">
+                                                {getUnreadCount(chat.id)}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="text-sm text-[#6b7280] mb-2">
+                                            {chat.client_email}
+                                          </div>
+                                          <div className="flex items-center gap-3 text-sm text-[#6b7280]">
+                                            <span className="text-muted-foreground">#{chat.conversation_number}</span>
+                                            <span>•</span>
+                                            <span>{formatDate(chat.created_at)}</span>
+                                            {getTimeSinceLastMessage(chat.id) && (
+                                              <>
+                                                <span>•</span>
+                                                <span className="text-blue-400">Última actividad: {getTimeSinceLastMessage(chat.id)}</span>
+                                              </>
+                                            )}
+                                          </div>
+                                          {lastMessages[chat.id] && (
+                                            <div className="mt-3 p-3 bg-[#1a1a1a] rounded-lg text-sm text-[#6b7280] border border-[#333333]">
+                                              <span className="text-muted-foreground">Último mensaje: </span>
+                                              {lastMessages[chat.id].message.length > 50 
+                                                ? lastMessages[chat.id].message.substring(0, 50) + '...' 
+                                                : lastMessages[chat.id].message}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleClaimChat(chat.id)
+                                          }}
+                                          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg transition-opacity ml-3"
+                                        >
+                                          Reclamar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Closed Sessions Group */}
+                          {getFilteredAndSortedSessions().filter(s => s.status === 'closed').length > 0 && (
+                            <div>
+                              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-gray-500" />
+                                Chats Cerrados ({getFilteredAndSortedSessions().filter(s => s.status === 'closed').length})
+                              </h3>
+                              <div className="space-y-3">
+                                {getFilteredAndSortedSessions()
+                                  .filter(s => s.status === 'closed')
+                                  .map((chat, index) => (
+                                    <div
+                                      key={chat.id}
+                                      className="p-5 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer opacity-70 hover:opacity-100"
+                                      style={{ animationDelay: `${index * 0.05}s` }}
+                                      onClick={() => {
+                                        setSelectedChat(chat)
+                                        loadChatMessages(chat.id)
+                                      }}
+                                    >
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-3 mb-2">
+                                            <div className="font-medium text-lg text-[#ededed]">{chat.client_name}</div>
+                                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${CHAT_STATUS_LABELS[chat.status]?.bgColor} ${CHAT_STATUS_LABELS[chat.status]?.color}`}>
+                                              {CHAT_STATUS_LABELS[chat.status]?.label || chat.status}
+                                            </div>
+                                          </div>
+                                          <div className="text-sm text-[#6b7280] mb-2">
+                                            {chat.client_email}
+                                          </div>
+                                          <div className="flex items-center gap-3 text-sm text-[#6b7280]">
+                                            <span className="text-muted-foreground">#{chat.conversation_number}</span>
+                                            <span>•</span>
+                                            <span>{formatDate(chat.created_at)}</span>
+                                          </div>
+                                          {lastMessages[chat.id] && (
+                                            <div className="mt-3 p-3 bg-[#1a1a1a] rounded-lg text-sm text-[#6b7280] border border-[#333333]">
+                                              <span className="text-muted-foreground">Último mensaje: </span>
+                                              {lastMessages[chat.id].message.length > 50 
+                                                ? lastMessages[chat.id].message.substring(0, 50) + '...' 
+                                                : lastMessages[chat.id].message}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-12">
-                          <p className="text-muted text-lg">No hay chats de soporte activos</p>
-                          <p className="text-sm text-muted mt-2">Los clientes pueden iniciar chats desde la burbuja de soporte en el sitio.</p>
+                          <p className="text-muted text-lg">
+                            {supportSearch ? 'No se encontraron chats que coincidan con la búsqueda' : 'No hay chats de soporte activos'}
+                          </p>
+                          <p className="text-sm text-muted mt-2">
+                            {supportSearch ? 'Intenta con otros términos de búsqueda' : 'Los clientes pueden iniciar chats desde la burbuja de soporte en el sitio.'}
+                          </p>
                         </div>
                       )}
                     </div>
