@@ -42,6 +42,7 @@ export default function SupportChatWidget() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
   const [onlineAgents, setOnlineAgents] = useState<any[]>([])
+  const [assignedAgentName, setAssignedAgentName] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -109,6 +110,15 @@ export default function SupportChatWidget() {
     loadUserSession()
   }, [])
 
+  // Cargar nombre del agente cuando la sesión cambia
+  useEffect(() => {
+    if (session?.assigned_agent_id) {
+      loadAssignedAgentName(session.assigned_agent_id)
+    } else {
+      setAssignedAgentName(null)
+    }
+  }, [session?.assigned_agent_id])
+
   // Cargar sesión del usuario
   async function loadUserSession() {
     try {
@@ -148,6 +158,32 @@ export default function SupportChatWidget() {
     }
   }
 
+  // Cargar nombre del agente asignado
+  async function loadAssignedAgentName(agentId: string | null) {
+    if (!agentId) {
+      setAssignedAgentName(null)
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      const { data: agent } = await supabase
+        .from('users')
+        .select('full_name, email')
+        .eq('id', agentId)
+        .single()
+
+      if (agent) {
+        setAssignedAgentName(agent.full_name || agent.email?.split('@')[0] || 'Agente')
+      } else {
+        setAssignedAgentName(null)
+      }
+    } catch (error) {
+      console.error('Error loading assigned agent name:', error)
+      setAssignedAgentName(null)
+    }
+  }
+
   // Suscribirse a cambios en tiempo real para session (siempre activo)
   useEffect(() => {
     if (!session) return
@@ -165,7 +201,13 @@ export default function SupportChatWidget() {
         console.log('Session status changed:', payload.new.status)
         const updatedSession = payload.new as ChatSession
         setSession(updatedSession)
-        
+
+        // Si cambió el agente asignado, actualizar el nombre
+        if (payload.old.assigned_agent_id !== payload.new.assigned_agent_id) {
+          console.log('Assigned agent changed:', payload.new.assigned_agent_id)
+          loadAssignedAgentName(payload.new.assigned_agent_id)
+        }
+
         // Si la sesión se cerró, limpiar mensajes
         if (updatedSession.status === 'closed') {
           setMessages([])
@@ -431,6 +473,12 @@ export default function SupportChatWidget() {
       if (response.ok) {
         setText('')
 
+        // Si el usuario es admin/staff/owner, no enviar respuesta automática del bot
+        if (['admin', 'staff', 'owner'].includes(currentUser.role)) {
+          console.log('Admin/staff/owner sent message, skipping bot response')
+          return
+        }
+
         // Verificar si hay agentes online para respuesta automática del bot
         if (onlineAgents.length === 0) {
           setTimeout(() => {
@@ -602,9 +650,13 @@ export default function SupportChatWidget() {
                 </span>
               </div>
             </div>
-            <h2 className="text-xl font-black text-white">Soporte</h2>
+            <h2 className="text-xl font-black text-white">
+              {assignedAgentName ? `Soporte con ${assignedAgentName}` : 'Soporte'}
+            </h2>
             <p className="mt-1 text-sm text-white/90">
-              Normalmente responde en menos de 5 minutos
+              {['admin', 'staff', 'owner'].includes(currentUser?.role) 
+                ? 'Puedes responder directamente a este chat' 
+                : 'Normalmente responde en menos de 5 minutos'}
             </p>
           </div>
           <button
@@ -811,7 +863,11 @@ export default function SupportChatWidget() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onPaste={handlePaste}
-                placeholder="Escribe tu mensaje..."
+                placeholder={
+                  ['admin', 'staff', 'owner'].includes(currentUser?.role)
+                    ? 'Responde como agente de soporte...'
+                    : 'Escribe tu mensaje...'
+                }
                 className="flex-1 px-4 py-2 bg-[#0a0a0a] rounded-full text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-blue-500 border border-[#333333]"
                 disabled={loading}
               />
