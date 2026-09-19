@@ -17,7 +17,6 @@ export default function PresenceTracker() {
           userIdRef.current = session.user.id
           userRoleRef.current = session.user.role
 
-          console.log('Setting online status: true')
           await fetch('/api/chat/presence', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -25,7 +24,6 @@ export default function PresenceTracker() {
           })
         }
       } catch (error) {
-        console.error('Error setting online status:', error)
       }
     }
 
@@ -33,14 +31,9 @@ export default function PresenceTracker() {
       try {
         // Use cached user data for synchronous offline detection
         if (userRoleRef.current && ['admin', 'staff', 'owner'].includes(userRoleRef.current)) {
-          console.log('Setting online status: false')
-          // Usar sendBeacon con FormData para mayor confiabilidad
-          const formData = new FormData()
-          formData.append('online', 'false')
           navigator.sendBeacon('/api/chat/presence', formData)
         }
       } catch (error) {
-        console.error('Error setting offline status:', error)
       }
     }
 
