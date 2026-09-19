@@ -125,15 +125,12 @@ export default function SupportChatWidget() {
       setAuthLoading(true)
       const userSession = await getSession()
       if (!userSession) {
-        console.log('No user session found')
         setIsAuthenticated(false)
         setCurrentUser(null)
         setAuthLoading(false)
         return
       }
 
-      console.log('User session found:', userSession.user.id, userSession.user.role)
-      
       setCurrentUser(userSession.user)
       setIsAuthenticated(true)
 
@@ -151,7 +148,6 @@ export default function SupportChatWidget() {
         }
       }
     } catch (error) {
-      console.error('Error loading user session:', error)
       setIsAuthenticated(false)
     } finally {
       setAuthLoading(false)
@@ -179,7 +175,6 @@ export default function SupportChatWidget() {
         setAssignedAgentName(null)
       }
     } catch (error) {
-      console.error('Error loading assigned agent name:', error)
       setAssignedAgentName(null)
     }
   }
@@ -187,8 +182,6 @@ export default function SupportChatWidget() {
   // Suscribirse a cambios en tiempo real para session (siempre activo)
   useEffect(() => {
     if (!session) return
-
-    console.log('Setting up Realtime subscription for session status (always active):', session.id)
 
     const channel = supabase
       .channel(`session-status:${session.id}`)
@@ -198,13 +191,11 @@ export default function SupportChatWidget() {
         table: 'chat_sessions',
         filter: `id=eq.${session.id}`
       }, (payload) => {
-        console.log('Session status changed:', payload.new.status)
         const updatedSession = payload.new as ChatSession
         setSession(updatedSession)
 
         // Si cambió el agente asignado, actualizar el nombre
         if (payload.old.assigned_agent_id !== payload.new.assigned_agent_id) {
-          console.log('Assigned agent changed:', payload.new.assigned_agent_id)
           loadAssignedAgentName(payload.new.assigned_agent_id)
         }
 
@@ -214,11 +205,9 @@ export default function SupportChatWidget() {
         }
       })
       .subscribe((status) => {
-        console.log('Session status Realtime subscription status:', status)
       })
 
     return () => {
-      console.log('Cleaning up session status Realtime subscription')
       supabase.removeChannel(channel)
     }
   }, [session?.id])
@@ -226,8 +215,6 @@ export default function SupportChatWidget() {
   // Suscribirse a cambios en tiempo real para mensajes (siempre activo para recibir notificaciones)
   useEffect(() => {
     if (!session) return
-
-    console.log('Setting up Realtime subscription for session:', session.id)
 
     const channel = supabase
       .channel(`messages:${session.id}`)
@@ -237,19 +224,16 @@ export default function SupportChatWidget() {
         table: 'chat_messages',
         filter: `session_id=eq.${session.id}`
       }, (payload) => {
-        console.log('Realtime INSERT received:', payload)
         const newMessage = payload.new as Message
         
         // Verificar si el mensaje ya existe para evitar duplicados
         setMessages(prev => {
           if (prev.some(msg => msg.id === newMessage.id)) {
-            console.log('Message already exists, skipping:', newMessage.id)
             return prev
           }
           
           // Solo agregar mensajes al estado si el chat está abierto
           if (!open) {
-            console.log('Chat is closed, not adding message to state')
             return prev
           }
           
@@ -265,7 +249,6 @@ export default function SupportChatWidget() {
             attachment_path: newMessage.attachment_path,
             attachment_name: newMessage.attachment_name,
           }
-          console.log('Adding new message:', cleanMessage.id)
           return [...prev, cleanMessage]
         })
 
@@ -284,18 +267,15 @@ export default function SupportChatWidget() {
         table: 'chat_sessions',
         filter: `id=eq.${session.id}`
       }, (payload) => {
-        console.log('Realtime UPDATE received:', payload)
         const updatedSession = payload.new as ChatSession
         setSession(updatedSession)
       })
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status)
       })
 
     channelRef.current = channel
 
     return () => {
-      console.log('Cleaning up Realtime subscription')
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
@@ -318,7 +298,6 @@ export default function SupportChatWidget() {
         setMessages(data.messages || [])
       }
     } catch (error) {
-      console.error('Error loading messages:', error)
     }
   }
 
@@ -326,7 +305,6 @@ export default function SupportChatWidget() {
   async function createSession() {
     if (session) return session
 
-    console.log('Creating chat session...')
     try {
       setLoading(true)
       const response = await fetch('/api/chat/sessions', {
@@ -339,20 +317,15 @@ export default function SupportChatWidget() {
         })
       })
 
-      console.log('Session API response status:', response.status)
-
       if (response.ok) {
         const data = await response.json()
-        console.log('Session created:', data.session)
         setSession(data.session)
         loadMessages(data.session.id)
         return data.session
       } else {
         const error = await response.json()
-        console.error('Session creation failed:', error)
       }
     } catch (error) {
-      console.error('Error creating session:', error)
     } finally {
       setLoading(false)
     }
@@ -413,7 +386,6 @@ export default function SupportChatWidget() {
         // setMessages(prev => [...prev, messageData.message])
       }
     } catch (error) {
-      console.error('Error uploading file:', error)
       notifyError('Error al subir el archivo')
     } finally {
       setUploadingFile(false)
@@ -475,7 +447,6 @@ export default function SupportChatWidget() {
 
         // Si el usuario es admin/staff/owner, no enviar respuesta automática del bot
         if (['admin', 'staff', 'owner'].includes(currentUser.role)) {
-          console.log('Admin/staff/owner sent message, skipping bot response')
           return
         }
 
@@ -512,7 +483,6 @@ export default function SupportChatWidget() {
         }
       }
     } catch (error) {
-      console.error('Error sending message:', error)
     } finally {
       setLoading(false)
     }
@@ -557,22 +527,18 @@ export default function SupportChatWidget() {
   useEffect(() => {
     async function loadOnlineAgents() {
       try {
-        console.log('Loading online agents...')
         const response = await fetch('/api/chat/queue')
         if (response.ok) {
           const data = await response.json()
-          console.log('Online agents loaded:', data.agents)
           setOnlineAgents(data.agents || [])
         }
       } catch (error) {
-        console.error('Error loading online agents:', error)
       }
     }
 
     loadOnlineAgents()
 
     // Suscribirse a cambios en tiempo real de usuarios
-    console.log('Setting up Realtime subscription for users table')
     const channel = supabase
       .channel('users-online-status')
       .on('postgres_changes', {
@@ -580,20 +546,15 @@ export default function SupportChatWidget() {
         schema: 'public',
         table: 'users'
       }, (payload) => {
-        console.log('User online status changed:', payload)
-        console.log('User ID:', payload.new.id, 'Online:', payload.new.online)
         // Solo procesar si es admin/staff/owner
         if (['admin', 'staff', 'owner'].includes(payload.new.role)) {
-          console.log('User is admin/staff/owner, reloading agents')
           loadOnlineAgents()
         }
       })
       .subscribe((status) => {
-        console.log('Users Realtime subscription status:', status)
       })
 
     return () => {
-      console.log('Cleaning up Users Realtime subscription')
       supabase.removeChannel(channel)
     }
   }, [])
@@ -787,10 +748,7 @@ export default function SupportChatWidget() {
                         alt={message.attachment_name}
                         className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => setSelectedImage(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-attachments/${message.attachment_path}`)}
-                        onLoad={() => console.log('Image loaded successfully:', message.attachment_path)}
                         onError={(e) => {
-                          console.error('Error loading image:', message.attachment_path)
-                          console.error('Image URL:', `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-attachments/${message.attachment_path}`)
                         }}
                       />
                     )}
