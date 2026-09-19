@@ -71,7 +71,6 @@ export default function OrdersPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      console.log('Pedidos cargados desde Supabase:', data)
       // Añadir service_name a cada pedido
       const ordersWithServiceName = (data || []).map((order: any) => ({
         ...order,
@@ -79,7 +78,6 @@ export default function OrdersPage() {
       }))
       setAllOrders(ordersWithServiceName)
     } catch (error) {
-      console.error('Error al cargar pedidos:', error)
     } finally {
       setLoading(false)
     }
@@ -99,7 +97,6 @@ export default function OrdersPage() {
         schema: 'public',
         table: 'orders'
       }, (payload) => {
-        console.log('Order status changed:', payload)
         const updatedOrder = payload.new as Order
         
         // Verificar si el pedido pertenece al usuario actual
@@ -118,7 +115,6 @@ export default function OrdersPage() {
         }
       })
       .subscribe((status) => {
-        console.log('Orders Realtime subscription status:', status)
       })
 
     return () => {
@@ -133,7 +129,6 @@ export default function OrdersPage() {
         setUserRole('owner')
       }
     } catch (error) {
-      console.error('Error checking user role:', error)
     }
   }
 
@@ -165,7 +160,6 @@ export default function OrdersPage() {
       setShowDeleteModal(false)
       notifySuccess('Pedido eliminado exitosamente')
     } catch (error) {
-      console.error('Error al eliminar pedido:', error)
       notifyError('Error al eliminar pedido: ' + (error as Error).message)
     }
   }
@@ -211,10 +205,8 @@ export default function OrdersPage() {
         ...data,
         service_name: data.services?.name || 'Servicio desconocido'
       }
-      console.log('Pedido encontrado:', orderWithServiceName)
       setSearchResult(orderWithServiceName)
     } catch (error) {
-      console.error('Error al buscar pedido:', error)
       setSearchError('Error al buscar pedido')
     }
   }
