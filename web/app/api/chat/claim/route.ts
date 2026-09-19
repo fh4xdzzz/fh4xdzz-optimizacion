@@ -24,6 +24,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
+    // Verificar si el admin ya tiene un chat activo asignado
+    const { data: activeChats, error: activeChatsError } = await supabase
+      .from('chat_sessions')
+      .select('id')
+      .eq('assigned_agent_id', session.user.id)
+      .neq('status', 'closed')
+      .limit(1)
+
+    if (activeChatsError) {
+      return NextResponse.json({ error: 'Failed to check active chats' }, { status: 500 })
+    }
+
+    if (activeChats && activeChats.length > 0) {
+      return NextResponse.json({ 
+        error: 'Ya tienes un chat activo. Debes cerrar el chat actual antes de reclamar otro.' 
+      }, { status: 409 })
+    }
+
     // Reclamar la sesión de forma atómica
     const { data: chatSession, error: claimError } = await supabase
       .from('chat_sessions')
