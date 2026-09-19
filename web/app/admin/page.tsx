@@ -946,13 +946,15 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleFeatured(service.id, service.is_featured)}
-                          >
-                            {service.is_featured ? 'Quitar destacado' : 'Marcar destacado'}
-                          </Button>
+                          {userRole === 'owner' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleFeatured(service.id, service.is_featured)}
+                            >
+                              {service.is_featured ? 'Quitar destacado' : 'Marcar destacado'}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
