@@ -31,6 +31,8 @@ export default function PresenceTracker() {
       try {
         // Use cached user data for synchronous offline detection
         if (userRoleRef.current && ['admin', 'staff', 'owner'].includes(userRoleRef.current)) {
+          const formData = new FormData()
+          formData.append('online', 'false')
           navigator.sendBeacon('/api/chat/presence', formData)
         }
       } catch (error) {
