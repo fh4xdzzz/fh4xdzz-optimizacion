@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth-hybrid'
+import { getServerSession } from '@/lib/auth-server'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
+    const session = await getServerSession()
 
     if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
