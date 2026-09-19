@@ -103,7 +103,7 @@ export default function Home() {
                       <span className={`text-3xl font-bold gradient-text-${index === 0 ? 'primary' : index === 1 ? 'secondary' : 'accent'}`}>
                         ${service.price.toFixed(2)}
                       </span>
-                      <Button variant="outline" size="lg" href={`/servicios/${service.id}`} className="shimmer-button">
+                      <Button variant="outline" size="lg" href={`/servicios/${service.slug}`} className="shimmer-button">
                         Ver detalles
                       </Button>
                     </div>
