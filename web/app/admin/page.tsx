@@ -200,19 +200,28 @@ export default function AdminPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      console.log('AdminPage: Loading data...')
       const session = await getSession()
+      console.log('AdminPage: Session:', session)
+
       if (!session) {
+        console.log('AdminPage: No session, redirecting to login')
         router.push('/auth/login?redirect=/admin')
         return
       }
 
       // Verificar si es admin o owner
       const role = session.user.role as string || 'client'
+      console.log('AdminPage: User role:', role)
       setUserRole(role as 'client' | 'admin' | 'staff' | 'owner')
+
       if (role !== 'admin' && role !== 'owner') {
+        console.log('AdminPage: Not admin or owner, redirecting to dashboard')
         router.push('/dashboard')
         return
       }
+
+      console.log('AdminPage: User is admin or owner, loading admin data')
 
       // Cargar datos de administración
       if (!isDemo) {
@@ -413,17 +422,32 @@ export default function AdminPage() {
 
   const toggleFeatured = async (serviceId: string, currentFeatured: boolean) => {
     try {
+      console.log('toggleFeatured called with userRole:', userRole)
       if (userRole !== 'owner') {
         notifyWarning('Solo el owner puede cambiar servicios destacados')
         return
       }
+
+      // Crear un nuevo cliente Supabase para asegurar el contexto de autenticación
+      const supabase = createClient()
+      const session = await getSession()
+
+      if (!session) {
+        notifyError('No hay sesión activa')
+        return
+      }
+
+      console.log('Updating service featured status:', serviceId, !currentFeatured)
 
       const { error } = await supabase
         .from('services')
         .update({ is_featured: !currentFeatured })
         .eq('id', serviceId)
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
 
       await loadAdminData()
       notifySuccess(currentFeatured ? 'Servicio quitado de destacados' : 'Servicio marcado como destacado')

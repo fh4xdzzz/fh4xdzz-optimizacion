@@ -23,27 +23,36 @@ export interface Session {
 export async function getServerSession(): Promise<Session | null> {
   if (isSupabaseMode()) {
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (session) {
+    // Usar getUser() para autenticación segura
+    const { data: { user }, error } = await supabase.auth.getUser()
+
+    if (error) {
+      console.error('Error obteniendo usuario en servidor:', error)
+      return null
+    }
+
+    if (user) {
       // Obtener perfil adicional
       const { data: profile } = await supabase
         .from('users')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single()
-      
+
+      // Obtener la sesión actual para el access_token
+      const { data: { session } } = await supabase.auth.getSession()
+
       return {
         user: {
-          id: session.user.id,
-          email: session.user.email!,
-          full_name: profile?.full_name || session.user.user_metadata?.full_name,
-          avatar_url: profile?.avatar_url || session.user.user_metadata?.avatar_url,
+          id: user.id,
+          email: user.email!,
+          full_name: profile?.full_name || user.user_metadata?.full_name,
+          avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url,
           discord_id: profile?.discord_id,
           discord_username: profile?.discord_username,
           role: profile?.role || 'client',
         },
-        access_token: session.access_token,
+        access_token: session?.access_token || '',
       }
     }
     return null

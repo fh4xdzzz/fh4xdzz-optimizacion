@@ -46,10 +46,20 @@ export async function middleware(request: NextRequest) {
 
     // Verificar rol de admin o owner para rutas de administración
     if (request.nextUrl.pathname.startsWith('/admin') && session) {
+      // Usar getUser() para validar la autenticación del usuario
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        // Si hay error o no hay usuario, redirigir a login
+        const redirectUrl = new URL('/auth/login', request.url)
+        redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+
       const { data: profile } = await supabase
         .from('users')
         .select('role')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single()
 
       if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) {
