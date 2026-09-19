@@ -125,40 +125,29 @@ export default function AdminPage() {
     }
 
     // Cargar servicios
-    console.log('Loading services...')
     const { data: servicesData, error: servicesError } = await supabase
       .from('services')
       .select('*')
       .order('sort_order', { ascending: true })
 
     if (servicesError) {
-      console.error('Error loading services:', servicesError)
     } else {
-      console.log('Services loaded:', servicesData?.length || 0)
-      console.log('Services with is_featured:', servicesData?.filter((s: any) => s.is_featured).length || 0)
       if (servicesData) setServices(servicesData)
     }
 
     // Cargar sesiones de chat (todas, filtrar en código)
-    console.log('Loading all chat sessions...')
     const { data: allSessions, error: allError } = await supabase
       .from('chat_sessions')
       .select('*, users!chat_sessions_client_id_fkey(email, full_name)')
       .order('created_at', { ascending: false })
 
     if (allError) {
-      console.error('Error loading all chat sessions:', allError)
     } else {
-      console.log('All sessions loaded:', allSessions?.length || 0)
-      console.log('All session statuses:', allSessions?.map((s: any) => s.status))
     }
 
     // Filtrar en código: solo no-closed para support tab
     const activeSessions = allSessions?.filter((s: any) => s.status !== 'closed') || []
     const closedSessions = allSessions?.filter((s: any) => s.status === 'closed') || []
-
-    console.log('Active sessions (after filter):', activeSessions.length)
-    console.log('Closed sessions (after filter):', closedSessions.length)
 
     setChatSessions(activeSessions.map((session: any) => ({
       id: session.id,
@@ -208,28 +197,21 @@ export default function AdminPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      console.log('AdminPage: Loading data...')
       const session = await getSession()
-      console.log('AdminPage: Session:', session)
 
       if (!session) {
-        console.log('AdminPage: No session, redirecting to login')
         router.push('/auth/login?redirect=/admin')
         return
       }
 
       // Verificar si es admin o owner
       const role = session.user.role as string || 'client'
-      console.log('AdminPage: User role:', role)
       setUserRole(role as 'client' | 'admin' | 'staff' | 'owner')
 
       if (role !== 'admin' && role !== 'owner') {
-        console.log('AdminPage: Not admin or owner, redirecting to dashboard')
         router.push('/dashboard')
         return
       }
-
-      console.log('AdminPage: User is admin or owner, loading admin data')
 
       // Cargar datos de administración
       if (!isDemo) {
@@ -246,8 +228,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (isDemo) return
 
-    console.log('Setting up Realtime for chat sessions')
-
     const channel = supabase
       .channel('admin-chat-sessions')
       .on('postgres_changes', {
@@ -255,15 +235,12 @@ export default function AdminPage() {
         schema: 'public',
         table: 'chat_sessions'
       }, () => {
-        console.log('Chat sessions changed, reloading...')
         loadAdminData()
       })
       .subscribe((status) => {
-        console.log('Chat sessions Realtime status:', status)
       })
 
     return () => {
-      console.log('Cleaning up chat sessions Realtime')
       supabase.removeChannel(channel)
     }
   }, [isDemo])
@@ -272,8 +249,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (isDemo) return
 
-    console.log('Setting up Realtime for users')
-
     const channel = supabase
       .channel('admin-users')
       .on('postgres_changes', {
@@ -281,15 +256,12 @@ export default function AdminPage() {
         schema: 'public',
         table: 'users'
       }, () => {
-        console.log('Users changed, reloading...')
         loadAdminData()
       })
       .subscribe((status) => {
-        console.log('Users Realtime status:', status)
       })
 
     return () => {
-      console.log('Cleaning up users Realtime')
       supabase.removeChannel(channel)
     }
   }, [isDemo])
@@ -298,8 +270,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (isDemo) return
 
-    console.log('Setting up Realtime for orders')
-
     const channel = supabase
       .channel('admin-orders')
       .on('postgres_changes', {
@@ -307,23 +277,18 @@ export default function AdminPage() {
         schema: 'public',
         table: 'orders'
       }, (payload) => {
-        console.log('Orders changed, payload:', payload)
         
         // Recargar si cambia deleted_at (soft delete)
         if (payload.eventType === 'UPDATE' && payload.new?.deleted_at !== payload.old?.deleted_at) {
-          console.log('Order deleted_at changed, reloading...')
           loadAdminData()
         } else {
-          console.log('Orders changed, reloading...')
           loadAdminData()
         }
       })
       .subscribe((status) => {
-        console.log('Orders Realtime status:', status)
       })
 
     return () => {
-      console.log('Cleaning up orders Realtime')
       supabase.removeChannel(channel)
     }
   }, [isDemo])
@@ -332,8 +297,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (isDemo) return
 
-    console.log('Setting up Realtime for services')
-
     const channel = supabase
       .channel('admin-services')
       .on('postgres_changes', {
@@ -341,15 +304,12 @@ export default function AdminPage() {
         schema: 'public',
         table: 'services'
       }, () => {
-        console.log('Services changed, reloading...')
         loadAdminData()
       })
       .subscribe((status) => {
-        console.log('Services Realtime status:', status)
       })
 
     return () => {
-      console.log('Cleaning up services Realtime')
       supabase.removeChannel(channel)
     }
   }, [isDemo])
@@ -357,8 +317,6 @@ export default function AdminPage() {
   // Suscribirse a cambios en tiempo real para chat messages
   useEffect(() => {
     if (!selectedChat || isDemo) return
-
-    console.log('Setting up Realtime for chat messages:', selectedChat.id)
 
     const channel = supabase
       .channel(`admin-chat-messages-${selectedChat.id}`)
@@ -368,15 +326,12 @@ export default function AdminPage() {
         table: 'chat_messages',
         filter: `session_id=eq.${selectedChat.id}`
       }, () => {
-        console.log('New message received, reloading...')
         loadChatMessages(selectedChat.id)
       })
       .subscribe((status) => {
-        console.log('Chat messages Realtime status:', status)
       })
 
     return () => {
-      console.log('Cleaning up chat messages Realtime')
       supabase.removeChannel(channel)
     }
   }, [selectedChat?.id, isDemo])
@@ -418,7 +373,6 @@ export default function AdminPage() {
       setShowDeleteModal(false)
       notifySuccess('Pedido eliminado exitosamente')
     } catch (error) {
-      console.error('Error al eliminar pedido:', error)
       notifyError('Error al eliminar pedido: ' + (error as Error).message)
     }
   }
@@ -430,8 +384,6 @@ export default function AdminPage() {
 
   const toggleFeatured = async (serviceId: string, currentFeatured: boolean) => {
     try {
-      console.log('toggleFeatured called with userRole:', userRole, 'isDemo:', isDemo)
-
       if (isDemo) {
         notifyWarning('No se pueden cambiar servicios destacados en modo demo')
         return
@@ -445,13 +397,9 @@ export default function AdminPage() {
       const session = await getSession()
 
       if (!session) {
-        console.error('No session found in toggleFeatured')
         notifyError('No hay sesión activa')
         return
       }
-
-      console.log('Session found:', session.user.id, session.user.role)
-      console.log('Updating service featured status via API:', serviceId, 'from', currentFeatured, 'to', !currentFeatured)
 
       const response = await fetch('/api/admin/services/featured', {
         method: 'POST',
@@ -465,18 +413,13 @@ export default function AdminPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        console.error('API error:', data.error)
         throw new Error(data.error || 'Error al actualizar el servicio')
       }
-
-      console.log('API response:', data)
 
       await loadAdminData()
       notifySuccess(currentFeatured ? 'Servicio quitado de destacados' : 'Servicio marcado como destacado')
     } catch (error) {
-      console.error('Error al cambiar destacado:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      console.error('Error message:', errorMessage)
       notifyError('Error al cambiar destacado: ' + errorMessage)
     }
   }
@@ -529,7 +472,6 @@ export default function AdminPage() {
         notifySuccess('Chat reclamado exitosamente')
       }
     } catch (error) {
-      console.error('Error al reclamar chat:', error)
       notifyError('Error al reclamar chat')
     }
   }
@@ -539,8 +481,6 @@ export default function AdminPage() {
       const session = await getSession()
       if (!session) return
 
-      console.log('Closing chat:', sessionId)
-
       const response = await fetch('/api/chat/close', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -549,7 +489,6 @@ export default function AdminPage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Chat closed successfully:', data.session.status)
         
         // Recargar datos para actualizar las listas
         await loadAdminData()
@@ -561,11 +500,9 @@ export default function AdminPage() {
         notifySuccess('Chat cerrado exitosamente')
       } else {
         const errorData = await response.json()
-        console.error('Error closing chat:', errorData)
         notifyError('Error al cerrar chat: ' + errorData.error)
       }
     } catch (error) {
-      console.error('Error al cerrar chat:', error)
       notifyError('Error al cerrar chat')
     }
   }
@@ -597,7 +534,6 @@ export default function AdminPage() {
         await loadChatMessages(selectedChat.id)
       }
     } catch (error) {
-      console.error('Error al enviar mensaje:', error)
       notifyError('Error al enviar mensaje')
     }
   }
@@ -1765,7 +1701,6 @@ export default function AdminPage() {
 
                       setShowOrderModal(false)
                     } catch (error) {
-                      console.error('Error al actualizar pedido:', error)
                     }
                   }}
                 >
@@ -1774,7 +1709,6 @@ export default function AdminPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowOrderModal(false)}
-                  className="hover-lift"
                 >
                   Cancelar
                 </Button>
