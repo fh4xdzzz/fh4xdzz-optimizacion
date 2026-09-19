@@ -39,11 +39,8 @@ export default function DashboardPage() {
   // CAMBIO CRÍTICO: Envolver loadOrders en useCallback
   const loadOrders = useCallback(async () => {
     if (!session?.user?.id) {
-      console.log('loadOrders: No session or user ID')
       return
     }
-
-    console.log('Loading orders for user:', session.user.id)
 
     const supabase = createClient()
     const { data, error } = await supabase
@@ -53,13 +50,9 @@ export default function DashboardPage() {
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
-    console.log('Orders query result:', { data, error })
-
     if (error) {
-      console.error('Error al cargar pedidos:', error)
       setOrders([])
     } else {
-      console.log('Orders data:', data)
       const ordersMapped = (data || []).map((order: any) => ({
         id: order.id,
         order_number: order.order_number,
@@ -67,23 +60,18 @@ export default function DashboardPage() {
         status: order.status,
         created_at: order.created_at,
       }))
-      console.log('Orders mapped:', ordersMapped)
       setOrders(ordersMapped)
-      console.log('Orders state set to:', ordersMapped.length, 'orders')
     }
   }, [session?.user?.id])
 
   useEffect(() => {
     const loadData = async () => {
-      console.log('useEffect: Starting data load')
       const session = await getSession()
       if (!session) {
-        console.log('useEffect: No session, redirecting to login')
         router.push('/auth/login?redirect=/dashboard')
         return
       }
 
-      console.log('useEffect: Session found, setting session')
       setSession(session)
 
       // Limpiar localStorage para evitar datos mezclados
@@ -91,10 +79,8 @@ export default function DashboardPage() {
         localStorage.removeItem('orders')
       }
 
-      console.log('useEffect: Calling loadOrders')
       await loadOrders()
       setLoading(false)
-      console.log('useEffect: Data load complete')
     }
 
     loadData()
@@ -103,11 +89,8 @@ export default function DashboardPage() {
   // Suscribirse a cambios en tiempo real para pedidos del cliente
   useEffect(() => {
     if (!session?.user?.id || isDemo) {
-      console.log('Realtime: Skipping - no session or demo mode')
       return
     }
-
-    console.log('Setting up Realtime for client orders')
 
     const channel = supabase
       .channel('client-orders')
@@ -117,7 +100,6 @@ export default function DashboardPage() {
         table: 'orders',
         filter: `user_id=eq.${session.user.id}`
       }, () => {
-        console.log('Client order inserted, reloading...')
         loadOrders()
       })
       .on('postgres_changes', {
@@ -128,10 +110,8 @@ export default function DashboardPage() {
       }, (payload) => {
         // Recargar si cambia deleted_at (soft delete)
         if (payload.new?.deleted_at !== payload.old?.deleted_at) {
-          console.log('Client order deleted_at changed, reloading...')
           loadOrders()
         } else {
-          console.log('Client order updated, reloading...')
           loadOrders()
         }
       })
@@ -143,16 +123,13 @@ export default function DashboardPage() {
         // Filtrar en el cliente usando el payload.old
         // Esto es necesario porque REPLICA IDENTITY puede no incluir user_id
         if (payload.old?.user_id === session.user.id) {
-          console.log('Client order deleted, reloading...')
           loadOrders()
         }
       })
       .subscribe((status) => {
-        console.log('Client orders Realtime status:', status)
       })
 
     return () => {
-      console.log('Cleaning up client orders Realtime')
       supabase.removeChannel(channel)
     }
   }, [session?.user?.id, isDemo, loadOrders, supabase])
@@ -181,8 +158,6 @@ export default function DashboardPage() {
       </div>
     )
   }
-
-  console.log('Rendering dashboard with orders:', orders.length, 'orders')
 
   return (
     <div className="min-h-screen bg-background">
