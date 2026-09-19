@@ -125,11 +125,19 @@ export default function AdminPage() {
     }
 
     // Cargar servicios
-    const { data: servicesData } = await supabase
+    console.log('Loading services...')
+    const { data: servicesData, error: servicesError } = await supabase
       .from('services')
       .select('*')
       .order('sort_order', { ascending: true })
-    if (servicesData) setServices(servicesData)
+
+    if (servicesError) {
+      console.error('Error loading services:', servicesError)
+    } else {
+      console.log('Services loaded:', servicesData?.length || 0)
+      console.log('Services with is_featured:', servicesData?.filter((s: any) => s.is_featured).length || 0)
+      if (servicesData) setServices(servicesData)
+    }
 
     // Cargar sesiones de chat (todas, filtrar en código)
     console.log('Loading all chat sessions...')
@@ -422,38 +430,54 @@ export default function AdminPage() {
 
   const toggleFeatured = async (serviceId: string, currentFeatured: boolean) => {
     try {
-      console.log('toggleFeatured called with userRole:', userRole)
+      console.log('toggleFeatured called with userRole:', userRole, 'isDemo:', isDemo)
+
+      if (isDemo) {
+        notifyWarning('No se pueden cambiar servicios destacados en modo demo')
+        return
+      }
+
       if (userRole !== 'owner') {
         notifyWarning('Solo el owner puede cambiar servicios destacados')
         return
       }
 
-      // Crear un nuevo cliente Supabase para asegurar el contexto de autenticación
-      const supabase = createClient()
       const session = await getSession()
 
       if (!session) {
+        console.error('No session found in toggleFeatured')
         notifyError('No hay sesión activa')
         return
       }
 
-      console.log('Updating service featured status:', serviceId, !currentFeatured)
+      console.log('Session found:', session.user.id, session.user.role)
+      console.log('Updating service featured status via API:', serviceId, 'from', currentFeatured, 'to', !currentFeatured)
 
-      const { error } = await supabase
-        .from('services')
-        .update({ is_featured: !currentFeatured })
-        .eq('id', serviceId)
+      const response = await fetch('/api/admin/services/featured', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId,
+          isFeatured: !currentFeatured
+        })
+      })
 
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('API error:', data.error)
+        throw new Error(data.error || 'Error al actualizar el servicio')
       }
+
+      console.log('API response:', data)
 
       await loadAdminData()
       notifySuccess(currentFeatured ? 'Servicio quitado de destacados' : 'Servicio marcado como destacado')
     } catch (error) {
       console.error('Error al cambiar destacado:', error)
-      notifyError('Error al cambiar destacado: ' + (error as Error).message)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      console.error('Error message:', errorMessage)
+      notifyError('Error al cambiar destacado: ' + errorMessage)
     }
   }
 
