@@ -223,41 +223,6 @@ export default function SupportChatWidget() {
     }
   }, [session?.id])
 
-  // Suscribirse a cambios de assigned_agent_id para admins (escuchar todas las sesiones activas)
-  useEffect(() => {
-    if (!session || !currentUser || 
-!['admin', 'staff', 'owner'].includes(currentUser.role)) {
-      return
-    }
-
-    console.log('Setting up Realtime subscription for all active sessions (admin mode)')
-
-    const channel = supabase
-      .channel('all-sessions-assigned-agent')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'chat_sessions',
-        filter: `status=eq.active`
-      }, (payload) => {
-        console.log('Session assigned_agent changed (admin mode):', payload.new.id, payload.new.assigned_agent_id)
-        
-        // Si la sesión actual cambió de agente, actualizar el nombre
-        if (payload.new.id === session.id && payload.old.assigned_agent_id !== payload.new.assigned_agent_id) {
-          console.log('Current session assigned agent changed, reloading name')
-          loadAssignedAgentName(payload.new.assigned_agent_id)
-        }
-      })
-      .subscribe((status) => {
-        console.log('All sessions assigned_agent Realtime subscription status:', status)
-      })
-
-    return () => {
-      console.log('Cleaning up all sessions assigned_agent Realtime subscription')
-      supabase.removeChannel(channel)
-    }
-  }, [session?.id, currentUser?.role])
-
   // Suscribirse a cambios en tiempo real para mensajes (siempre activo para recibir notificaciones)
   useEffect(() => {
     if (!session) return
