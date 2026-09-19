@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 interface Service {
   id: string
   name: string
+  slug: string
   description: string
   price: number
   features: string[]
