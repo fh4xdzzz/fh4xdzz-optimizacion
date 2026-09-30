@@ -78,7 +78,7 @@ class EventProcessor:
         embed.add_field(name="Descripción", value=payload.get('description', 'Sin descripción'), inline=False)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
@@ -99,7 +99,7 @@ class EventProcessor:
         embed.add_field(name="Estado", value="Pagado", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
@@ -120,7 +120,7 @@ class EventProcessor:
         embed.add_field(name="Estado", value="En Proceso", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
@@ -141,7 +141,7 @@ class EventProcessor:
         embed.add_field(name="Estado", value="Completado", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
@@ -162,7 +162,7 @@ class EventProcessor:
         embed.add_field(name="Estado", value="Cancelado", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
@@ -184,7 +184,7 @@ class EventProcessor:
         embed.add_field(name="Descripción", value=payload.get('description', 'Sin descripción'), inline=False)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
@@ -205,7 +205,7 @@ class EventProcessor:
         embed.add_field(name="Mensaje", value=payload.get('message', 'Sin mensaje'), inline=False)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
@@ -225,7 +225,7 @@ class EventProcessor:
         embed.add_field(name="Nombre", value=payload.get('full_name', 'N/A'), inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
 
@@ -261,7 +261,7 @@ class EventProcessor:
                 embed.add_field(name="Información Técnica", value=f"```json\n{json.dumps(safe_info, indent=2)}\n```", inline=False)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
         await self.notify_support_team(embed)
 
