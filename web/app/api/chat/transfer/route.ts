@@ -42,15 +42,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'El chat ya está asignado a este agente.' }, { status: 409 })
     }
 
-    // Verificar que el agente de destino existe y acepta soporte
-    const { data: targetAgent } = await supabase
+    // Los roles de soporte son suficientes; la marca is_support_agent puede
+    // no existir todavía en cuentas creadas antes del sistema de chat.
+    const { data: targetAgent, error: targetAgentError } = await supabase
       .from('users')
-      .select('id, role, is_support_agent, online, accepting_chats')
+      .select('id, role, full_name, email')
       .eq('id', target_agent_id)
-      .single()
+      .maybeSingle()
 
-    if (!targetAgent || !['staff', 'admin', 'owner'].includes(targetAgent.role) || targetAgent.is_support_agent === false) {
-      return NextResponse.json({ error: 'Target agent not found or not a support agent' }, { status: 404 })
+    if (targetAgentError) {
+      return NextResponse.json({ error: 'No se pudo verificar el agente de destino.' }, { status: 500 })
+    }
+
+    if (!targetAgent || !['staff', 'admin', 'owner'].includes(targetAgent.role)) {
+      return NextResponse.json({ error: 'El usuario seleccionado no es un agente autorizado.' }, { status: 404 })
     }
 
     const { data: targetActiveChat } = await supabase
@@ -93,6 +98,16 @@ export async function POST(request: NextRequest) {
         from_agent: currentChat.assigned_agent_id,
         to_agent: target_agent_id
       }
+    })
+
+    const targetName = targetAgent.full_name || targetAgent.email?.split('@')[0] || 'otro agente'
+    await supabase.from('chat_messages').insert({
+      id: crypto.randomUUID(),
+      session_id,
+      sender_id: session.user.id,
+      sender_role: userRole,
+      message: `Tu conversación fue transferida a ${targetName}. Continuaremos atendiéndote aquí.`,
+      message_type: 'text'
     })
 
     return NextResponse.json({ session: chatSession })
