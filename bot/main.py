@@ -955,13 +955,14 @@ async def ping(ctx):
     await ctx.send(embed=embed)
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    port = int(os.getenv('SERVER_PORT', os.getenv('PORT', '5000')))
+    app.run(host='0.0.0.0', port=port, debug=False)
 
 if __name__ == '__main__':
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
-    logger.info("Flask webhook server iniciado en puerto 5000")
+    logger.info("Flask webhook server iniciado en el puerto asignado")
 
     try:
         bot.run(TOKEN)
