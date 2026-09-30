@@ -47,6 +47,7 @@ export default function DashboardPage() {
       .from('orders')
       .select('*, services(name)')
       .eq('user_id', session.user.id)
+      .neq('status', 'pending')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 

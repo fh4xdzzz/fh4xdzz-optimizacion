@@ -113,6 +113,7 @@ export default function AdminPage() {
     const { data: ordersData } = await supabase
       .from('orders')
       .select('*, services(name)')
+      .neq('status', 'pending')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
     if (ordersData) {

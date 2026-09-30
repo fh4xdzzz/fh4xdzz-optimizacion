@@ -67,6 +67,7 @@ export default function OrdersPage() {
         .from('orders')
         .select('*, services(name)')
         .eq('user_id', session.user.id)
+        .neq('status', 'pending')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
@@ -99,7 +100,8 @@ export default function OrdersPage() {
       }, (payload) => {
         const updatedOrder = payload.new as Order
         
-        // Verificar si el pedido pertenece al usuario actual
+        // Los pedidos pendientes de pago están ocultos. Al confirmarse el pago,
+        // el webhook cambia el estado y esta actualización los hace aparecer.
         if (allOrders.some(order => order.id === updatedOrder.id)) {
           // Notificar cambio de estado
           const oldStatus = payload.old.status
@@ -110,9 +112,9 @@ export default function OrdersPage() {
             notifyInfo(`El pedido ${updatedOrder.order_number} cambió a: ${statusLabel}`)
           }
           
-          // Recargar pedidos
-          loadOrders()
         }
+
+        loadOrders()
       })
       .subscribe((status) => {
       })
@@ -192,6 +194,7 @@ export default function OrdersPage() {
         .select('*, services(name)')
         .eq('order_number', orderNumber.trim())
         .eq('user_id', session.user.id)
+        .neq('status', 'pending')
         .is('deleted_at', null)
         .single()
 
