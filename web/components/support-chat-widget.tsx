@@ -54,6 +54,7 @@ export default function SupportChatWidget() {
   const [assignedAgentName, setAssignedAgentName] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
@@ -232,6 +233,15 @@ export default function SupportChatWidget() {
 
     const channel = supabase
       .channel(`messages:${session.id}`)
+      .on('broadcast', { event: 'agent_typing' }, ({ payload }) => {
+        const typing = payload?.typing === true
+        setIsTyping(typing)
+
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+        if (typing) {
+          typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 2500)
+        }
+      })
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -290,6 +300,8 @@ export default function SupportChatWidget() {
     channelRef.current = channel
 
     return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      setIsTyping(false)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
@@ -301,7 +313,7 @@ export default function SupportChatWidget() {
     if (open) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages, open])
+  }, [messages, open, isTyping])
 
   // Cargar mensajes de una sesión
   async function loadMessages(sessionId: string) {
@@ -818,8 +830,13 @@ export default function SupportChatWidget() {
 
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-[#1a1a1a] border border-[#333333] rounded-2xl p-3">
-                  <p className="text-sm text-[#6b7280]">Escribiendo...</p>
+                <div className="rounded-2xl rounded-bl-md border border-white/10 bg-[#1a1a1f] px-4 py-3 shadow-sm" role="status" aria-live="polite">
+                  <span className="sr-only">El agente está escribiendo</span>
+                  <div className="flex items-center gap-1.5" aria-hidden="true">
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-400 [animation-delay:-0.3s]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-violet-400 [animation-delay:-0.15s]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-fuchsia-400" />
+                  </div>
                 </div>
               </div>
             )}

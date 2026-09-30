@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
@@ -88,6 +89,8 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
+  const typingChannelRef = useRef<RealtimeChannel | null>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   // Support tab filters and search
   const [supportFilter, setSupportFilter] = useState<'all' | 'active' | 'waiting' | 'closed'>('all')
@@ -634,6 +637,7 @@ export default function AdminPage() {
       })
 
       if (response.ok) {
+        sendAgentTyping(false)
         await loadChatMessages(selectedChat.id)
       } else {
         const data = await response.json()
@@ -642,6 +646,35 @@ export default function AdminPage() {
     } catch (error) {
       notifyError('Error al enviar mensaje')
     }
+  }
+
+  useEffect(() => {
+    if (!selectedChat || isDemo) return
+
+    const channel = supabase.channel(`messages:${selectedChat.id}`)
+    channel.subscribe()
+    typingChannelRef.current = channel
+
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      channel.send({ type: 'broadcast', event: 'agent_typing', payload: { typing: false } })
+      supabase.removeChannel(channel)
+      typingChannelRef.current = null
+    }
+  }, [selectedChat?.id, isDemo])
+
+  const sendAgentTyping = (typing: boolean) => {
+    typingChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'agent_typing',
+      payload: { typing },
+    })
+  }
+
+  const handleAgentTyping = () => {
+    sendAgentTyping(true)
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+    typingTimeoutRef.current = setTimeout(() => sendAgentTyping(false), 1200)
   }
 
   const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -1265,6 +1298,7 @@ export default function AdminPage() {
                             e.preventDefault()
                             const form = e.target as HTMLFormElement
                             const input = form.elements.namedItem('message') as HTMLInputElement
+                            sendAgentTyping(false)
                             handleSendChatMessage(input.value)
                             input.value = ''
                           }}
@@ -1274,6 +1308,7 @@ export default function AdminPage() {
                             name="message"
                             type="text"
                             placeholder="Escribe tu respuesta..."
+                            onChange={handleAgentTyping}
                             disabled={selectedChat.status === 'closed' || selectedChat.assigned_agent_id !== currentUserId}
                             className="flex-1 px-4 py-2 bg-[#0a0a0a] rounded-lg text-[#ededed] border border-[#333333] focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
