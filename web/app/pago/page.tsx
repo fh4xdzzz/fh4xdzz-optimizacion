@@ -43,7 +43,15 @@ function PaymentPageContent() {
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: order.id }),
       })
-      const payload = await response.json()
+      const responseText = await response.text()
+      let payload: { url?: string; error?: string } = {}
+      if (responseText) {
+        try {
+          payload = JSON.parse(responseText) as { url?: string; error?: string }
+        } catch {
+          throw new Error('El servidor de pagos devolvió una respuesta inválida. Inténtalo nuevamente.')
+        }
+      }
       if (!response.ok || !payload.url) throw new Error(payload.error || 'No se pudo abrir el pago')
       window.location.assign(payload.url)
     } catch (checkoutError) {
