@@ -1,71 +1,130 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
-// POST /api/cron/cleanup-chats - Limpiar chats cerrados antiguos
-// Este endpoint debe ser llamado por Vercel cron jobs cada hora
-export async function POST(request: NextRequest) {
+const RETENTION_HOURS = 24
+const CLEANUP_BATCH_SIZE = 500
+const STORAGE_BATCH_SIZE = 100
+
+type SessionRow = { id: string }
+type AttachmentRow = { file_path: string | null }
+type MessageAttachmentRow = { attachment_path: string | null }
+
+function createCleanupClient(url: string, serviceRoleKey: string) {
+  return createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+type CleanupClient = ReturnType<typeof createCleanupClient>
+
+async function removeStorageFiles(
+  supabase: CleanupClient,
+  sessionIds: string[]
+) {
+  const [{ data: attachments, error: attachmentsError }, { data: messages, error: messagesError }] =
+    await Promise.all([
+      supabase.from('chat_attachments').select('file_path').in('session_id', sessionIds),
+      supabase
+        .from('chat_messages')
+        .select('attachment_path')
+        .in('session_id', sessionIds)
+        .not('attachment_path', 'is', null),
+    ])
+
+  if (attachmentsError) throw attachmentsError
+  if (messagesError) throw messagesError
+
+  const paths = new Set<string>()
+  for (const attachment of (attachments || []) as AttachmentRow[]) {
+    if (attachment.file_path) paths.add(attachment.file_path)
+  }
+  for (const message of (messages || []) as MessageAttachmentRow[]) {
+    if (message.attachment_path) paths.add(message.attachment_path)
+  }
+
+  const allPaths = Array.from(paths)
+  for (let index = 0; index < allPaths.length; index += STORAGE_BATCH_SIZE) {
+    const { error } = await supabase.storage
+      .from('chat-attachments')
+      .remove(allPaths.slice(index, index + STORAGE_BATCH_SIZE))
+
+    if (error) throw error
+  }
+
+  return allPaths.length
+}
+
+async function cleanupChats(request: NextRequest) {
   try {
-    // Verificar autenticación del cron job (usando un header secreto)
-    const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
+    const authHeader = request.headers.get('authorization')
 
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = await createClient()
-
-    // Primero obtener IDs de chats cerrados antiguos
-    const { data: oldSessions, error: fetchError } = await supabase
-      .from('chat_sessions')
-      .select('id')
-      .eq('status', 'closed')
-      .lt('closed_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-
-    if (fetchError) {
-      console.error('Error fetching old sessions:', fetchError)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('[cleanup-chats] Missing server-side Supabase configuration')
+      return NextResponse.json({ error: 'Cleanup service is not configured' }, { status: 503 })
     }
 
-    // Eliminar mensajes de esos chats
-    if (oldSessions && oldSessions.length > 0) {
-      const sessionIds = oldSessions.map((s: any) => s.id)
-      const { error: messagesError } = await supabase
-        .from('chat_messages')
+    const supabase = createCleanupClient(supabaseUrl, serviceRoleKey)
+    const cutoff = new Date(Date.now() - RETENTION_HOURS * 60 * 60 * 1000).toISOString()
+    let deletedSessions = 0
+    let deletedFiles = 0
+
+    while (true) {
+      const { data, error: fetchError } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('status', 'closed')
+        .not('closed_at', 'is', null)
+        .lt('closed_at', cutoff)
+        .order('closed_at', { ascending: true })
+        .limit(CLEANUP_BATCH_SIZE)
+
+      if (fetchError) throw fetchError
+
+      const sessionIds = ((data || []) as SessionRow[]).map((session) => session.id)
+      if (sessionIds.length === 0) break
+
+      deletedFiles += await removeStorageFiles(supabase, sessionIds)
+
+      // Related messages, attachments, ratings, notes and audit logs are
+      // removed by their ON DELETE CASCADE foreign keys.
+      const { data: deleted, error: deleteError } = await supabase
+        .from('chat_sessions')
         .delete()
-        .in('session_id', sessionIds)
+        .in('id', sessionIds)
+        .select('id')
 
-      if (messagesError) {
-        console.error('Error deleting old messages:', messagesError)
-      }
+      if (deleteError) throw deleteError
+      deletedSessions += deleted?.length || 0
+
+      if (sessionIds.length < CLEANUP_BATCH_SIZE) break
     }
 
-    // Eliminar chats cerrados hace más de 24 horas
-    const { error: sessionsError, count } = await supabase
-      .from('chat_sessions')
-      .delete()
-      .eq('status', 'closed')
-      .lt('closed_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-
-    if (sessionsError) {
-      console.error('Error deleting old sessions:', sessionsError)
-      return NextResponse.json({ error: 'Failed to cleanup' }, { status: 500 })
-    }
-
-    // Eliminar registros de auditoría antiguos (30 días)
-    await supabase
-      .from('chat_audit_logs')
-      .delete()
-      .lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-
-    console.log(`Cleanup completed: ${count || 0} sessions deleted`)
+    console.log('[cleanup-chats] Cleanup completed', {
+      cutoff,
+      deletedSessions,
+      deletedFiles,
+    })
 
     return NextResponse.json({
       success: true,
-      deletedSessions: count || 0,
-      message: 'Cleanup completed successfully'
+      retentionHours: RETENTION_HOURS,
+      deletedSessions,
+      deletedFiles,
     })
   } catch (error) {
-    console.error('Error in cleanup cron job:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('[cleanup-chats] Cleanup failed', error)
+    return NextResponse.json({ error: 'Failed to cleanup chat history' }, { status: 500 })
   }
 }
+
+// Vercel Cron invokes routes with GET. POST remains available for an
+// authenticated manual run from the server dashboard.
+export const GET = cleanupChats
+export const POST = cleanupChats
