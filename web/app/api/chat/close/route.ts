@@ -24,6 +24,28 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
+    const { data: currentChat, error: currentChatError } = await supabase
+      .from('chat_sessions')
+      .select('id, status, assigned_agent_id')
+      .eq('id', session_id)
+      .maybeSingle()
+
+    if (currentChatError) {
+      return NextResponse.json({ error: 'Unable to verify the conversation' }, { status: 500 })
+    }
+
+    if (!currentChat) {
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+    }
+
+    if (currentChat.status === 'closed') {
+      return NextResponse.json({ error: 'Conversation is already closed' }, { status: 409 })
+    }
+
+    if (currentChat.assigned_agent_id !== session.user.id) {
+      return NextResponse.json({ error: 'Solo el agente que reclamó el chat puede cerrarlo.' }, { status: 403 })
+    }
+
     // Cerrar la sesión
     const { data: chatSession, error: closeError } = await supabase
       .from('chat_sessions')
@@ -33,6 +55,8 @@ export async function POST(request: NextRequest) {
         closed_by: session.user.id
       })
       .eq('id', session_id)
+      .eq('assigned_agent_id', session.user.id)
+      .neq('status', 'closed')
       .select()
       .single()
 

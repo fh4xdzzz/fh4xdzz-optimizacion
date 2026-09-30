@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
       .select('*')
       .eq('client_id', session.user.id)
       .in('status', ['waiting', 'active', 'pending'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     if (existingError) {

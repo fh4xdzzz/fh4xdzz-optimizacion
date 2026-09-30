@@ -24,43 +24,22 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Verificar si el admin ya tiene un chat activo asignado
-    const { data: activeChats, error: activeChatsError } = await supabase
-      .from('chat_sessions')
-      .select('id')
-      .eq('assigned_agent_id', session.user.id)
-      .neq('status', 'closed')
-      .limit(1)
-
-    if (activeChatsError) {
-      return NextResponse.json({ error: 'Failed to check active chats' }, { status: 500 })
-    }
-
-    if (activeChats && activeChats.length > 0) {
-      return NextResponse.json({ 
-        error: 'Ya tienes un chat activo. Debes cerrar el chat actual antes de reclamar otro.' 
-      }, { status: 409 })
-    }
-
-    // Reclamar la sesión de forma atómica
+    // La función SQL serializa los reclamos del agente y bloquea la conversación.
     const { data: chatSession, error: claimError } = await supabase
-      .from('chat_sessions')
-      .update({
-        assigned_agent_id: session.user.id,
-        status: 'active',
-        claimed_at: new Date().toISOString()
-      })
-      .eq('id', session_id)
-      .is('assigned_agent_id', null) // Solo si no está asignada
-      .select()
-      .maybeSingle()
+      .rpc('claim_chat_session', { p_session_id: session_id })
 
     if (claimError) {
-      return NextResponse.json({ error: 'Failed to claim chat' }, { status: 500 })
-    }
-
-    if (!chatSession) {
-      return NextResponse.json({ error: 'Chat already claimed or not found' }, { status: 409 })
+      const message = claimError.message || ''
+      if (message.includes('AGENT_ALREADY_BUSY')) {
+        return NextResponse.json({ error: 'Ya tienes un chat activo. Ciérralo o transfiérelo antes de reclamar otro.' }, { status: 409 })
+      }
+      if (message.includes('CHAT_ALREADY_CLAIMED')) {
+        return NextResponse.json({ error: 'Otro agente ya reclamó este chat.' }, { status: 409 })
+      }
+      if (message.includes('CHAT_NOT_FOUND')) {
+        return NextResponse.json({ error: 'Conversación no encontrada.' }, { status: 404 })
+      }
+      return NextResponse.json({ error: 'No se pudo reclamar el chat.' }, { status: 500 })
     }
 
     // Actualizar estado del agente

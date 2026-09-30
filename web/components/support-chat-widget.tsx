@@ -444,43 +444,6 @@ export default function SupportChatWidget() {
 
       if (response.ok) {
         setText('')
-
-        // Si el usuario es admin/staff/owner, no enviar respuesta automática del bot
-        if (['admin', 'staff', 'owner'].includes(currentUser.role)) {
-          return
-        }
-
-        // Verificar si hay agentes online para respuesta automática del bot
-        if (onlineAgents.length === 0) {
-          setTimeout(() => {
-            const lowerMessage = text.trim().toLowerCase()
-            let botResponse = null
-
-            // Buscar respuesta basada en palabras clave
-            for (const bot of botResponses) {
-              if (bot.keywords.some(keyword => lowerMessage.includes(keyword))) {
-                botResponse = bot.response
-                break
-              }
-            }
-
-            // Si no hay respuesta específica, respuesta genérica
-            if (!botResponse) {
-              botResponse = 'He recibido tu mensaje. En este momento no hay agentes de soporte disponibles, pero te responderemos lo antes posible. Si es urgente, puedes revisar nuestros artículos de ayuda en la pestaña "Artículos".'
-            }
-
-            // Enviar respuesta del bot
-            fetch('/api/chat/messages', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                session_id: currentSession.id,
-                message: botResponse,
-                message_type: 'text'
-              })
-            })
-          }, 1000) // 1 segundo de delay para simular respuesta
-        }
       }
     } catch (error) {
     } finally {
@@ -503,25 +466,6 @@ export default function SupportChatWidget() {
 
   // Verificar si hay agentes online
   const isOnline = onlineAgents.length > 0
-
-  // Enviar mensaje de bienvenida del bot si no hay agentes online
-  useEffect(() => {
-    if (open && isAuthenticated && session && messages.length === 0 && onlineAgents.length === 0) {
-      setTimeout(() => {
-        const welcomeMessage = '¡Hola! 👋 Soy el asistente virtual de TheDulcanDesign. En este momento no hay agentes de soporte disponibles, pero te ayudaré lo mejor que pueda. Si necesitas ayuda inmediata, puedes revisar nuestros artículos en la pestaña "Artículos" o esperar a que un agente esté disponible. ¿En qué puedo ayudarte?'
-        
-        fetch('/api/chat/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            session_id: session.id,
-            message: welcomeMessage,
-            message_type: 'text'
-          })
-        })
-      }, 500)
-    }
-  }, [open, isAuthenticated, session, messages.length, onlineAgents.length])
 
   // Cargar agentes de soporte en línea
   useEffect(() => {
@@ -558,6 +502,11 @@ export default function SupportChatWidget() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  // Los agentes atienden desde /admin; la burbuja es exclusiva para clientes.
+  if (!authLoading && currentUser && ['admin', 'staff', 'owner'].includes(currentUser.role)) {
+    return null
+  }
 
   if (!open) {
     return (

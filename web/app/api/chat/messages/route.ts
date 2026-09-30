@@ -5,14 +5,10 @@ import { getServerSession } from '@/lib/auth-server'
 // GET /api/chat/messages?session_id=xxx - Obtener mensajes de una sesión
 export async function GET(request: NextRequest) {
   try {
-    console.log('GET /api/chat/messages - Starting')
     const session = await getServerSession()
     if (!session) {
-      console.error('No session found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    console.log('User authenticated:', session.user.id, session.user.role)
 
     const { searchParams } = new URL(request.url)
     const sessionId = searchParams.get('session_id')
@@ -20,8 +16,6 @@ export async function GET(request: NextRequest) {
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID is required' }, { status: 400 })
     }
-
-    console.log('Fetching messages for session:', sessionId)
 
     const supabase = await createClient()
     const userRole = session.user.role
@@ -35,11 +29,10 @@ export async function GET(request: NextRequest) {
         .maybeSingle()
 
       if (sessionError) {
-        console.error('Error checking session ownership:', sessionError)
+        return NextResponse.json({ error: 'Unable to verify the conversation' }, { status: 500 })
       }
 
       if (!chatSession || chatSession.client_id !== session.user.id) {
-        console.error('Forbidden: User does not own this session')
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     }
@@ -51,38 +44,33 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Error fetching messages:', error)
-      return NextResponse.json({ error: 'Failed to fetch messages', details: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 })
     }
 
-    console.log('Messages fetched successfully:', messages?.length || 0)
     return NextResponse.json({ messages })
   } catch (error) {
-    console.error('Error in GET /api/chat/messages:', error)
-    return NextResponse.json({ error: 'Internal server error', details: (error as Error).message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 // POST /api/chat/messages - Enviar mensaje
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST /api/chat/messages - Starting')
     const session = await getServerSession()
     if (!session) {
-      console.error('No session found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    console.log('User authenticated:', session.user.id, session.user.role)
 
     const body = await request.json()
     const { session_id, message, message_type, attachment_path, attachment_name } = body
 
-    if (!session_id || !message) {
+    if (!session_id || typeof message !== 'string' || !message.trim()) {
       return NextResponse.json({ error: 'Session ID and message are required' }, { status: 400 })
     }
 
-    console.log('Message data:', { session_id, message_type, message_length: message.length })
+    if (message.trim().length > 5000) {
+      return NextResponse.json({ error: 'Message is too long' }, { status: 400 })
+    }
 
     const supabase = await createClient()
     const userRole = session.user.role
@@ -119,7 +107,7 @@ export async function POST(request: NextRequest) {
       // Admin/staff también deben verificar que el chat no esté cerrado
       const { data: chatSession, error: sessionError } = await supabase
         .from('chat_sessions')
-        .select('status')
+        .select('status, assigned_agent_id')
         .eq('id', session_id)
         .maybeSingle()
 
@@ -133,7 +121,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Session not found' }, { status: 404 })
       }
 
-      // Admin/staff no pueden enviar mensajes a chats cerrados
+      // Un agente solo puede responder la conversación que reclamó.
       if (chatSession.status === 'closed') {
         console.log('Attempt to send message to closed session by admin - blocked')
         return NextResponse.json({ 
@@ -141,16 +129,23 @@ export async function POST(request: NextRequest) {
           message: 'Este chat ha sido cerrado y está en el historial. No se pueden enviar mensajes.'
         }, { status: 403 })
       }
+
+      if (chatSession.assigned_agent_id !== session.user.id) {
+        return NextResponse.json({
+          error: 'Debes reclamar esta conversación antes de responder.'
+        }, { status: 403 })
+      }
+    } else {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Insertar mensaje - estructura correcta con session_id y sender_id
-    console.log('Inserting message...')
-    const insertData: any = {
+    const insertData: Record<string, string> = {
       id: crypto.randomUUID(),
       session_id,
       sender_id: session.user.id,
       sender_role: userRole,
-      message,
+      message: message.trim(),
       message_type: message_type || 'text'
     }
 
@@ -169,24 +164,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Error sending message:', insertError)
-      console.error('Error details:', JSON.stringify(insertError))
-      return NextResponse.json({ 
-        error: 'Failed to send message', 
-        details: insertError.message,
-        code: insertError.code 
-      }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
     }
 
-    console.log('Message sent successfully:', newMessage.id)
     return NextResponse.json({ message: newMessage })
   } catch (error) {
-    console.error('Error in POST /api/chat/messages:', error)
-    console.error('Error stack:', (error as Error).stack)
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: (error as Error).message,
-      stack: (error as Error).stack
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

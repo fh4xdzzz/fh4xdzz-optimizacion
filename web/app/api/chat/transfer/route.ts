@@ -24,15 +24,45 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Verificar que el agente de destino existe y es staff
+    const { data: currentChat } = await supabase
+      .from('chat_sessions')
+      .select('id, status, assigned_agent_id')
+      .eq('id', session_id)
+      .maybeSingle()
+
+    if (!currentChat) {
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+    }
+
+    if (currentChat.status === 'closed' || currentChat.assigned_agent_id !== session.user.id) {
+      return NextResponse.json({ error: 'Solo puedes transferir el chat activo que reclamaste.' }, { status: 403 })
+    }
+
+    if (target_agent_id === session.user.id) {
+      return NextResponse.json({ error: 'El chat ya está asignado a este agente.' }, { status: 409 })
+    }
+
+    // Verificar que el agente de destino existe y acepta soporte
     const { data: targetAgent } = await supabase
       .from('users')
-      .select('id, role, is_support_agent')
+      .select('id, role, is_support_agent, online, accepting_chats')
       .eq('id', target_agent_id)
       .single()
 
-    if (!targetAgent || !targetAgent.is_support_agent) {
+    if (!targetAgent || !['staff', 'admin', 'owner'].includes(targetAgent.role) || targetAgent.is_support_agent === false) {
       return NextResponse.json({ error: 'Target agent not found or not a support agent' }, { status: 404 })
+    }
+
+    const { data: targetActiveChat } = await supabase
+      .from('chat_sessions')
+      .select('id')
+      .eq('assigned_agent_id', target_agent_id)
+      .neq('status', 'closed')
+      .limit(1)
+      .maybeSingle()
+
+    if (targetActiveChat) {
+      return NextResponse.json({ error: 'El agente de destino ya está atendiendo otro chat.' }, { status: 409 })
     }
 
     // Transferir la sesión
@@ -40,10 +70,12 @@ export async function POST(request: NextRequest) {
       .from('chat_sessions')
       .update({
         assigned_agent_id: target_agent_id,
-        status: 'waiting', // Cambiar a waiting para que el nuevo agente pueda reclamarla
-        claimed_at: null
+        status: 'active',
+        claimed_at: new Date().toISOString()
       })
       .eq('id', session_id)
+      .eq('assigned_agent_id', session.user.id)
+      .neq('status', 'closed')
       .select()
       .single()
 
@@ -58,7 +90,7 @@ export async function POST(request: NextRequest) {
       action: 'CHAT_TRANSFERRED',
       session_id,
       metadata: {
-        from_agent: session.user.id,
+        from_agent: currentChat.assigned_agent_id,
         to_agent: target_agent_id
       }
     })

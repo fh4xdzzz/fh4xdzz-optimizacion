@@ -83,6 +83,8 @@ export default function AdminPage() {
   const [newStatus, setNewStatus] = useState('')
   const [orderNote, setOrderNote] = useState('')
   const [userRole, setUserRole] = useState<'client' | 'admin' | 'staff' | 'owner'>('client')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [transferAgentId, setTransferAgentId] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
@@ -211,6 +213,7 @@ export default function AdminPage() {
       // Verificar si es admin o owner
       const role = session.user.role as string || 'client'
       setUserRole(role as 'client' | 'admin' | 'staff' | 'owner')
+      setCurrentUserId(session.user.id)
 
       if (role !== 'admin' && role !== 'owner') {
         router.push('/dashboard')
@@ -530,8 +533,13 @@ export default function AdminPage() {
       })
 
       if (response.ok) {
+        const data = await response.json()
         await loadAdminData()
+        setSelectedChat(current => current?.id === sessionId ? { ...current, ...data.session } : current)
         notifySuccess('Chat reclamado exitosamente')
+      } else {
+        const data = await response.json()
+        notifyError(data.error || 'No se pudo reclamar el chat')
       }
     } catch (error) {
       notifyError('Error al reclamar chat')
@@ -569,6 +577,35 @@ export default function AdminPage() {
     }
   }
 
+  const handleTransferChat = async () => {
+    if (!selectedChat || !transferAgentId) return
+
+    try {
+      const response = await fetch('/api/chat/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: selectedChat.id,
+          target_agent_id: transferAgentId,
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        notifyError(data.error || 'No se pudo transferir el chat')
+        return
+      }
+
+      setTransferAgentId('')
+      setSelectedChat(null)
+      setChatMessages([])
+      await loadAdminData()
+      notifySuccess('Chat transferido exitosamente')
+    } catch {
+      notifyError('Error al transferir el chat')
+    }
+  }
+
   const handleSendChatMessage = async (message: string) => {
     if (!selectedChat || !message.trim()) return
 
@@ -594,6 +631,9 @@ export default function AdminPage() {
 
       if (response.ok) {
         await loadChatMessages(selectedChat.id)
+      } else {
+        const data = await response.json()
+        notifyError(data.error || 'No se pudo enviar el mensaje')
       }
     } catch (error) {
       notifyError('Error al enviar mensaje')
@@ -617,7 +657,7 @@ export default function AdminPage() {
 
   // Filtrar, buscar y ordenar sesiones de chat
   const getFilteredAndSortedSessions = () => {
-    let filtered = [...chatSessions]
+    let filtered = supportFilter === 'closed' ? [...chatHistory] : [...chatSessions]
     
     // Filtrar por estado
     if (supportFilter !== 'all') {
@@ -1139,12 +1179,39 @@ export default function AdminPage() {
                           >
                             Volver
                           </button>
-                          <button
-                            onClick={() => handleCloseChat(selectedChat.id)}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg transition-colors"
-                          >
-                            Cerrar
-                          </button>
+                          {selectedChat.assigned_agent_id === currentUserId && selectedChat.status !== 'closed' && (
+                            <>
+                              <select
+                                value={transferAgentId}
+                                onChange={(event) => setTransferAgentId(event.target.value)}
+                                className="rounded-lg border border-[#333333] bg-[#0a0a0a] px-3 py-2 text-sm text-[#ededed]"
+                                aria-label="Agente de destino"
+                              >
+                                <option value="">Transferir a...</option>
+                                {users
+                                  .filter(user => ['admin', 'staff', 'owner'].includes(user.role) && user.id !== currentUserId)
+                                  .map(user => (
+                                    <option key={user.id} value={user.id}>
+                                      {user.full_name || user.email}{user.online ? ' · online' : ''}
+                                    </option>
+                                  ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={handleTransferChat}
+                                disabled={!transferAgentId}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Transferir
+                              </button>
+                              <button
+                                onClick={() => handleCloseChat(selectedChat.id)}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg transition-colors"
+                              >
+                                Cerrar
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="h-[400px] overflow-auto p-4 space-y-3 bg-[#0a0a0a]">
@@ -1172,6 +1239,23 @@ export default function AdminPage() {
                         })}
                       </div>
                       <div className="p-4 bg-[#1a1a1a] border-t border-[#333333]">
+                        {selectedChat.status === 'waiting' && !selectedChat.assigned_agent_id && (
+                          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3">
+                            <p className="text-sm text-yellow-200">Reclama esta conversación para responder al cliente.</p>
+                            <button
+                              type="button"
+                              onClick={() => handleClaimChat(selectedChat.id)}
+                              className="shrink-0 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white"
+                            >
+                              Reclamar chat
+                            </button>
+                          </div>
+                        )}
+                        {selectedChat.assigned_agent_id && selectedChat.assigned_agent_id !== currentUserId && selectedChat.status !== 'closed' && (
+                          <p className="mb-3 rounded-lg border border-blue-500/40 bg-blue-500/10 p-3 text-sm text-blue-200">
+                            Esta conversación está siendo atendida por otro agente. Puedes verla, pero no responder.
+                          </p>
+                        )}
                         <form
                           onSubmit={(e) => {
                             e.preventDefault()
@@ -1186,11 +1270,13 @@ export default function AdminPage() {
                             name="message"
                             type="text"
                             placeholder="Escribe tu respuesta..."
+                            disabled={selectedChat.status === 'closed' || selectedChat.assigned_agent_id !== currentUserId}
                             className="flex-1 px-4 py-2 bg-[#0a0a0a] rounded-lg text-[#ededed] border border-[#333333] focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                           <button
                             type="submit"
-                            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg transition-opacity"
+                            disabled={selectedChat.status === 'closed' || selectedChat.assigned_agent_id !== currentUserId}
+                            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             Enviar
                           </button>
