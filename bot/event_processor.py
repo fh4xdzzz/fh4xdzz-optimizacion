@@ -4,6 +4,7 @@ Procesa eventos desde la web y genera embeds profesionales en Discord
 """
 
 import discord
+import json
 from datetime import datetime
 from typing import Dict, Any
 from utils.logger import logger
@@ -20,7 +21,7 @@ class EventProcessor:
         try:
             event_id = event.get('event_id')
             event_type = event.get('event_type')
-            payload = event.get('event_id')
+            payload = event.get('payload', {})
 
             # Prevenir duplicados
             if event_id in self.processed_events:
@@ -79,11 +80,8 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        # Enviar al canal de pedidos
-        await self.send_to_channel('pedidos', embed)
-
-        # Enviar notificación directa a admin y owner
-        await self.notify_admins_and_owners(embed)
+        await self.notify_support_team(embed)
+        await self.notify_customer(payload, embed)
 
     async def handle_order_paid(self, event: Dict[str, Any]):
         """Manejar evento de pedido pagado"""
@@ -103,7 +101,8 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('pedidos', embed)
+        await self.notify_support_team(embed)
+        await self.notify_customer(payload, embed)
 
     async def handle_order_processing(self, event: Dict[str, Any]):
         """Manejar evento de pedido en proceso"""
@@ -123,7 +122,8 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('pedidos', embed)
+        await self.notify_support_team(embed)
+        await self.notify_customer(payload, embed)
 
     async def handle_order_completed(self, event: Dict[str, Any]):
         """Manejar evento de pedido completado"""
@@ -143,7 +143,8 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('pedidos', embed)
+        await self.notify_support_team(embed)
+        await self.notify_customer(payload, embed)
 
     async def handle_order_cancelled(self, event: Dict[str, Any]):
         """Manejar evento de pedido cancelado"""
@@ -163,7 +164,8 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('pedidos', embed)
+        await self.notify_support_team(embed)
+        await self.notify_customer(payload, embed)
 
     async def handle_ticket_created(self, event: Dict[str, Any]):
         """Manejar evento de ticket creado"""
@@ -184,7 +186,8 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('staff', embed)
+        await self.notify_support_team(embed)
+        await self.notify_customer(payload, embed)
 
     async def handle_ticket_message(self, event: Dict[str, Any]):
         """Manejar evento de mensaje en ticket"""
@@ -204,7 +207,8 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('staff', embed)
+        await self.notify_support_team(embed)
+        await self.notify_customer(payload, embed)
 
     async def handle_user_created(self, event: Dict[str, Any]):
         """Manejar evento de usuario creado"""
@@ -223,7 +227,7 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('notificaciones', embed)
+        await self.notify_support_team(embed)
 
     async def handle_system_alert(self, event: Dict[str, Any]):
         """Manejar evento de alerta del sistema"""
@@ -259,7 +263,7 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.set_timestamp(datetime.fromisoformat(event.get('created_at')))
 
-        await self.send_to_channel('notificaciones', embed)
+        await self.notify_support_team(embed)
 
     async def send_to_channel(self, channel_name: str, embed: discord.Embed):
         """Enviar embed a un canal específico"""
@@ -276,30 +280,15 @@ class EventProcessor:
         except Exception as e:
             logger.error(f"Error enviando a canal #{channel_name}: {e}")
 
-    async def notify_admins_and_owners(self, embed: discord.Embed):
-        """Enviar notificación directa a usuarios con roles admin y owner"""
+    async def notify_support_team(self, embed: discord.Embed):
+        """Enviar por DM sólo a staff, admin y owner."""
         try:
             for guild in self.bot.guilds:
-                # Buscar roles admin y owner
-                admin_role = discord.utils.get(guild.roles, name='admin')
-                owner_role = discord.utils.get(guild.roles, name='owner')
-
-                if not admin_role and not owner_role:
-                    logger.warning(f"No se encontraron roles admin u owner en {guild.name}")
-                    continue
-
-                # Obtener miembros con estos roles
-                members_to_notify = set()
-
-                if admin_role:
-                    for member in guild.members:
-                        if admin_role in member.roles:
-                            members_to_notify.add(member)
-
-                if owner_role:
-                    for member in guild.members:
-                        if owner_role in member.roles:
-                            members_to_notify.add(member)
+                allowed_names = {'staff', 'admin', 'owner', 'soporte'}
+                members_to_notify = {
+                    member for member in guild.members
+                    if not member.bot and any(role.name.lower() in allowed_names for role in member.roles)
+                }
 
                 # Enviar DM a cada miembro
                 for member in members_to_notify:
@@ -310,4 +299,15 @@ class EventProcessor:
                         logger.error(f"Error enviando DM a {member.name}: {e}")
 
         except Exception as e:
-            logger.error(f"Error notificando admins y owners: {e}")
+            logger.error(f"Error notificando al equipo de soporte: {e}")
+
+    async def notify_customer(self, payload: Dict[str, Any], embed: discord.Embed):
+        """Enviar al cliente por DM cuando el evento incluye su Discord ID."""
+        discord_user_id = payload.get('discord_user_id')
+        if not discord_user_id:
+            return
+        try:
+            user = self.bot.get_user(int(discord_user_id)) or await self.bot.fetch_user(int(discord_user_id))
+            await user.send(embed=embed)
+        except (ValueError, discord.Forbidden, discord.NotFound) as error:
+            logger.warning(f"No se pudo enviar DM privado al cliente: {error}")

@@ -66,6 +66,9 @@ event_processor = None
 from cogs.setup_server import SetupServer
 from cogs.events import Events
 from cogs.role_sync import RoleSync
+from cogs.tickets import Tickets
+from cogs.admin import Admin
+from cogs.services import Services
 
 # Storage (en produccion usar Supabase)
 tickets = {}
@@ -115,14 +118,14 @@ def webhook():
     """Webhook endpoint para recibir eventos de la web"""
     try:
         data = request.json
-        logger.info(f"Webhook recibido: {data}")
+        logger.info("Webhook recibido: tipo=%s id=%s", data.get('event_type'), data.get('event_id'))
 
         # Validar token secreto (opcional para desarrollo)
         webhook_secret = os.getenv('DISCORD_WEBHOOK_SECRET')
         auth_header = request.headers.get('Authorization')
 
-        if webhook_secret and auth_header:
-            if not auth_header.startswith('Bearer '):
+        if webhook_secret:
+            if not auth_header or not auth_header.startswith('Bearer '):
                 logger.error("Webhook sin autenticación válida")
                 return jsonify({'success': False, 'message': 'Unauthorized'}), 401
 
@@ -248,9 +251,13 @@ async def on_ready():
     logger.info('EventProcessor inicializado')
 
     # Cargar cogs
-    await bot.add_cog(SetupServer(bot))
-    await bot.add_cog(Events(bot))
-    await bot.add_cog(RoleSync(bot))
+    if not bot.get_cog('SetupServer'):
+        await bot.add_cog(SetupServer(bot))
+        await bot.add_cog(Events(bot))
+        await bot.add_cog(RoleSync(bot))
+        await bot.add_cog(Tickets(bot))
+        await bot.add_cog(Admin(bot))
+        await bot.add_cog(Services(bot))
     logger.info('Cogs cargados')
 
     await bot.change_presence(
@@ -261,7 +268,8 @@ async def on_ready():
         status=discord.Status.online
     )
 
-    await setup_professional_server()
+    # La configuración del servidor sólo se ejecuta con el comando !setup.
+    # Nunca se crean o eliminan canales automáticamente al reiniciar el bot.
 
 async def setup_professional_server():
     """Setup del servidor profesional"""

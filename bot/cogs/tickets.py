@@ -1,4 +1,5 @@
 import discord
+import os
 from discord.ext import commands
 from discord import ui
 from typing import Optional
@@ -90,11 +91,11 @@ class Tickets(commands.Cog):
             description = modal_interaction.data['components'][0]['value']
             
             # Crear canal privado para el ticket
-            category = ctx.guild.get_channel_named("tickets")
+            category = discord.utils.get(ctx.guild.categories, name="Tickets")
             if not category:
                 overwrites = {
-                    discord.PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True, attach_files=True),
-                    discord.PermissionOverwrite(ctx.guild.default_role, view_channel=False)
+                    ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+                    ctx.guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True, manage_channels=True)
                 }
                 category = await ctx.guild.create_category("Tickets", overwrites=overwrites)
             
@@ -103,6 +104,22 @@ class Tickets(commands.Cog):
                 ctx.author: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True, attach_files=True),
                 ctx.guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True, manage_channels=True)
             }
+
+            for role_id in (config.DISCORD_STAFF_ROLE_ID, config.DISCORD_ADMIN_ROLE_ID):
+                if role_id:
+                    role = ctx.guild.get_role(int(role_id))
+                    if role:
+                        overwrites[role] = discord.PermissionOverwrite(
+                            view_channel=True, send_messages=True, read_messages=True,
+                            read_message_history=True, attach_files=True
+                        )
+            for role_name in ('Staff', 'Admin', 'Owner', 'Soporte'):
+                role = discord.utils.get(ctx.guild.roles, name=role_name)
+                if role:
+                    overwrites[role] = discord.PermissionOverwrite(
+                        view_channel=True, send_messages=True, read_messages=True,
+                        read_message_history=True, attach_files=True
+                    )
             
             channel = await category.create_text_channel(
                 name=f"ticket-{ctx.author.name}-{ctx.author.discriminator}",
@@ -154,7 +171,10 @@ class Tickets(commands.Cog):
                 color=config.COLOR_SUCCESS
             )
             
-            await ctx.send(embed=success_embed)
+            try:
+                await ctx.author.send(embed=success_embed)
+            except discord.Forbidden:
+                pass
             await modal_interaction.response.send_message("✅ Ticket creado exitosamente", ephemeral=True)
             
             logger.info(f"Ticket {ticket_id} created by {ctx.author} in {ctx.guild.name}")
@@ -220,6 +240,45 @@ class Tickets(commands.Cog):
         await ctx.send("✅ Ticket cerrado exitosamente.")
         
         logger.info(f"Ticket {ticket} closed by {ctx.author} in {ctx.guild.name}")
+
+    @commands.command(name='pago')
+    async def private_payment_link(self, ctx, order_id: str = ''):
+        """Envía por DM el enlace privado al pago de un pedido."""
+        if not order_id:
+            await ctx.author.send("Uso: `!pago ID_DEL_PEDIDO`")
+            return
+        site_url = os.getenv('SITE_URL', 'https://www.thedulcandesign.com').rstrip('/')
+        embed = discord.Embed(
+            title="🔒 Pago seguro",
+            description="El pago se completa en Stripe. El bot nunca pedirá datos bancarios ni de tarjeta.",
+            color=config.COLOR_PRIMARY
+        )
+        embed.add_field(name="Abrir pago", value=f"{site_url}/pago?orderId={order_id}", inline=False)
+        await ctx.author.send(embed=embed)
+        if ctx.guild:
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden:
+                pass
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        """Registra texto y adjuntos sólo dentro del ticket privado."""
+        if message.author.bot or not isinstance(message.channel, discord.TextChannel):
+            return
+        ticket_id = next((ticket_id for ticket_id, data in ticket_db.tickets.items()
+                          if data.get('channel_id') == str(message.channel.id) and data.get('status') == 'open'), None)
+        if not ticket_id:
+            return
+        attachments = [attachment.url for attachment in message.attachments]
+        content = message.content.strip()
+        if attachments:
+            content = f"{content}\nAdjuntos privados:\n" + "\n".join(attachments)
+        if content:
+            ticket_db.add_message(
+                ticket_id, str(message.author.id), str(message.author), content,
+                is_staff=is_staff(message.author, config.DISCORD_STAFF_ROLE_ID)
+            )
 
 async def setup(bot):
     await bot.add_cog(Tickets(bot))

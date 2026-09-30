@@ -8,7 +8,7 @@ interface DiscordEvent {
   event_type: string
   created_at: string
   organization_id: string
-  payload: Record<string, any>
+  payload: Record<string, unknown>
 }
 
 interface DiscordConfig {
@@ -104,6 +104,7 @@ class DiscordIntegrationService {
     order_number: string
     service_name: string
     customer_name: string
+    discord_user_id?: string
   }): Promise<boolean> {
     const event: DiscordEvent = {
       event_id: `order_paid_${orderData.order_id}_${Date.now()}`,
@@ -114,7 +115,8 @@ class DiscordIntegrationService {
         order_id: orderData.order_id,
         order_number: orderData.order_number,
         service_name: orderData.service_name,
-        customer_name: orderData.customer_name
+        customer_name: orderData.customer_name,
+        discord_user_id: orderData.discord_user_id
       }
     }
 
@@ -228,7 +230,7 @@ class DiscordIntegrationService {
     level: 'info' | 'warning' | 'error' | 'critical'
     message: string
     origin: string
-    technical_info?: Record<string, any>
+    technical_info?: Record<string, unknown>
   }): Promise<boolean> {
     const event: DiscordEvent = {
       event_id: `alert_${alertData.level}_${Date.now()}`,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe-server'
+import { getDiscordService } from '@/lib/discord-integration'
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe()
@@ -28,6 +29,21 @@ export async function POST(request: NextRequest) {
         notes: `Pago Stripe confirmado. Sesión: ${checkout.id}`,
       }).eq('id', checkout.metadata.order_id).eq('user_id', checkout.metadata.user_id).eq('status', 'pending')
       if (error) return NextResponse.json({ error: 'No se pudo actualizar el pedido' }, { status: 500 })
+
+      const { data: order } = await supabase.from('orders')
+        .select('id, order_number, client_name, services(name), users(discord_id)')
+        .eq('id', checkout.metadata.order_id).maybeSingle()
+      if (order) {
+        const service = Array.isArray(order.services) ? order.services[0] : order.services
+        const user = Array.isArray(order.users) ? order.users[0] : order.users
+        await getDiscordService().notifyOrderPaid({
+          order_id: order.id,
+          order_number: order.order_number,
+          service_name: service?.name || 'Servicio',
+          customer_name: order.client_name,
+          discord_user_id: user?.discord_id || undefined,
+        })
+      }
     }
   }
 
