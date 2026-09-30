@@ -9,6 +9,19 @@ const updateSchema = z.object({
   is_active: z.boolean(),
 })
 
+export async function GET() {
+  const auth = await requireAdminRole()
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const { data, error } = await auth.supabase
+    .from('services')
+    .select('*')
+    .order('sort_order', { ascending: true })
+
+  if (error) return NextResponse.json({ error: 'No se pudieron cargar los servicios' }, { status: 500 })
+  return NextResponse.json({ services: data || [] })
+}
+
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdminRole(true)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })

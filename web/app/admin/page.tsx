@@ -130,15 +130,18 @@ export default function AdminPage() {
       })))
     }
 
-    // Cargar servicios
-    const { data: servicesData, error: servicesError } = await supabase
-      .from('services')
-      .select('*')
-      .order('sort_order', { ascending: true })
-
-    if (servicesError) {
-    } else {
-      if (servicesData) setServices(servicesData)
+    // Cargar todos los servicios desde el servidor. La consulta pública de
+    // Supabase oculta los inactivos, pero el panel debe poder reactivarlos.
+    try {
+      const servicesResponse = await fetch('/api/admin/services', { cache: 'no-store' })
+      if (servicesResponse.ok) {
+        const servicesPayload = await servicesResponse.json()
+        setServices(servicesPayload.services || [])
+      } else {
+        notifyError('No se pudieron cargar los servicios del panel')
+      }
+    } catch {
+      notifyError('No se pudieron cargar los servicios del panel')
     }
 
     // Cargar sesiones de chat (todas, filtrar en código)
