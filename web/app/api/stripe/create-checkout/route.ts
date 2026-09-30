@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     const service = Array.isArray(order.services) ? order.services[0] : order.services
     const checkout = await stripe.checkout.sessions.create({
       mode: 'payment',
+      payment_method_types: ['card'],
       customer_email: order.client_email,
       client_reference_id: order.id,
       metadata: { order_id: order.id, user_id: session.user.id, order_number: order.order_number },
@@ -41,9 +42,12 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Error desconocido'
     console.error('[stripe/create-checkout] No se pudo crear la sesión', { message })
 
-    const publicMessage = message.toLowerCase().includes('api key')
+    const normalizedMessage = message.toLowerCase()
+    const publicMessage = normalizedMessage.includes('api key')
       ? 'La clave de Stripe configurada no es válida. Revisa STRIPE_SECRET_KEY en Vercel.'
-      : message.toLowerCase().includes('account') || message.toLowerCase().includes('charges')
+      : normalizedMessage.includes('payment method')
+        ? 'Los pagos con tarjeta todavía no están activos en Stripe. Actívalos en la configuración de métodos de pago.'
+        : normalizedMessage.includes('account') || normalizedMessage.includes('charges')
         ? 'Stripe todavía no permite recibir pagos en esta cuenta. Revisa el estado de verificación en Stripe.'
         : 'Stripe no pudo iniciar el pago. Revisa los registros de la función en Vercel.'
 
