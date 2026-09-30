@@ -1,72 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/client'
+import { getServerSession } from '@/lib/auth-server'
+import { createClient } from '@/lib/supabase/server'
+import { getPayPalAccessToken, paypalBaseUrl } from '@/lib/paypal-server'
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { paypalOrderId } = body
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
+  const { paypalOrderId, orderId } = await request.json()
+  if (!paypalOrderId || !orderId) return NextResponse.json({ error: 'Pago inválido' }, { status: 400 })
 
-    if (!paypalOrderId) {
-      return NextResponse.json(
-        { error: 'Missing PayPal order ID' },
-        { status: 400 }
-      )
-    }
+  const supabase = await createClient()
+  const { data: order } = await supabase.from('orders').select('id, price')
+    .eq('id', orderId).eq('user_id', session.user.id).eq('status', 'pending').is('deleted_at', null).maybeSingle()
+  if (!order) return NextResponse.json({ error: 'Pedido no encontrado o ya procesado' }, { status: 404 })
 
-    // Capturar el pago en PayPal
-    const paypalApiUrl = process.env.PAYPAL_MODE === 'sandbox'
-      ? `https://api-m.sandbox.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`
-      : `https://api-m.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`
+  const accessToken = await getPayPalAccessToken()
+  if (!accessToken) return NextResponse.json({ error: 'PayPal aún no está configurado' }, { status: 503 })
+  const response = await fetch(`${paypalBaseUrl()}/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`, {
+    method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+  })
+  const payload = await response.json()
+  const purchase = payload.purchase_units?.[0]
+  const capture = purchase?.payments?.captures?.[0]
+  const valid = response.ok && payload.status === 'COMPLETED' && purchase?.custom_id === order.id &&
+    capture?.status === 'COMPLETED' && capture?.amount?.currency_code === 'USD' &&
+    capture?.amount?.value === Number(order.price).toFixed(2)
+  if (!valid) return NextResponse.json({ error: 'El pago no pudo verificarse' }, { status: 422 })
 
-    const response = await fetch(paypalApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(
-          `${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
-        ).toString('base64')}`,
-      },
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error('PayPal capture error:', data)
-      return NextResponse.json(
-        { error: 'Failed to capture PayPal payment' },
-        { status: 500 }
-      )
-    }
-
-    // Si el pago fue exitoso, actualizar el estado del pedido en Supabase
-    if (data.status === 'COMPLETED') {
-      const supabase = createClient()
-      const customId = data.purchase_units[0]?.custom_id
-
-      if (customId) {
-        // Verificar que el pedido existe y no está soft-deleted
-        const { data: order } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('id', customId)
-          .is('deleted_at', null)
-          .single()
-
-        if (order) {
-          await supabase
-            .from('orders')
-            .update({ status: 'paid' })
-            .eq('id', customId)
-        }
-      }
-    }
-
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('PayPal capture order error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
+  const { error } = await supabase.from('orders')
+    .update({ status: 'reviewing', notes: `Pago PayPal confirmado. Captura: ${capture.id}` })
+    .eq('id', order.id).eq('user_id', session.user.id).eq('status', 'pending')
+  if (error) return NextResponse.json({ error: 'Pago recibido; no se pudo actualizar el pedido' }, { status: 500 })
+  return NextResponse.json({ success: true, captureId: capture.id })
 }
