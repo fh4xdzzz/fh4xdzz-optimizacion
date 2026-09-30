@@ -158,7 +158,7 @@ export default function AdminPage() {
     const activeSessions = allSessions?.filter((s: any) => s.status !== 'closed') || []
     const closedSessions = allSessions?.filter((s: any) => s.status === 'closed') || []
 
-    setChatSessions(activeSessions.map((session: any) => ({
+    const mapChatSession = (session: any): ChatSession => ({
       id: session.id,
       conversation_number: session.conversation_number,
       status: session.status,
@@ -169,36 +169,22 @@ export default function AdminPage() {
       client_id: session.client_id,
       client_name: session.users?.full_name || session.users?.email || 'Cliente',
       client_email: session.users?.email || '',
-    })))
+    })
 
-    setChatHistory(closedSessions.map((session: any) => ({
-      id: session.id,
-      conversation_number: session.conversation_number,
-      status: session.status,
-      priority: session.priority,
-      assigned_agent_id: session.assigned_agent_id,
-      subject: session.subject,
-      created_at: session.created_at,
-      client_id: session.client_id,
-      client_name: session.users?.full_name || session.users?.email || 'Cliente',
-      client_email: session.users?.email || '',
-    })))
+    const mappedActiveSessions = activeSessions.map(mapChatSession)
+    const mappedClosedSessions = closedSessions.map(mapChatSession)
+
+    setChatSessions(mappedActiveSessions)
+
+    setChatHistory(mappedClosedSessions)
+    setSelectedChat(current => {
+      if (!current) return null
+      return [...mappedActiveSessions, ...mappedClosedSessions].find(chat => chat.id === current.id) || null
+    })
 
     // Cargar últimos mensajes para sesiones activas
     if (activeSessions.length > 0) {
-      const mappedSessions = activeSessions.map((session: any) => ({
-        id: session.id,
-        conversation_number: session.conversation_number,
-        status: session.status,
-        priority: session.priority,
-        assigned_agent_id: session.assigned_agent_id,
-        subject: session.subject,
-        created_at: session.created_at,
-        client_id: session.client_id,
-        client_name: session.users?.full_name || session.users?.email || 'Cliente',
-        client_email: session.users?.email || '',
-      }))
-      await loadLastMessages(mappedSessions)
+      await loadLastMessages(mappedActiveSessions)
     }
 
 
@@ -523,6 +509,20 @@ export default function AdminPage() {
     
     setLastMessages(lastMessagesMap)
   }
+
+  // Respaldo para instalaciones donde Supabase Realtime no esté publicado o
+  // el websocket se desconecte. Realtime sigue siendo la vía inmediata.
+  useEffect(() => {
+    if (isDemo || loading) return
+
+    const syncSupport = async () => {
+      await loadAdminData()
+      if (selectedChat) await loadChatMessages(selectedChat.id)
+    }
+
+    const interval = window.setInterval(syncSupport, 3000)
+    return () => window.clearInterval(interval)
+  }, [isDemo, loading, selectedChat?.id])
 
   const handleClaimChat = async (sessionId: string) => {
     try {

@@ -301,6 +301,29 @@ export default function SupportChatWidget() {
     }
   }
 
+  // Respaldo de Realtime: mantiene el chat sincronizado aunque el websocket
+  // sea bloqueado o la tabla no esté todavía en la publicación de Supabase.
+  useEffect(() => {
+    if (!session || !isAuthenticated) return
+
+    const syncChat = async () => {
+      try {
+        const response = await fetch('/api/chat/sessions', { cache: 'no-store' })
+        if (response.ok) {
+          const data = await response.json()
+          const updated = data.sessions?.find((item: ChatSession) => item.id === session.id)
+          if (updated) setSession(updated)
+        }
+        if (session.status !== 'closed') await loadMessages(session.id)
+      } catch {
+        // Realtime seguirá funcionando si una consulta puntual falla.
+      }
+    }
+
+    const interval = window.setInterval(syncChat, 3000)
+    return () => window.clearInterval(interval)
+  }, [session?.id, session?.status, isAuthenticated])
+
   // Crear nueva sesión de chat
   async function createSession() {
     if (session) return session
