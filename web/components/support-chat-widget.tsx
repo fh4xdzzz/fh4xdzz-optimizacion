@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
-import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, User } from 'lucide-react'
+import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, Search, ShieldCheck, Sparkles, ChevronRight } from 'lucide-react'
 import { useNotificationStore } from '@/lib/notifications-store'
 
 interface Message {
@@ -28,10 +28,19 @@ interface ChatSession {
   created_at: string
 }
 
+const PROFESSIONAL_EMOJIS = ['😀', '😊', '😂', '😍', '🤔', '😎', '👍', '👎', '👌', '👏', '🙏', '👋', '💪', '🎮', '💻', '🎙️', '🎧', '📸', '✅', '❌', '⚠️', '🔥', '⭐', '💙']
+
+const QUICK_ACTIONS = [
+  { label: 'Problema técnico', message: 'Hola, necesito ayuda con un problema técnico.' },
+  { label: 'OBS o streaming', message: 'Hola, necesito ayuda con OBS o mi configuración de streaming.' },
+  { label: 'Pagos y pedidos', message: 'Hola, necesito ayuda con un pago o pedido.' },
+]
+
 export default function SupportChatWidget() {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'chat' | 'articles'>('chat')
+  const [articleSearch, setArticleSearch] = useState('')
   const [session, setSession] = useState<ChatSession | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
@@ -80,6 +89,11 @@ export default function SupportChatWidget() {
       message: 'Hola, necesito ayuda para configurar bitrate, encoder y audio. ¿Cuáles son los valores recomendados?'
     }
   ]
+
+  const filteredArticles = articles.filter((article) => {
+    const query = articleSearch.trim().toLowerCase()
+    return !query || `${article.title} ${article.description}`.toLowerCase().includes(query)
+  })
 
   // Respuestas automáticas del bot
   const botResponses = [
@@ -533,30 +547,41 @@ export default function SupportChatWidget() {
 
   if (!open) {
     return (
-      <button
-        onClick={() => {
-          setOpen(true)
-          setUnread(0)
-        }}
-        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-110"
-        aria-label="Abrir chat de soporte"
-      >
-        <MessageCircle size={28} />
-        {unread > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 min-w-6 rounded-full bg-red-600 text-xs font-bold text-white border-2 border-white animate-pulse">
-            {unread > 9 ? '9+' : unread}
-          </span>
-        )}
-      </button>
+      <div className="fixed bottom-5 right-4 z-50 flex items-center gap-3 sm:bottom-6 sm:right-6">
+        <div className="hidden rounded-2xl border border-white/10 bg-[#15151c]/95 px-4 py-3 text-right shadow-2xl backdrop-blur-xl sm:block">
+          <p className="text-sm font-bold text-white">¿Necesitas ayuda?</p>
+          <p className="mt-0.5 text-xs text-white/60">{isOnline ? 'Estamos en línea' : 'Déjanos un mensaje'}</p>
+        </div>
+        <button
+          onClick={() => {
+            setOpen(true)
+            setUnread(0)
+          }}
+          className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-indigo-500 to-violet-600 text-white shadow-[0_16px_50px_rgba(79,70,229,0.45)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(79,70,229,0.6)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/40"
+          aria-label="Abrir chat de soporte"
+        >
+          <MessageCircle size={27} className="transition-transform group-hover:scale-110" />
+          <span className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] border-[#0a0a0a] ${isOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+          {unread > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-xs font-bold text-white">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </button>
+      </div>
     )
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col w-[390px] max-w-[calc(100vw-24px)] h-[720px] max-h-[90vh] bg-[#1a1a1a] rounded-[28px] shadow-2xl overflow-hidden border border-[#333333]">
+    <section
+      className="fixed inset-0 z-50 flex h-[100dvh] w-full flex-col overflow-hidden bg-[#0d0d12] shadow-2xl sm:inset-auto sm:bottom-5 sm:right-5 sm:h-[730px] sm:max-h-[calc(100vh-40px)] sm:w-[400px] sm:rounded-[26px] sm:border sm:border-white/10"
+      aria-label="Soporte de TheDulcanDesign"
+    >
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 p-5 pb-4">
+      <header className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-5 pb-4">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-white/15 blur-3xl" />
         <div className="flex items-start justify-between">
-          <div>
+          <div className="relative">
             <div className="flex items-center gap-2 mb-3">
               <div className="flex -space-x-2">
                 {onlineAgents.length > 0 ? (
@@ -576,25 +601,26 @@ export default function SupportChatWidget() {
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-xs font-semibold text-white/90">
-                  {isOnline ? 'Online' : 'Offline'}
+              <div className="flex items-center gap-1.5 rounded-full bg-black/20 px-2.5 py-1 backdrop-blur">
+                <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-emerald-300' : 'bg-amber-300'}`} />
+                <span className="text-xs font-semibold text-white">
+                  {isOnline ? `${onlineAgents.length} en línea` : 'Fuera de horario'}
                 </span>
               </div>
             </div>
-            <h2 className="text-xl font-black text-white">
+            <h2 className="text-xl font-black tracking-tight text-white">
               {assignedAgentName ? `Soporte con ${assignedAgentName}` : 'Soporte'}
             </h2>
-            <p className="mt-1 text-sm text-white/90">
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-white/85">
+              <ShieldCheck size={14} />
               {['admin', 'staff', 'owner'].includes(currentUser?.role) 
                 ? 'Puedes responder directamente a este chat' 
-                : 'Normalmente responde en menos de 5 minutos'}
+                : isOnline ? 'Normalmente respondemos en menos de 5 minutos' : 'Responderemos en cuanto volvamos'}
             </p>
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full bg-black/20 transition-colors hover:bg-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             aria-label="Cerrar chat"
           >
             <X size={18} className="text-white" />
@@ -602,11 +628,11 @@ export default function SupportChatWidget() {
         </div>
 
         {/* Tabs */}
-        <nav className="mt-4 grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/20">
+        <nav className="relative mt-4 grid grid-cols-2 gap-1 rounded-xl bg-black/20 p-1" aria-label="Secciones de soporte">
           <button
             onClick={() => setTab('chat')}
-            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-colors ${
-              tab === 'chat' ? 'bg-white text-gray-900' : 'text-white/80 hover:text-white'
+            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-all ${
+              tab === 'chat' ? 'bg-white text-gray-900 shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white'
             }`}
           >
             <MessagesSquare size={16} />
@@ -614,8 +640,8 @@ export default function SupportChatWidget() {
           </button>
           <button
             onClick={() => setTab('articles')}
-            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-colors ${
-              tab === 'articles' ? 'bg-white text-gray-900' : 'text-white/80 hover:text-white'
+            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-all ${
+              tab === 'articles' ? 'bg-white text-gray-900 shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white'
             }`}
           >
             <BookOpen size={16} />
@@ -626,20 +652,48 @@ export default function SupportChatWidget() {
 
       {/* Content */}
       {tab === 'articles' ? (
-        <div className="flex-1 overflow-auto p-5 space-y-3 bg-[#0a0a0a]">
-          {articles.map((article, index) => (
+        <div className="flex-1 space-y-3 overflow-auto bg-[#0d0d12] p-5">
+          <div className="relative mb-4">
+            <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35" />
+            <input
+              value={articleSearch}
+              onChange={(event) => setArticleSearch(event.target.value)}
+              placeholder="Buscar en el centro de ayuda"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.06] py-3 pl-10 pr-4 text-sm text-white outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-white">Respuestas rápidas</p>
+              <p className="text-xs text-white/45">Elige un tema para comenzar</p>
+            </div>
+            <BookOpen size={20} className="text-indigo-400" />
+          </div>
+          {filteredArticles.map((article, index) => (
             <article
               key={index}
               onClick={() => {
                 setText(article.message)
                 setTab('chat')
               }}
-              className="p-4 bg-[#1a1a1a] rounded-2xl border border-[#333333] hover:border-blue-500 transition-colors cursor-pointer"
+              className="group flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-4 transition hover:-translate-y-0.5 hover:border-indigo-400/60 hover:bg-white/[0.07]"
             >
-              <h3 className="font-bold text-[#ededed]">{article.title}</h3>
-              <p className="mt-1 text-sm text-[#6b7280]">{article.description}</p>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300"><BookOpen size={18} /></span>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-white">{article.title}</h3>
+                <p className="mt-1 text-sm text-white/45">{article.description}</p>
+              </div>
+              <ChevronRight size={18} className="text-white/25 transition group-hover:translate-x-0.5 group-hover:text-indigo-300" />
             </article>
           ))}
+          {filteredArticles.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center">
+              <p className="font-semibold text-white">No encontramos ese tema</p>
+              <button onClick={() => { setText(`Hola, necesito ayuda con: ${articleSearch}`); setTab('chat') }} className="mt-3 text-sm font-bold text-indigo-300 hover:text-indigo-200">
+                Preguntar al equipo
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -688,12 +742,31 @@ export default function SupportChatWidget() {
                 </button>
               </div>
             ) : messages.length === 0 ? (
-              <div className="p-4 bg-[#1a1a1a] rounded-2xl text-sm text-[#ededed] border border-[#333333]">
-                <p className="font-bold">¡Hola! 👋</p>
-                <p className="mt-2">
-                  Bienvenido a nuestro soporte. Estamos aquí para ayudarte con OBS, streaming, PC, gaming y soporte técnico.
-                </p>
-                <p className="mt-2">Cuéntanos qué problema tienes y te ayudaremos.</p>
+              <div className="space-y-4 py-2">
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.03] p-5 text-sm text-white shadow-lg">
+                  <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
+                    <Sparkles size={21} />
+                  </span>
+                  <p className="text-lg font-black">¡Hola! ¿Cómo podemos ayudarte?</p>
+                  <p className="mt-2 leading-relaxed text-white/55">
+                    Habla con nuestro equipo sobre OBS, streaming, optimización, pagos o soporte técnico.
+                  </p>
+                </div>
+                <div>
+                  <p className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.16em] text-white/35">Comenzar rápidamente</p>
+                  <div className="space-y-2">
+                    {QUICK_ACTIONS.map((action) => (
+                      <button
+                        key={action.label}
+                        onClick={() => setText(action.message)}
+                        className="group flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-indigo-400/50 hover:bg-indigo-500/10"
+                      >
+                        {action.label}
+                        <ChevronRight size={17} className="text-white/25 transition group-hover:translate-x-0.5 group-hover:text-indigo-300" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -755,15 +828,16 @@ export default function SupportChatWidget() {
           </div>
 
           {/* Input */}
-          <div className="p-4 bg-[#1a1a1a] border-t border-[#333333]">
+          <div className="border-t border-white/10 bg-[#15151c] p-3 sm:p-4">
             {showEmojiPicker && (
-              <div className="mb-4 p-4 bg-[#0a0a0a] border border-[#333333] rounded-2xl">
-                <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto">
-                  {emojis.map(emoji => (
+              <div className="mb-3 rounded-2xl border border-white/10 bg-[#0d0d12] p-3 shadow-xl">
+                <div className="grid max-h-40 grid-cols-8 gap-1 overflow-y-auto">
+                  {PROFESSIONAL_EMOJIS.map(emoji => (
                     <button
+                      type="button"
                       key={emoji}
                       onClick={() => handleEmojiSelect(emoji)}
-                      className="text-2xl hover:bg-[#333333] rounded p-1 transition-colors"
+                      className="rounded-lg p-1 text-xl transition-colors hover:bg-white/10"
                     >
                       {emoji}
                     </button>
@@ -771,7 +845,7 @@ export default function SupportChatWidget() {
                 </div>
               </div>
             )}
-            <form onSubmit={sendMessage} className="flex items-center gap-2">
+            <form onSubmit={sendMessage} className="flex items-end gap-2">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -783,7 +857,7 @@ export default function SupportChatWidget() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingFile}
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#333333] transition-colors text-[#6b7280]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/45 transition-colors hover:bg-white/10 hover:text-white"
                 aria-label="Adjuntar archivo"
               >
                 {uploadingFile ? '...' : <Paperclip size={20} />}
@@ -798,13 +872,13 @@ export default function SupportChatWidget() {
                     ? 'Responde como agente de soporte...'
                     : 'Escribe tu mensaje...'
                 }
-                className="flex-1 px-4 py-2 bg-[#0a0a0a] rounded-full text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-blue-500 border border-[#333333]"
+                className="min-h-11 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/25 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
                 disabled={loading}
               />
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#333333] transition-colors text-[#6b7280]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/45 transition-colors hover:bg-white/10 hover:text-white"
                 aria-label="Emoji"
               >
                 <Smile size={20} />
@@ -812,7 +886,7 @@ export default function SupportChatWidget() {
               <button
                 type="submit"
                 disabled={!text.trim() || loading}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Enviar mensaje"
               >
                 <Send size={18} />
@@ -843,6 +917,6 @@ export default function SupportChatWidget() {
           />
         </div>
       )}
-    </div>
+    </section>
   )
 }
