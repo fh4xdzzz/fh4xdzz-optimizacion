@@ -114,9 +114,13 @@ function ContactFormContent() {
 
       // Guardar en Supabase
       const supabase = createClient()
+      const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const uniquePart = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
+      const newOrderNumber = `ORD${datePart}${uniquePart}`
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
+          order_number: newOrderNumber,
           user_id: session.user.id,
           service_id: service.id,
           client_name: formData.name,
@@ -169,7 +173,16 @@ function ContactFormContent() {
       })
     } catch (error) {
       console.error('Error al crear pedido:', error)
-      setErrors({ general: 'Error al crear el pedido. Inténtalo de nuevo.' })
+      const message = error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message?: unknown }).message || '')
+          : ''
+      setErrors({
+        general: message
+          ? `No se pudo crear el pedido: ${message}`
+          : 'Error al crear el pedido. Inténtalo de nuevo.'
+      })
     } finally {
       setIsSubmitting(false)
     }
