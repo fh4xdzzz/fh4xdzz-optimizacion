@@ -24,8 +24,8 @@ class DiscordIntegrationService {
 
   constructor() {
     this.config = {
-      webhookUrl: process.env.DISCORD_WEBHOOK_URL || '',
-      webhookSecret: process.env.DISCORD_WEBHOOK_SECRET || '',
+      webhookUrl: process.env.DISCORD_WEBHOOK_URL || process.env.DISCORD_BOT_API_URL || '',
+      webhookSecret: process.env.DISCORD_WEBHOOK_SECRET || process.env.DISCORD_BOT_API_SECRET || '',
       botApiUrl: process.env.DISCORD_BOT_API_URL || '',
       botApiSecret: process.env.DISCORD_BOT_API_SECRET || '',
       notificationChannelId: process.env.DISCORD_NOTIFICATION_CHANNEL_ID || ''
@@ -157,6 +157,7 @@ class DiscordIntegrationService {
     category: string
     subject: string
     description: string
+    discord_user_id?: string
   }): Promise<boolean> {
     const event: DiscordEvent = {
       event_id: `ticket_${ticketData.ticket_id}_${Date.now()}`,
@@ -168,7 +169,8 @@ class DiscordIntegrationService {
         customer_name: ticketData.customer_name,
         category: ticketData.category,
         subject: ticketData.subject,
-        description: ticketData.description
+        description: ticketData.description,
+        discord_user_id: ticketData.discord_user_id
       }
     }
 
@@ -183,6 +185,7 @@ class DiscordIntegrationService {
     customer_name: string
     message: string
     sender: 'customer' | 'staff'
+    discord_user_id?: string
   }): Promise<boolean> {
     const event: DiscordEvent = {
       event_id: `ticket_message_${ticketData.ticket_id}_${Date.now()}`,
@@ -193,7 +196,8 @@ class DiscordIntegrationService {
         ticket_id: ticketData.ticket_id,
         customer_name: ticketData.customer_name,
         message: ticketData.message,
-        sender: ticketData.sender
+        sender: ticketData.sender,
+        discord_user_id: ticketData.discord_user_id
       }
     }
 

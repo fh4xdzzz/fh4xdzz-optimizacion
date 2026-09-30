@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getServerSession } from '@/lib/auth-server'
+import { getDiscordService } from '@/lib/discord-integration'
 
 // GET /api/chat/sessions - Obtener sesiones del usuario actual
 export async function GET(request: NextRequest) {
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Verificar si el usuario existe en la tabla users
     const { data: userRecord, error: userError } = await supabase
       .from('users')
-      .select('id, role')
+      .select('id, role, full_name, email, discord_id')
       .eq('id', session.user.id)
       .single()
 
@@ -130,6 +131,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Created new session successfully:', newSession.id, newSession.conversation_number, newSession.status)
+
+    await getDiscordService().notifyNewTicket({
+      ticket_id: newSession.conversation_number,
+      customer_name: userRecord.full_name || userRecord.email || 'Cliente',
+      category: service_type || 'general',
+      subject: subject || 'Soporte web',
+      description: 'El cliente abrió una conversación privada desde la web.',
+      discord_user_id: userRecord.discord_id || undefined,
+    })
 
     return NextResponse.json({ session: newSession, existing: false })
   } catch (error) {
