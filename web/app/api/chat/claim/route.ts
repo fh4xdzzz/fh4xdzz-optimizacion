@@ -25,8 +25,51 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // La función SQL serializa los reclamos del agente y bloquea la conversación.
-    const { data: chatSession, error: claimError } = await supabase
+    let { data: chatSession, error: claimError } = await supabase
       .rpc('claim_chat_session', { p_session_id: session_id })
+
+    // Compatibilidad mientras la migración SQL todavía no se ha aplicado.
+    const rpcMissing = claimError && (
+      claimError.code === 'PGRST202' ||
+      claimError.code === '42883' ||
+      claimError.message?.includes('claim_chat_session')
+    )
+
+    if (rpcMissing) {
+      const { data: activeChat, error: activeChatError } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('assigned_agent_id', session.user.id)
+        .neq('status', 'closed')
+        .limit(1)
+        .maybeSingle()
+
+      if (activeChatError) {
+        return NextResponse.json({ error: 'No se pudo verificar tu disponibilidad.' }, { status: 500 })
+      }
+      if (activeChat) {
+        return NextResponse.json({ error: 'Ya tienes un chat activo. Ciérralo o transfiérelo antes de reclamar otro.' }, { status: 409 })
+      }
+
+      const fallbackResult = await supabase
+        .from('chat_sessions')
+        .update({
+          assigned_agent_id: session.user.id,
+          status: 'active',
+          claimed_at: new Date().toISOString(),
+        })
+        .eq('id', session_id)
+        .eq('status', 'waiting')
+        .is('assigned_agent_id', null)
+        .select()
+        .maybeSingle()
+
+      chatSession = fallbackResult.data
+      claimError = fallbackResult.error
+      if (!claimError && !chatSession) {
+        return NextResponse.json({ error: 'Otro agente ya reclamó este chat.' }, { status: 409 })
+      }
+    }
 
     if (claimError) {
       const message = claimError.message || ''
