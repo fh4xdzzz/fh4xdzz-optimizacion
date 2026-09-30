@@ -10,6 +10,8 @@ import { Modal } from '@/components/ui/modal'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
 import { useNotificationStore } from '@/lib/notifications-store'
+import AdminSettings from '@/components/admin/admin-settings'
+import { updateSupabaseOrderStatus } from '@/lib/supabase/orders'
 
 interface User {
   id: string
@@ -30,6 +32,7 @@ interface Order {
   client_name: string
   client_email: string
   description: string
+  notes?: string
 }
 
 interface Service {
@@ -121,6 +124,7 @@ export default function AdminPage() {
         client_name: order.client_name,
         client_email: order.client_email,
         description: order.description,
+        notes: order.notes,
       })))
     }
 
@@ -421,6 +425,64 @@ export default function AdminPage() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       notifyError('Error al cambiar destacado: ' + errorMessage)
+    }
+  }
+
+  const updateUserRole = async (userId: string, role: User['role']) => {
+    try {
+      const response = await fetch('/api/admin/users/role', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'No se pudo cambiar el rol')
+      setUsers((current) => current.map((user) => user.id === userId ? { ...user, role } : user))
+      notifySuccess('Rol actualizado correctamente')
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'No se pudo cambiar el rol')
+    }
+  }
+
+  const editService = async (service: Service) => {
+    const name = window.prompt('Nombre del servicio', service.name)
+    if (name === null) return
+    const priceText = window.prompt('Precio del servicio', String(service.price))
+    if (priceText === null) return
+    const price = Number(priceText)
+    if (!name.trim() || !Number.isFinite(price) || price < 0) {
+      notifyWarning('Nombre o precio inválido')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/admin/services', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: service.id, name: name.trim(), price, is_active: service.is_active }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'No se pudo actualizar el servicio')
+      setServices((current) => current.map((item) => item.id === service.id ? { ...item, name: name.trim(), price } : item))
+      notifySuccess('Servicio actualizado correctamente')
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'No se pudo actualizar el servicio')
+    }
+  }
+
+  const toggleServiceActive = async (service: Service) => {
+    try {
+      const response = await fetch('/api/admin/services', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: service.id, name: service.name, price: service.price, is_active: !service.is_active }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'No se pudo actualizar el servicio')
+      setServices((current) => current.map((item) => item.id === service.id ? { ...item, is_active: !service.is_active } : item))
+      notifySuccess(service.is_active ? 'Servicio desactivado' : 'Servicio activado')
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'No se pudo actualizar el servicio')
     }
   }
 
@@ -809,6 +871,18 @@ export default function AdminPage() {
                             {user.full_name || 'Sin nombre'} • {formatDate(user.created_at)}
                           </div>
                         </div>
+                        {userRole === 'owner' && user.role !== 'owner' && (
+                          <select
+                            aria-label={`Rol de ${user.email}`}
+                            value={user.role}
+                            onChange={(event) => updateUserRole(user.id, event.target.value as User['role'])}
+                            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground"
+                          >
+                            <option value="client">Cliente</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -924,13 +998,15 @@ export default function AdminPage() {
                         </div>
                         <div className="flex gap-2">
                           {userRole === 'owner' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleFeatured(service.id, service.is_featured)}
-                            >
-                              {service.is_featured ? 'Quitar destacado' : 'Marcar destacado'}
-                            </Button>
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => editService(service)}>Editar</Button>
+                              <Button variant="outline" size="sm" onClick={() => toggleServiceActive(service)}>
+                                {service.is_active ? 'Desactivar' : 'Activar'}
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => toggleFeatured(service.id, service.is_featured)}>
+                                {service.is_featured ? 'Quitar destacado' : 'Marcar destacado'}
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -1383,203 +1459,8 @@ export default function AdminPage() {
           )}
 
           {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Información del Negocio</CardTitle>
-                  <CardDescription>Configura la información básica de tu negocio</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Nombre del negocio</label>
-                      <input
-                        type="text"
-                        value="TheDulcanDesign"
-                        disabled
-                        className="w-full px-4 py-2 rounded-lg border border-border bg-muted text-muted-foreground cursor-not-allowed"
-                      />
-                      <p className="text-xs text-muted mt-1">El nombre del negocio es fijo</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Email de contacto</label>
-                      <input
-                        type="email"
-                        defaultValue="thedulcandesign@gmail.com"
-                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Teléfono</label>
-                      <input
-                        type="text"
-                        placeholder="+1 234 567 890"
-                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Dirección</label>
-                      <input
-                        type="text"
-                        placeholder="Calle, Ciudad, País"
-                        className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Enlace de Discord</label>
-                    <input
-                      type="url"
-                      defaultValue="https://discord.gg/DXkEXrYRvM"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <Button>Guardar cambios</Button>
-                </CardContent>
-              </Card>
+          {activeTab === 'settings' && <AdminSettings />}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Redes Sociales</CardTitle>
-                  <CardDescription>Configura los enlaces a tus redes sociales</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Discord</label>
-                    <input
-                      type="url"
-                      defaultValue="https://discord.gg/DXkEXrYRvM"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Twitter</label>
-                    <input
-                      type="url"
-                      placeholder="https://twitter.com/tuusuario"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">YouTube</label>
-                    <input
-                      type="url"
-                      placeholder="https://youtube.com/tucanal"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Instagram</label>
-                    <input
-                      type="url"
-                      placeholder="https://instagram.com/tuusuario"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <Button>Guardar cambios</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Formulario de Contacto</CardTitle>
-                  <CardDescription>Configura el formulario de contacto</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Habilitar formulario</div>
-                      <div className="text-sm text-muted">Permite que los usuarios envíen mensajes de contacto</div>
-                    </div>
-                    <input type="checkbox" defaultChecked className="w-5 h-5" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Habilitar reCAPTCHA</div>
-                      <div className="text-sm text-muted">Protege el formulario contra spam</div>
-                    </div>
-                    <input type="checkbox" className="w-5 h-5" />
-                  </div>
-                  <Button>Guardar cambios</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configuración de Pagos</CardTitle>
-                  <CardDescription>Configura los métodos de pago</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Moneda</label>
-                    <select className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                      <option value="USD">USD - Dólar Estadounidense</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="MXN">MXN - Peso Mexicano</option>
-                      <option value="COP">COP - Peso Colombiano</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Habilitar PayPal</div>
-                      <div className="text-sm text-muted">Acepta pagos con PayPal</div>
-                    </div>
-                    <input type="checkbox" className="w-5 h-5" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Habilitar Stripe</div>
-                      <div className="text-sm text-muted">Acepta pagos con tarjetas de crédito</div>
-                    </div>
-                    <input type="checkbox" className="w-5 h-5" />
-                  </div>
-                  <Button>Guardar cambios</Button>
-                </CardContent>
-              </Card>
-
-
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Integración con Discord</CardTitle>
-                  <CardDescription>Configura la integración con tu bot de Discord</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">URL del Bot de Discord</label>
-                    <input
-                      type="url"
-                      placeholder="http://localhost:5000/webhook"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Webhook Secret</label>
-                    <input
-                      type="password"
-                      placeholder="Tu webhook secreto"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">ID del Canal de Notificaciones</label>
-                    <input
-                      type="text"
-                      placeholder="ID del canal de Discord"
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button>Guardar cambios</Button>
-                    <Button variant="outline">Probar conexión</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
         </div>
       </section>
 
@@ -1670,37 +1551,12 @@ export default function AdminPage() {
                   className="flex-1 hover-lift shimmer-button"
                   onClick={async () => {
                     try {
-                      const supabase = createClient()
-                      const { error } = await supabase
-                        .from('orders')
-                        .update({ status: newStatus })
-                        .eq('id', selectedOrder.id)
-
-                      if (error) throw error
-
-                      // Reload orders
-                      const { data: updatedOrders } = await supabase
-                        .from('orders')
-                        .select('*, services(name)')
-                        .is('deleted_at', null)
-                        .order('created_at', { ascending: false })
-
-                      if (updatedOrders) {
-                        setOrders(updatedOrders.map((order: any) => ({
-                          id: order.id,
-                          order_number: order.order_number,
-                          user_id: order.user_id,
-                          service_name: order.services?.name || 'Servicio desconocido',
-                          status: order.status,
-                          created_at: order.created_at,
-                          client_name: order.client_name,
-                          client_email: order.client_email,
-                          description: order.description,
-                        })))
-                      }
-
+                      await updateSupabaseOrderStatus(selectedOrder.id, newStatus, orderNote.trim() || undefined)
+                      await loadAdminData()
                       setShowOrderModal(false)
+                      notifySuccess('Pedido actualizado correctamente')
                     } catch (error) {
+                      notifyError(error instanceof Error ? error.message : 'No se pudo actualizar el pedido')
                     }
                   }}
                 >

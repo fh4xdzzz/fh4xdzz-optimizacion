@@ -107,12 +107,15 @@ export async function updateSupabaseOrderStatus(
     if (!currentOrder) throw new Error('Order not found')
 
     // Actualizar pedido
+    const updatePayload: { status: string; updated_at: string; notes?: string } = {
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    }
+    if (notes?.trim()) updatePayload.notes = notes.trim()
+
     const { data, error } = await supabase
       .from('orders')
-      .update({
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', orderId)
       .select()
       .single()
