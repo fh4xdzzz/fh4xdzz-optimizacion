@@ -258,7 +258,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted text-base leading-relaxed">
-                  Aceptamos PayPal, transferencia bancaria y criptomonedas. Los detalles se proporcionan al confirmar el servicio.
+                  Aceptamos tarjetas de crédito y débito mediante Stripe. Los métodos adicionales disponibles se muestran en el pago seguro.
                 </p>
               </CardContent>
             </Card>
