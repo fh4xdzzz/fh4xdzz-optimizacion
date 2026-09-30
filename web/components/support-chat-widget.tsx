@@ -646,7 +646,7 @@ export default function SupportChatWidget() {
           {/* Messages */}
           <div 
             ref={messagesContainerRef}
-            className="flex-1 overflow-auto p-4 space-y-3 bg-[#0a0a0a] relative"
+            className="relative flex-1 space-y-3 overflow-y-auto overflow-x-hidden bg-[#0a0a0a] p-4"
           >
             {authLoading ? (
               <div className="p-4 bg-[#1a1a1a] rounded-2xl text-sm text-[#ededed] border border-[#333333] text-center">
@@ -708,7 +708,7 @@ export default function SupportChatWidget() {
                   className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl p-3 ${
+                    className={`min-w-0 max-w-[80%] rounded-2xl p-3 ${
                       isClient
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
                         : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
@@ -727,10 +727,10 @@ export default function SupportChatWidget() {
                     {isAttachment && !isImage && (
                       <div className="flex items-center gap-2 mb-2">
                         <Paperclip size={16} />
-                        <span className="text-sm">{message.attachment_name}</span>
+                        <span className="min-w-0 break-words [overflow-wrap:anywhere] text-sm">{message.attachment_name}</span>
                       </div>
                     )}
-                    {!isAttachment && <p className="text-sm">{message.message}</p>}
+                    {!isAttachment && <p className="break-words [overflow-wrap:anywhere] text-sm">{message.message}</p>}
                     <p
                       className={`text-xs mt-1 ${
                         isClient ? 'text-white/80' : 'text-[#6b7280]'
