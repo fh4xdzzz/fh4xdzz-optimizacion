@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, Clock3, MessageCircle, PackageCheck, Paperclip, UserRound } from 'lucide-react'
+import { Check, Clock3, Download, FileArchive, MessageCircle, PackageCheck, Paperclip, RotateCcw, UserRound } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
@@ -52,11 +52,23 @@ interface OrderEvent {
   created_at: string
 }
 
+interface Deliverable {
+  id: string
+  fileName: string
+  contentType: string
+  fileSize: number
+  note: string | null
+  createdAt: string
+  downloadUrl: string | null
+}
+
 export default function OrdersPage() {
   const supabase = useMemo(() => createClient(), [])
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [events, setEvents] = useState<OrderEvent[]>([])
+  const [deliverables, setDeliverables] = useState<Deliverable[]>([])
+  const [loadingDeliverables, setLoadingDeliverables] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -116,6 +128,7 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!selectedId) {
       setEvents([])
+      setDeliverables([])
       return
     }
     const loadEvents = async () => {
@@ -127,6 +140,12 @@ export default function OrdersPage() {
       setEvents((data || []) as OrderEvent[])
     }
     loadEvents()
+    setLoadingDeliverables(true)
+    fetch(`/api/orders/${selectedId}/deliverables`, { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : Promise.reject())
+      .then(payload => setDeliverables(payload.deliverables || []))
+      .catch(() => setDeliverables([]))
+      .finally(() => setLoadingDeliverables(false))
   }, [selectedId, supabase])
 
   const selectedOrder = orders.find(order => order.id === selectedId) || null
@@ -141,6 +160,17 @@ export default function OrdersPage() {
       detail: { message: `Hola, necesito ayuda privada con mi pedido ${selectedOrder.order_number}.` },
     }))
   }
+
+  const requestRevision = () => {
+    if (!selectedOrder) return
+    window.dispatchEvent(new CustomEvent('open-support-chat', {
+      detail: { message: `Hola, quiero solicitar una revisión privada de la entrega del pedido ${selectedOrder.order_number}.` },
+    }))
+  }
+
+  const formatFileSize = (bytes: number) => bytes >= 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`
 
   return (
     <div className="min-h-screen bg-background">
@@ -195,6 +225,19 @@ export default function OrdersPage() {
 
                     <div className="rounded-xl border border-white/10 bg-black/10 p-5"><p className="text-xs uppercase tracking-wider text-muted">Tu solicitud</p><p className="mt-3 break-words text-sm leading-6 text-foreground/90">{selectedOrder.description}</p></div>
                     <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold">Canal privado del pedido</h3><p className="mt-1 text-sm text-muted">Escribe al equipo o envía capturas y archivos de hasta 4 MB.</p></div><Button onClick={openPrivateSupport} className="shrink-0"><MessageCircle className="mr-2 h-4 w-4" />Abrir soporte</Button></div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-primary/20">
+                  <CardHeader><CardTitle className="text-xl">Entregas privadas</CardTitle><CardDescription>Archivos finales compartidos exclusivamente contigo.</CardDescription></CardHeader>
+                  <CardContent className="space-y-4">
+                    {loadingDeliverables ? <div className="h-20 animate-pulse rounded-xl bg-white/5" /> : deliverables.length > 0 ? <>
+                      {deliverables.map(file => <div key={file.id} className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><FileArchive className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate font-medium">{file.fileName}</p><p className="mt-1 text-xs text-muted">{formatFileSize(file.fileSize)} · {formatDate(file.createdAt)}</p>{file.note && <p className="mt-2 break-words text-sm text-foreground/80">{file.note}</p>}</div></div>
+                        {file.downloadUrl && <Button href={file.downloadUrl} target="_blank" rel="noopener noreferrer" variant="outline" size="sm"><Download className="mr-2 h-4 w-4" />Descargar</Button>}
+                      </div>)}
+                      <div className="flex flex-col gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">¿Necesitas un ajuste?</p><p className="mt-1 text-sm text-muted">Solicita una revisión y explica el cambio en el canal privado.</p></div><Button variant="outline" size="sm" onClick={requestRevision}><RotateCcw className="mr-2 h-4 w-4" />Solicitar revisión</Button></div>
+                    </> : <div className="rounded-xl border border-dashed border-white/15 p-6 text-center"><FileArchive className="mx-auto mb-3 h-7 w-7 text-muted" /><p className="font-medium">Aún no hay archivos de entrega</p><p className="mt-1 text-sm text-muted">Aparecerán aquí cuando el especialista termine el trabajo.</p></div>}
                   </CardContent>
                 </Card>
 
