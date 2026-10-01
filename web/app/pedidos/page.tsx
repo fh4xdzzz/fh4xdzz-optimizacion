@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, Clock3, Download, FileArchive, MessageCircle, PackageCheck, Paperclip, RotateCcw, UserRound } from 'lucide-react'
+import { Check, Clock3, Copy, Download, FileArchive, MessageCircle, MonitorCog, PackageCheck, Paperclip, RotateCcw, ShieldCheck, UserRound } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
@@ -62,6 +62,18 @@ interface Deliverable {
   downloadUrl: string | null
 }
 
+interface OptimizerReport {
+  id: string
+  app_version: string
+  device_name: string | null
+  created_at: string
+  report: {
+    latest?: { capturedAt: string; hardware: unknown[]; system: unknown[]; network: unknown[]; obs: unknown[] } | null
+    baseline?: { capturedAt: string } | null
+    actions?: unknown[]
+  }
+}
+
 export default function OrdersPage() {
   const supabase = useMemo(() => createClient(), [])
   const [orders, setOrders] = useState<Order[]>([])
@@ -69,6 +81,9 @@ export default function OrdersPage() {
   const [events, setEvents] = useState<OrderEvent[]>([])
   const [deliverables, setDeliverables] = useState<Deliverable[]>([])
   const [loadingDeliverables, setLoadingDeliverables] = useState(false)
+  const [optimizerReports, setOptimizerReports] = useState<OptimizerReport[]>([])
+  const [optimizerCode, setOptimizerCode] = useState<{ code: string; expiresAt: string } | null>(null)
+  const [loadingOptimizer, setLoadingOptimizer] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -129,6 +144,8 @@ export default function OrdersPage() {
     if (!selectedId) {
       setEvents([])
       setDeliverables([])
+      setOptimizerReports([])
+      setOptimizerCode(null)
       return
     }
     const loadEvents = async () => {
@@ -146,6 +163,11 @@ export default function OrdersPage() {
       .then(payload => setDeliverables(payload.deliverables || []))
       .catch(() => setDeliverables([]))
       .finally(() => setLoadingDeliverables(false))
+    fetch(`/api/orders/${selectedId}/optimizer`, { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : Promise.reject())
+      .then(payload => setOptimizerReports(payload.reports || []))
+      .catch(() => setOptimizerReports([]))
+    setOptimizerCode(null)
   }, [selectedId, supabase])
 
   const selectedOrder = orders.find(order => order.id === selectedId) || null
@@ -171,6 +193,27 @@ export default function OrdersPage() {
   const formatFileSize = (bytes: number) => bytes >= 1024 * 1024
     ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
     : `${Math.max(1, Math.round(bytes / 1024))} KB`
+
+  const createOptimizerCode = async () => {
+    if (!selectedOrder || loadingOptimizer) return
+    setLoadingOptimizer(true)
+    try {
+      const response = await fetch(`/api/orders/${selectedOrder.id}/optimizer`, { method: 'POST' })
+      const payload = await response.json() as { code?: string; expiresAt?: string; error?: string }
+      if (!response.ok || !payload.code || !payload.expiresAt) throw new Error(payload.error || 'No se pudo generar el código.')
+      setOptimizerCode({ code: payload.code, expiresAt: payload.expiresAt })
+    } catch (optimizerError) {
+      notifyInfo(optimizerError instanceof Error ? optimizerError.message : 'No se pudo generar el código.')
+    } finally {
+      setLoadingOptimizer(false)
+    }
+  }
+
+  const copyOptimizerCode = async () => {
+    if (!optimizerCode) return
+    await navigator.clipboard.writeText(optimizerCode.code)
+    notifyInfo('Código copiado. Pégalo en Dulcan Optimizer.')
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -225,6 +268,17 @@ export default function OrdersPage() {
 
                     <div className="rounded-xl border border-white/10 bg-black/10 p-5"><p className="text-xs uppercase tracking-wider text-muted">Tu solicitud</p><p className="mt-3 break-words text-sm leading-6 text-foreground/90">{selectedOrder.description}</p></div>
                     <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold">Canal privado del pedido</h3><p className="mt-1 text-sm text-muted">Escribe al equipo o envía capturas y archivos de hasta 4 MB.</p></div><Button onClick={openPrivateSupport} className="shrink-0"><MessageCircle className="mr-2 h-4 w-4" />Abrir soporte</Button></div>
+                  </CardContent>
+                </Card>
+
+                <Card className="overflow-hidden border-cyan-400/25 bg-gradient-to-br from-cyan-500/10 via-card to-card">
+                  <CardHeader>
+                    <div className="flex items-start gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-300"><MonitorCog className="h-6 w-6" /></div><div><CardTitle className="text-xl">Dulcan Optimizer</CardTitle><CardDescription className="mt-1">Envía el diagnóstico de tu PC directamente a este pedido.</CardDescription></div></div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-xl border border-white/10 bg-black/15 p-4 text-sm text-muted"><div className="mb-2 flex items-center gap-2 font-medium text-foreground"><ShieldCheck className="h-4 w-4 text-emerald-400" />Conexión privada y temporal</div>El código dura 30 minutos, funciona una sola vez y no comparte contraseñas ni archivos personales.</div>
+                    {optimizerCode ? <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 text-center"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Código de conexión</p><p className="my-3 font-mono text-3xl font-black tracking-[0.18em] text-white">{optimizerCode.code}</p><p className="mb-4 text-xs text-muted">Vence {formatDate(optimizerCode.expiresAt)}</p><Button onClick={copyOptimizerCode} variant="outline" size="sm"><Copy className="mr-2 h-4 w-4" />Copiar código</Button></div> : <Button onClick={createOptimizerCode} disabled={loadingOptimizer}>{loadingOptimizer ? 'Generando…' : 'Conectar Dulcan Optimizer'}</Button>}
+                    {optimizerReports.length > 0 && <div className="space-y-3 border-t border-white/10 pt-4"><p className="text-sm font-semibold">Diagnósticos recibidos ({optimizerReports.length})</p>{optimizerReports.slice(0, 3).map(report => <div key={report.id} className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{report.device_name || 'Equipo del cliente'}</p><p className="mt-1 text-xs text-muted">Optimizer {report.app_version} · {formatDate(report.created_at)}</p></div><span className="mt-2 w-fit rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300 sm:mt-0">Recibido</span></div>)}</div>}
                   </CardContent>
                 </Card>
 

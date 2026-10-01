@@ -53,6 +53,14 @@ interface OrderDeliverable {
   created_at: string
 }
 
+interface OptimizerReport {
+  id: string
+  app_version: string
+  device_name: string | null
+  created_at: string
+  report: { latest?: { capturedAt: string; hardware: unknown[]; system: unknown[]; network: unknown[]; obs: unknown[] } | null; actions?: unknown[] }
+}
+
 interface Service {
   id: string
   name: string
@@ -119,6 +127,7 @@ export default function AdminPage() {
   const [estimatedCompletion, setEstimatedCompletion] = useState('')
   const [orderEvents, setOrderEvents] = useState<OrderEvent[]>([])
   const [orderDeliverables, setOrderDeliverables] = useState<OrderDeliverable[]>([])
+  const [optimizerReports, setOptimizerReports] = useState<OptimizerReport[]>([])
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null)
   const [deliveryNote, setDeliveryNote] = useState('')
   const [uploadingDelivery, setUploadingDelivery] = useState(false)
@@ -408,6 +417,17 @@ export default function AdminPage() {
       .limit(8)
     setOrderEvents((data || []) as OrderEvent[])
     await loadOrderDeliverables(order.id)
+    await loadOptimizerReports(order.id)
+  }
+
+  const loadOptimizerReports = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/optimizer`, { cache: 'no-store' })
+      const payload = await response.json()
+      setOptimizerReports(response.ok ? payload.reports || [] : [])
+    } catch {
+      setOptimizerReports([])
+    }
   }
 
   const loadOrderDeliverables = async (orderId: string) => {
@@ -1920,6 +1940,15 @@ export default function AdminPage() {
 
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3"><div><p className="font-medium">Soporte privado del cliente</p><p className="text-sm text-muted">Busca sus conversaciones para responder o revisar archivos.</p></div><Button variant="outline" size="sm" onClick={() => openCustomerSupport(selectedOrder)}>Abrir soporte</Button></div>
+              </div>
+
+              <div className="border-t border-border/50 pt-5">
+                <p className="font-medium">Diagnósticos de Dulcan Optimizer</p>
+                <p className="mt-1 text-sm text-muted">Informes privados enviados por el cliente desde su equipo.</p>
+                <div className="mt-4 space-y-3">
+                  {optimizerReports.map(report => <div key={report.id} className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-medium">{report.device_name || 'Equipo del cliente'}</p><span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">Optimizer {report.app_version}</span></div><p className="mt-2 text-xs text-muted">Recibido {formatDate(report.created_at)} · {report.report.latest?.hardware?.length || 0} datos de hardware · {report.report.actions?.length || 0} acciones registradas</p></div>)}
+                  {optimizerReports.length === 0 && <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-sm text-muted">El cliente todavía no ha enviado un diagnóstico.</p>}
+                </div>
               </div>
 
               <div className="border-t border-border/50 pt-5">
