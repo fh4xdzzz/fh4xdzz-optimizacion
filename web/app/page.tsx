@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
+import { SupportChatButton } from '@/components/support-chat-trigger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 
@@ -74,9 +75,9 @@ export default function Home() {
                 Optimizar mi setup
                 <span aria-hidden="true" className="ml-2">→</span>
               </Button>
-              <Button variant="outline" size="lg" href="/contacto" className="h-14 border-white/15 bg-white/[.03] px-8 text-base hover:bg-white/[.07]">
+              <SupportChatButton variant="outline" size="lg" className="h-14 border-white/15 bg-white/[.03] px-8 text-base hover:bg-white/[.07]">
                 Hablar con un especialista
-              </Button>
+              </SupportChatButton>
             </div>
             <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm text-muted lg:justify-start">
               {['Pago seguro con Stripe', 'Soporte privado', 'Configuración personalizada'].map((item) => (
@@ -339,9 +340,9 @@ export default function Home() {
               <Button variant="primary" size="lg" href="/servicios" className="shimmer-button text-lg px-10 py-5">
                 Ver Servicios
               </Button>
-              <Button variant="outline" size="lg" href="/contacto" className="text-lg px-10 py-5">
+              <SupportChatButton variant="outline" size="lg" className="text-lg px-10 py-5">
                 Contactar
-              </Button>
+              </SupportChatButton>
             </div>
           </div>
         </div>
@@ -352,3 +353,4 @@ export default function Home() {
     </div>
   )
 }
+
