@@ -83,6 +83,8 @@ interface ChatMessage {
   sender_role: string
   message: string
   message_type: string
+  attachment_path?: string | null
+  attachment_name?: string | null
   created_at: string
 }
 
@@ -94,6 +96,7 @@ export default function AdminPage() {
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([])
   const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [selectedChatImage, setSelectedChatImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'support' | 'history' | 'settings'>('overview')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -1392,6 +1395,13 @@ export default function AdminPage() {
                       <div className="h-[400px] overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-[#0a0a0a]">
                         {chatMessages.map((message) => {
                           const isClient = message.sender_role === 'client'
+                          const isAttachment = message.message_type === 'attachment'
+                          const isImage = Boolean(
+                            isAttachment && message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+                          )
+                          const attachmentUrl = message.attachment_path
+                            ? `/api/chat/attachments/view?path=${encodeURIComponent(message.attachment_path)}`
+                            : null
                           return (
                             <div
                               key={message.id}
@@ -1404,7 +1414,34 @@ export default function AdminPage() {
                                     : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
                                 }`}
                               >
-                                <p className="break-words [overflow-wrap:anywhere] text-sm">{message.message}</p>
+                                {isImage && attachmentUrl ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedChatImage(attachmentUrl)}
+                                    className="block max-w-full overflow-hidden rounded-xl border border-white/15 bg-black/20 text-left"
+                                    aria-label={`Abrir imagen ${message.attachment_name || 'adjunta'}`}
+                                  >
+                                    <img
+                                      src={attachmentUrl}
+                                      alt={message.attachment_name || 'Imagen adjunta'}
+                                      className="max-h-72 w-auto max-w-full object-contain transition-opacity hover:opacity-90"
+                                    />
+                                    <span className="block break-words px-3 py-2 text-xs [overflow-wrap:anywhere]">
+                                      {message.attachment_name}
+                                    </span>
+                                  </button>
+                                ) : isAttachment && attachmentUrl ? (
+                                  <a
+                                    href={attachmentUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block break-words text-sm underline underline-offset-2 [overflow-wrap:anywhere]"
+                                  >
+                                    📎 {message.attachment_name || 'Abrir archivo adjunto'}
+                                  </a>
+                                ) : (
+                                  <p className="break-words [overflow-wrap:anywhere] text-sm">{message.message}</p>
+                                )}
                                 <p className={`text-xs mt-1 ${isClient ? 'text-white/80' : 'text-[#6b7280]'}`}>
                                   {new Date(message.created_at).toLocaleTimeString('es-ES')}
                                 </p>
@@ -1886,6 +1923,31 @@ export default function AdminPage() {
         cancelText="Cancelar"
         variant="destructive"
       />
+
+      {selectedChatImage && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vista previa de imagen adjunta"
+          onClick={() => setSelectedChatImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedChatImage(null)}
+            className="absolute right-5 top-5 rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xl text-white"
+            aria-label="Cerrar vista previa"
+          >
+            ×
+          </button>
+          <img
+            src={selectedChatImage}
+            alt="Imagen adjunta ampliada"
+            className="max-h-[90vh] max-w-[95vw] rounded-xl object-contain shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
 
       <Footer />
       </div>
