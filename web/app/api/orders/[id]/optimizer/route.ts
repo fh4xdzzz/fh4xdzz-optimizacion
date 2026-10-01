@@ -21,7 +21,13 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     .eq('order_id', id)
     .order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: 'No se pudieron cargar los diagnósticos.' }, { status: 500 })
-  return NextResponse.json({ reports: data || [] })
+  const { data: release } = await supabase.from('optimizer_releases').select('version, file_name, file_path, file_size, sha256, release_notes, created_at').eq('is_active', true).maybeSingle()
+  let downloadUrl: string | null = null
+  if (release) {
+    const { data: signed } = await supabase.storage.from('optimizer-releases').createSignedUrl(release.file_path, 600, { download: release.file_name })
+    downloadUrl = signed?.signedUrl || null
+  }
+  return NextResponse.json({ reports: data || [], release: release ? { version: release.version, fileName: release.file_name, fileSize: release.file_size, sha256: release.sha256, releaseNotes: release.release_notes, createdAt: release.created_at, downloadUrl } : null })
 }
 
 export async function POST(_request: NextRequest, context: { params: Promise<{ id: string }> }) {

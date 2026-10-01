@@ -74,6 +74,16 @@ interface OptimizerReport {
   }
 }
 
+interface OptimizerRelease {
+  version: string
+  fileName: string
+  fileSize: number
+  sha256: string
+  releaseNotes: string | null
+  createdAt: string
+  downloadUrl: string | null
+}
+
 export default function OrdersPage() {
   const supabase = useMemo(() => createClient(), [])
   const [orders, setOrders] = useState<Order[]>([])
@@ -83,6 +93,7 @@ export default function OrdersPage() {
   const [loadingDeliverables, setLoadingDeliverables] = useState(false)
   const [optimizerReports, setOptimizerReports] = useState<OptimizerReport[]>([])
   const [optimizerCode, setOptimizerCode] = useState<{ code: string; expiresAt: string } | null>(null)
+  const [optimizerRelease, setOptimizerRelease] = useState<OptimizerRelease | null>(null)
   const [loadingOptimizer, setLoadingOptimizer] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -146,6 +157,7 @@ export default function OrdersPage() {
       setDeliverables([])
       setOptimizerReports([])
       setOptimizerCode(null)
+      setOptimizerRelease(null)
       return
     }
     const loadEvents = async () => {
@@ -165,8 +177,8 @@ export default function OrdersPage() {
       .finally(() => setLoadingDeliverables(false))
     fetch(`/api/orders/${selectedId}/optimizer`, { cache: 'no-store' })
       .then(response => response.ok ? response.json() : Promise.reject())
-      .then(payload => setOptimizerReports(payload.reports || []))
-      .catch(() => setOptimizerReports([]))
+      .then(payload => { setOptimizerReports(payload.reports || []); setOptimizerRelease(payload.release || null) })
+      .catch(() => { setOptimizerReports([]); setOptimizerRelease(null) })
     setOptimizerCode(null)
   }, [selectedId, supabase])
 
@@ -277,6 +289,8 @@ export default function OrdersPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="rounded-xl border border-white/10 bg-black/15 p-4 text-sm text-muted"><div className="mb-2 flex items-center gap-2 font-medium text-foreground"><ShieldCheck className="h-4 w-4 text-emerald-400" />Conexión privada y temporal</div>El código dura 30 minutos, funciona una sola vez y no comparte contraseñas ni archivos personales.</div>
+                    {optimizerRelease && <div className="flex flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Dulcan Optimizer {optimizerRelease.version}</p><p className="mt-1 text-xs text-muted">{formatFileSize(optimizerRelease.fileSize)} · Instalador privado para Windows</p>{optimizerRelease.releaseNotes && <p className="mt-2 text-sm text-foreground/80">{optimizerRelease.releaseNotes}</p>}</div>{optimizerRelease.downloadUrl && <Button href={optimizerRelease.downloadUrl} target="_blank" rel="noopener noreferrer" className="shrink-0"><Download className="mr-2 h-4 w-4" />Descargar</Button>}</div>}
+                    {!optimizerRelease && <div className="rounded-xl border border-dashed border-white/15 p-4 text-sm text-muted">El instalador estará disponible aquí cuando el equipo publique la primera versión.</div>}
                     {optimizerCode ? <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 text-center"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Código de conexión</p><p className="my-3 font-mono text-3xl font-black tracking-[0.18em] text-white">{optimizerCode.code}</p><p className="mb-4 text-xs text-muted">Vence {formatDate(optimizerCode.expiresAt)}</p><Button onClick={copyOptimizerCode} variant="outline" size="sm"><Copy className="mr-2 h-4 w-4" />Copiar código</Button></div> : <Button onClick={createOptimizerCode} disabled={loadingOptimizer}>{loadingOptimizer ? 'Generando…' : 'Conectar Dulcan Optimizer'}</Button>}
                     {optimizerReports.length > 0 && <div className="space-y-3 border-t border-white/10 pt-4"><p className="text-sm font-semibold">Diagnósticos recibidos ({optimizerReports.length})</p>{optimizerReports.slice(0, 3).map(report => <div key={report.id} className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{report.device_name || 'Equipo del cliente'}</p><p className="mt-1 text-xs text-muted">Optimizer {report.app_version} · {formatDate(report.created_at)}</p></div><span className="mt-2 w-fit rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300 sm:mt-0">Recibido</span></div>)}</div>}
                   </CardContent>
