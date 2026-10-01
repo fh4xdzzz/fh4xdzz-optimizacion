@@ -828,6 +828,9 @@ export default function AdminPage() {
     closed: { label: 'Cerrado', color: 'bg-gray-500', bgColor: 'bg-gray-500/10' },
   }
 
+  const orderHistory = orders.filter(order => ['completed', 'cancelled'].includes(order.status))
+  const activeOrders = orders.filter(order => !['completed', 'cancelled'].includes(order.status))
+
   // Filtrar, buscar y ordenar sesiones de chat
   const getFilteredAndSortedSessions = () => {
     let filtered = supportFilter === 'closed' ? [...chatHistory] : [...chatSessions]
@@ -963,7 +966,7 @@ export default function AdminPage() {
               }`}
               onClick={() => setActiveTab('orders')}
             >
-              Pedidos ({orders.length})
+              Pedidos ({activeOrders.length})
             </button>
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
@@ -993,7 +996,7 @@ export default function AdminPage() {
               }`}
               onClick={() => setActiveTab('history')}
             >
-              Historial ({chatHistory.length})
+              Historial ({orderHistory.length})
             </button>
             {(userRole === 'owner') && (
               <button
@@ -1112,10 +1115,10 @@ export default function AdminPage() {
           {activeTab === 'orders' && (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-4">
-                <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5"><p className="text-sm text-blue-300">Por revisar</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'reviewing').length}</p></div>
-                <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5"><p className="text-sm text-violet-300">En proceso</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'in_progress').length}</p></div>
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5"><p className="text-sm text-amber-300">Esperando cliente</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'waiting_client').length}</p></div>
-                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5"><p className="text-sm text-emerald-300">Completados</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'completed').length}</p></div>
+                <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5"><p className="text-sm text-blue-300">Por revisar</p><p className="mt-2 text-3xl font-bold">{activeOrders.filter(order => order.status === 'reviewing').length}</p></div>
+                <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5"><p className="text-sm text-violet-300">En proceso</p><p className="mt-2 text-3xl font-bold">{activeOrders.filter(order => order.status === 'in_progress').length}</p></div>
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5"><p className="text-sm text-amber-300">Esperando cliente</p><p className="mt-2 text-3xl font-bold">{activeOrders.filter(order => order.status === 'waiting_client').length}</p></div>
+                <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5"><p className="text-sm text-sky-300">Pedidos activos</p><p className="mt-2 text-3xl font-bold">{activeOrders.length}</p></div>
               </div>
             <Card className="glass-card hover-glow animate-fade-in-up">
               <CardHeader>
@@ -1123,9 +1126,9 @@ export default function AdminPage() {
                 <CardDescription className="text-base">Gestión de pedidos de todos los usuarios</CardDescription>
               </CardHeader>
               <CardContent>
-                {orders.length > 0 ? (
+                {activeOrders.length > 0 ? (
                   <div className="space-y-4">
-                    {orders.map((order, index) => (
+                    {activeOrders.map((order, index) => (
                       <div
                         key={order.id}
                         className="flex items-center justify-between p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
@@ -1312,7 +1315,7 @@ export default function AdminPage() {
                             : 'border border-border bg-transparent text-muted-foreground'
                         }`}
                       >
-                        Cerrados ({chatSessions.filter(s => s.status === 'closed').length})
+                        Cerrados ({chatHistory.length})
                       </button>
                     </div>
 
@@ -1670,35 +1673,31 @@ export default function AdminPage() {
             <div className="space-y-6">
               <Card className="glass-card hover-glow animate-fade-in-up">
                 <CardHeader>
-                  <CardTitle className="text-2xl">Historial de Chats</CardTitle>
-                  <CardDescription className="text-base">Chats cerrados (se eliminan automáticamente después de 24 horas)</CardDescription>
+                  <CardTitle className="text-2xl">Historial de Pedidos</CardTitle>
+                  <CardDescription className="text-base">Pedidos completados y cancelados</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {chatHistory.length > 0 ? (
-                      chatHistory.map((chat, index) => (
+                    {orderHistory.length > 0 ? (
+                      orderHistory.map((order, index) => (
                         <div
-                          key={chat.id}
+                          key={order.id}
                           className="p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
-                                <div className="font-medium text-lg text-[#ededed]">{chat.client_name}</div>
-                                <div className="w-3 h-3 rounded-full bg-gray-500" />
-                                <span className="text-sm text-[#6b7280] font-medium">Cerrado</span>
+                                <div className="font-medium text-lg text-[#ededed]">{order.order_number}</div>
+                                <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'}`} />
+                                <span className="text-sm text-[#6b7280] font-medium">{STATUS_LABELS[order.status]?.label || order.status}</span>
                               </div>
                               <div className="text-base text-[#6b7280]">
-                                {chat.conversation_number} • {formatDate(chat.created_at)}
+                                {order.service_name} • {order.client_name} • {formatDate(order.updated_at || order.created_at)}
                               </div>
                             </div>
                             <button
-                              onClick={() => {
-                                setSelectedChat(chat)
-                                loadChatMessages(chat.id)
-                                setActiveTab('support')
-                              }}
+                              onClick={() => openOrderDetails(order)}
                               className="px-4 py-2 bg-[#333333] text-[#ededed] rounded-lg transition-colors"
                             >
                               Ver detalles
@@ -1708,8 +1707,8 @@ export default function AdminPage() {
                       ))
                     ) : (
                       <div className="text-center py-12">
-                        <p className="text-muted text-lg">No hay chats en el historial</p>
-                        <p className="text-sm text-muted mt-2">Los chats cerrados aparecerán aquí.</p>
+                        <p className="text-muted text-lg">No hay pedidos en el historial</p>
+                        <p className="text-sm text-muted mt-2">Los pedidos completados o cancelados aparecerán aquí.</p>
                       </div>
                     )}
                   </div>
@@ -1893,3 +1892,4 @@ export default function AdminPage() {
     </div>
   )
 }
+
