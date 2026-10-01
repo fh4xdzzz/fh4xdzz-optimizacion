@@ -196,6 +196,7 @@ class EventProcessor:
     async def handle_ticket_message(self, event: Dict[str, Any]):
         """Manejar evento de mensaje en ticket"""
         payload = event.get('payload', {})
+        notification_scope = payload.get('notification_scope', 'support_team')
 
         embed = discord.Embed(
             title="💬 Nuevo Mensaje en Ticket",
@@ -211,7 +212,17 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
-        await self.notify_support_team(embed)
+        # Un mensaje del agente dentro de un chat ya reclamado sólo debe llegar
+        # al cliente. No volvemos a inundar por DM a todo el equipo de soporte.
+        if notification_scope == 'support_team':
+            await self.notify_support_team(embed)
+        elif notification_scope == 'assigned_agent':
+            await self.notify_discord_user(
+                payload.get('assigned_agent_discord_id'),
+                embed,
+                "agente asignado"
+            )
+
         await self.notify_customer(payload, embed)
 
     async def handle_ticket_transferred(self, event: Dict[str, Any]):

@@ -226,6 +226,8 @@ class DiscordIntegrationService {
     message: string
     sender: 'customer' | 'staff'
     discord_user_id?: string
+    notification_scope?: 'support_team' | 'customer_only' | 'assigned_agent'
+    assigned_agent_discord_id?: string
   }): Promise<boolean> {
     const event: DiscordEvent = {
       event_id: `ticket_message_${ticketData.ticket_id}_${Date.now()}`,
@@ -237,7 +239,9 @@ class DiscordIntegrationService {
         customer_name: ticketData.customer_name,
         message: ticketData.message,
         sender: ticketData.sender,
-        discord_user_id: ticketData.discord_user_id
+        discord_user_id: ticketData.discord_user_id,
+        notification_scope: ticketData.notification_scope || 'support_team',
+        assigned_agent_discord_id: ticketData.assigned_agent_discord_id,
       }
     }
 

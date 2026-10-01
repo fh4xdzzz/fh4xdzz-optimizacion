@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
           message: notificationMessage,
           sender: 'staff',
           discord_user_id: client?.discord_id || undefined,
+          notification_scope: 'customer_only',
         })
       }
     }
