@@ -26,11 +26,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  scroll-padding-top: 6rem;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(88, 101, 242, 0.42);
+  color: #fff;
 }
 
 .premium-grid {
@@ -418,3 +429,14 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+@media (max-width: 767px) {
+  .animated-bg {
+    animation-duration: 24s;
+  }
+
+  .animated-bg-overlay {
+    animation: none;
+  }
+}
+
