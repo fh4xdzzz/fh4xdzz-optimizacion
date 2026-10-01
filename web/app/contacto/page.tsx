@@ -49,14 +49,18 @@ function ContactFormContent() {
     }
     loadServices()
 
-    // Cargar email del usuario
-    const loadUserEmail = async () => {
+    // Cargar datos vinculados a la cuenta
+    const loadUserProfile = async () => {
       const session = await getSession()
       if (session) {
-        setFormData(prev => ({ ...prev, email: session.user.email }))
+        setFormData(prev => ({
+          ...prev,
+          email: session.user.email,
+          discord: session.user.discord_username || '',
+        }))
       }
     }
-    loadUserEmail()
+    loadUserProfile()
   }, [searchParams])
 
   const validateForm = () => {
@@ -72,6 +76,10 @@ function ContactFormContent() {
       newErrors.email = 'El email es requerido'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido'
+    }
+
+    if (!formData.discord.trim()) {
+      newErrors.discord = 'Debes vincular tu cuenta de Discord desde tu perfil antes de continuar'
     }
 
     if (!formData.service) {
@@ -116,7 +124,6 @@ function ContactFormContent() {
         body: JSON.stringify({
           serviceId: service.id,
           name: formData.name,
-          discord: formData.discord,
           description: formData.description,
         }),
       })
@@ -230,17 +237,22 @@ function ContactFormContent() {
 
                 <div>
                   <label htmlFor="discord" className="block text-sm font-medium mb-2">
-                    Usuario de Discord (opcional)
+                    Usuario de Discord *
                   </label>
                   <input
                     type="text"
                     id="discord"
                     name="discord"
+                    required
+                    disabled
                     value={formData.discord}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="usuario#1234"
+                    className={`w-full cursor-not-allowed rounded-lg border bg-muted px-4 py-2 text-muted-foreground focus:outline-none ${
+                      errors.discord ? 'border-red-500' : 'border-border'
+                    }`}
+                    placeholder="Vincula Discord desde tu perfil"
                   />
+                  <p className="mt-1 text-sm text-muted">Usuario vinculado a tu cuenta (no editable)</p>
+                  {errors.discord && <p className="mt-1 text-sm text-red-500">{errors.discord}</p>}
                 </div>
 
                 <div>
@@ -339,3 +351,4 @@ export default function ContactPage() {
     </Suspense>
   )
 }
+
