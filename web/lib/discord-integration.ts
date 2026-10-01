@@ -245,6 +245,33 @@ class DiscordIntegrationService {
   }
 
   /**
+   * Notificar una transferencia solamente al nuevo agente responsable.
+   */
+  async notifyTicketTransferred(ticketData: {
+    ticket_id: string
+    customer_name: string
+    from_agent_name: string
+    target_agent_name: string
+    target_discord_user_id: string
+  }): Promise<boolean> {
+    const event: DiscordEvent = {
+      event_id: `ticket_transfer_${ticketData.ticket_id}_${Date.now()}`,
+      event_type: 'ticket.transferred',
+      created_at: new Date().toISOString(),
+      organization_id: 'thedulcandesign',
+      payload: {
+        ticket_id: ticketData.ticket_id,
+        customer_name: ticketData.customer_name,
+        from_agent_name: ticketData.from_agent_name,
+        target_agent_name: ticketData.target_agent_name,
+        target_discord_user_id: ticketData.target_discord_user_id,
+      },
+    }
+
+    return this.sendDiscordEvent(event)
+  }
+
+  /**
    * Notificar nuevo usuario
    */
   async notifyNewUser(userData: {

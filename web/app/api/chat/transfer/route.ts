@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getServerSession } from '@/lib/auth-server'
+import { getDiscordService } from '@/lib/discord-integration'
 
 // POST /api/chat/transfer - Transferir conversación a otro agente
 export async function POST(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     const { data: currentChat } = await supabase
       .from('chat_sessions')
-      .select('id, status, assigned_agent_id')
+      .select('id, conversation_number, status, assigned_agent_id, client_id')
       .eq('id', session_id)
       .maybeSingle()
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     // no existir todavía en cuentas creadas antes del sistema de chat.
     const { data: targetAgent, error: targetAgentError } = await supabase
       .from('users')
-      .select('id, role, full_name, email')
+      .select('id, role, full_name, email, discord_id')
       .eq('id', target_agent_id)
       .maybeSingle()
 
@@ -111,6 +112,21 @@ export async function POST(request: NextRequest) {
       message: `Tu conversación fue transferida a ${targetName}. Continuaremos atendiéndote aquí.`,
       message_type: 'text'
     })
+
+    if (targetAgent.discord_id) {
+      const [{ data: customer }, { data: sourceAgent }] = await Promise.all([
+        supabase.from('users').select('full_name, email').eq('id', currentChat.client_id).maybeSingle(),
+        supabase.from('users').select('full_name, email').eq('id', session.user.id).maybeSingle(),
+      ])
+
+      await getDiscordService().notifyTicketTransferred({
+        ticket_id: currentChat.conversation_number,
+        customer_name: customer?.full_name || customer?.email || 'Cliente',
+        from_agent_name: sourceAgent?.full_name || sourceAgent?.email || 'Otro agente',
+        target_agent_name: targetName,
+        target_discord_user_id: targetAgent.discord_id,
+      })
+    }
 
     return NextResponse.json({ session: chatSession })
   } catch (error) {

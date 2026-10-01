@@ -45,6 +45,8 @@ class EventProcessor:
                 await self.handle_ticket_created(event)
             elif event_type == 'ticket.message_created':
                 await self.handle_ticket_message(event)
+            elif event_type == 'ticket.transferred':
+                await self.handle_ticket_transferred(event)
             elif event_type == 'user.created':
                 await self.handle_user_created(event)
             elif event_type == 'system.alert':
@@ -210,6 +212,23 @@ class EventProcessor:
         await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
 
+    async def handle_ticket_transferred(self, event: Dict[str, Any]):
+        """Notificar una transferencia únicamente al agente receptor."""
+        payload = event.get('payload', {})
+
+        embed = discord.Embed(
+            title="🔄 Chat transferido a ti",
+            description=f"Ahora eres responsable del ticket {payload.get('ticket_id', 'N/A')}",
+            color=0x5865F2
+        )
+        embed.add_field(name="Cliente", value=payload.get('customer_name', 'N/A'), inline=True)
+        embed.add_field(name="Transferido por", value=payload.get('from_agent_name', 'N/A'), inline=True)
+        embed.add_field(name="Acción", value="Entra al panel de soporte para continuar la conversación.", inline=False)
+        embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
+        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+
+        await self.notify_discord_user(payload.get('target_discord_user_id'), embed, "agente receptor")
+
     async def handle_user_created(self, event: Dict[str, Any]):
         """Manejar evento de usuario creado"""
         payload = event.get('payload', {})
@@ -311,3 +330,15 @@ class EventProcessor:
             await user.send(embed=embed)
         except (ValueError, discord.Forbidden, discord.NotFound) as error:
             logger.warning(f"No se pudo enviar DM privado al cliente: {error}")
+
+    async def notify_discord_user(self, discord_user_id: Any, embed: discord.Embed, recipient: str):
+        """Enviar un DM a un único usuario de Discord."""
+        if not discord_user_id:
+            logger.warning(f"No se pudo notificar al {recipient}: Discord ID no configurado")
+            return
+        try:
+            user = self.bot.get_user(int(discord_user_id)) or await self.bot.fetch_user(int(discord_user_id))
+            await user.send(embed=embed)
+            logger.info(f"Notificación privada enviada al {recipient} ({discord_user_id})")
+        except (ValueError, discord.Forbidden, discord.NotFound) as error:
+            logger.warning(f"No se pudo enviar DM privado al {recipient}: {error}")
