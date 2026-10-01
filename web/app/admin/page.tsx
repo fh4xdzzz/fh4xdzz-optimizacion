@@ -12,7 +12,6 @@ import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
 import { useNotificationStore } from '@/lib/notifications-store'
 import AdminSettings from '@/components/admin/admin-settings'
-import { updateSupabaseOrderStatus } from '@/lib/supabase/orders'
 
 interface User {
   id: string
@@ -34,6 +33,15 @@ interface Order {
   client_email: string
   description: string
   notes?: string
+  assigned_to?: string | null
+  estimated_completion?: string | null
+  updated_at: string
+}
+
+interface OrderEvent {
+  id: string
+  description: string | null
+  created_at: string
 }
 
 interface Service {
@@ -83,6 +91,10 @@ export default function AdminPage() {
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
   const [orderNote, setOrderNote] = useState('')
+  const [assignedAgentId, setAssignedAgentId] = useState('')
+  const [estimatedCompletion, setEstimatedCompletion] = useState('')
+  const [orderEvents, setOrderEvents] = useState<OrderEvent[]>([])
+  const [savingOrder, setSavingOrder] = useState(false)
   const [userRole, setUserRole] = useState<'client' | 'admin' | 'staff' | 'owner'>('client')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [transferAgentId, setTransferAgentId] = useState('')
@@ -131,6 +143,9 @@ export default function AdminPage() {
         client_email: order.client_email,
         description: order.description,
         notes: order.notes,
+        assigned_to: order.assigned_to,
+        estimated_completion: order.estimated_completion,
+        updated_at: order.updated_at,
       })))
     }
 
@@ -344,6 +359,56 @@ export default function AdminPage() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const openOrderDetails = async (order: Order) => {
+    setSelectedOrder(order)
+    setNewStatus(order.status)
+    setOrderNote('')
+    setAssignedAgentId(order.assigned_to || '')
+    setEstimatedCompletion(order.estimated_completion ? new Date(order.estimated_completion).toISOString().slice(0, 16) : '')
+    setShowOrderModal(true)
+
+    const { data } = await supabase
+      .from('order_events')
+      .select('id, description, created_at')
+      .eq('order_id', order.id)
+      .order('created_at', { ascending: false })
+      .limit(8)
+    setOrderEvents((data || []) as OrderEvent[])
+  }
+
+  const saveOrderOperations = async () => {
+    if (!selectedOrder || savingOrder) return
+    setSavingOrder(true)
+    try {
+      const response = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: newStatus,
+          assignedTo: assignedAgentId || null,
+          estimatedCompletion: estimatedCompletion ? new Date(estimatedCompletion).toISOString() : null,
+          note: orderNote,
+        }),
+      })
+      const payload = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(payload.error || 'No se pudo actualizar el pedido')
+      await loadAdminData()
+      setShowOrderModal(false)
+      notifySuccess('Pedido, responsable e historial actualizados')
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'No se pudo actualizar el pedido')
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
+  const openCustomerSupport = (order: Order) => {
+    setShowOrderModal(false)
+    setSupportSearch(order.client_email)
+    setSupportFilter('all')
+    setActiveTab('support')
   }
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -974,6 +1039,13 @@ export default function AdminPage() {
 
           {/* Orders Tab */}
           {activeTab === 'orders' && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5"><p className="text-sm text-blue-300">Por revisar</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'reviewing').length}</p></div>
+                <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5"><p className="text-sm text-violet-300">En proceso</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'in_progress').length}</p></div>
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5"><p className="text-sm text-amber-300">Esperando cliente</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'waiting_client').length}</p></div>
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5"><p className="text-sm text-emerald-300">Completados</p><p className="mt-2 text-3xl font-bold">{orders.filter(order => order.status === 'completed').length}</p></div>
+              </div>
             <Card className="glass-card hover-glow animate-fade-in-up">
               <CardHeader>
                 <CardTitle className="text-2xl">Todos los Pedidos</CardTitle>
@@ -990,12 +1062,7 @@ export default function AdminPage() {
                       >
                         <div
                           className="flex-1 cursor-pointer"
-                          onClick={() => {
-                            setSelectedOrder(order)
-                            setNewStatus(order.status)
-                            setOrderNote('')
-                            setShowOrderModal(true)
-                          }}
+                          onClick={() => openOrderDetails(order)}
                         >
                           <div className="flex items-center gap-3 mb-2">
                             <div className="font-medium text-lg">{order.order_number}</div>
@@ -1005,17 +1072,13 @@ export default function AdminPage() {
                           <div className="text-base text-muted">
                             {order.service_name} • {formatDate(order.created_at)}
                           </div>
+                          <div className="mt-2 text-sm text-muted">{order.assigned_to ? '✓ Responsable asignado' : 'Sin responsable'} · {order.estimated_completion ? `Entrega: ${formatDate(order.estimated_completion)}` : 'Sin fecha estimada'}</div>
                         </div>
                         <div className="flex gap-3">
                           <Button
                             variant="outline"
                             size="md"
-                            onClick={() => {
-                              setSelectedOrder(order)
-                              setNewStatus(order.status)
-                              setOrderNote('')
-                              setShowOrderModal(true)
-                            }}
+                            onClick={() => openOrderDetails(order)}
                             className="hover-lift"
                           >
                             Ver detalles
@@ -1041,6 +1104,7 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+            </div>
           )}
 
           {/* Services Tab */}
@@ -1649,7 +1713,6 @@ export default function AdminPage() {
                   onChange={(e) => setNewStatus(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="pending">Pendiente</option>
                   <option value="reviewing">Revisando</option>
                   <option value="in_progress">En proceso</option>
                   <option value="waiting_client">Esperando cliente</option>
@@ -1658,15 +1721,40 @@ export default function AdminPage() {
                 </select>
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label htmlFor="order-assignee" className="mb-3 block text-base font-medium">Responsable</label>
+                  <select id="order-assignee" value={assignedAgentId} onChange={(event) => setAssignedAgentId(event.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">Equipo general</option>
+                    {users.filter(user => ['staff', 'admin', 'owner'].includes(user.role)).map(user => <option key={user.id} value={user.id}>{user.full_name || user.email} · {ROLE_LABELS[user.role]?.label || user.role}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="order-estimated-date" className="mb-3 block text-base font-medium">Entrega estimada</label>
+                  <input id="order-estimated-date" type="datetime-local" value={estimatedCompletion} onChange={(event) => setEstimatedCompletion(event.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+
               {/* Note */}
               <div>
-                <div className="text-base font-medium mb-3">Agregar nota</div>
+                <div className="text-base font-medium mb-3">Nota para el historial</div>
                 <textarea
                   value={orderNote}
                   onChange={(e) => setOrderNote(e.target.value)}
-                  placeholder="Agrega una nota sobre este pedido..."
+                  placeholder="Describe el avance, lo que necesitas del cliente o los próximos pasos..."
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[120px]"
                 />
+              </div>
+
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3"><div><p className="font-medium">Soporte privado del cliente</p><p className="text-sm text-muted">Busca sus conversaciones para responder o revisar archivos.</p></div><Button variant="outline" size="sm" onClick={() => openCustomerSupport(selectedOrder)}>Abrir soporte</Button></div>
+              </div>
+
+              <div className="border-t border-border/50 pt-5">
+                <p className="mb-3 font-medium">Historial reciente</p>
+                <div className="space-y-3">
+                  {orderEvents.length > 0 ? orderEvents.map(event => <div key={event.id} className="rounded-lg border border-white/10 bg-white/[0.03] p-3"><p className="text-sm">{event.description || 'Pedido actualizado'}</p><p className="mt-1 text-xs text-muted">{formatDate(event.created_at)}</p></div>) : <p className="text-sm text-muted">Todavía no hay movimientos registrados.</p>}
+                </div>
               </div>
 
               {/* Actions */}
@@ -1674,18 +1762,10 @@ export default function AdminPage() {
                 <Button
                   variant="primary"
                   className="flex-1 hover-lift shimmer-button"
-                  onClick={async () => {
-                    try {
-                      await updateSupabaseOrderStatus(selectedOrder.id, newStatus, orderNote.trim() || undefined)
-                      await loadAdminData()
-                      setShowOrderModal(false)
-                      notifySuccess('Pedido actualizado correctamente')
-                    } catch (error) {
-                      notifyError(error instanceof Error ? error.message : 'No se pudo actualizar el pedido')
-                    }
-                  }}
+                  onClick={saveOrderOperations}
+                  disabled={savingOrder}
                 >
-                  Guardar cambios
+                  {savingOrder ? 'Guardando…' : 'Guardar cambios'}
                 </Button>
                 <Button
                   variant="outline"
