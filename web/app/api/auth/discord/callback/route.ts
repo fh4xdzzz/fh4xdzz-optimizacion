@@ -10,8 +10,6 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const code = searchParams.get('code')
-    const state = searchParams.get('state')
-
     if (!code) {
       return NextResponse.redirect(new URL('/auth/login?error=no_code', request.url))
     }
@@ -46,8 +44,6 @@ export async function GET(request: NextRequest) {
     })
 
     const discordUser = await userResponse.json()
-    console.log('Discord user info:', discordUser)
-
     // Buscar usuario por Discord ID
     const { data: existingUser } = await supabaseAdmin
       .from('users')
@@ -60,8 +56,6 @@ export async function GET(request: NextRequest) {
 
     // Generar email temporal si Discord no proporciona email
     const userEmailToUse = discordUser.email || `${discordUser.id}@discord.temp`
-    console.log('Email to use for user creation:', userEmailToUse)
-
     if (existingUser) {
       // Usuario encontrado, usar existente
       userId = existingUser.id
@@ -71,8 +65,6 @@ export async function GET(request: NextRequest) {
       // Usuario no encontrado, crear automáticamente usando generateLink con signup
       // Este método evita problemas de SMTP configuración en Supabase
       console.log('Creating new user from Discord OAuth using generateLink signup')
-      console.log('Discord user data:', discordUser)
-      
       // Generar contraseña temporal
       const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
       
@@ -92,8 +84,6 @@ export async function GET(request: NextRequest) {
           },
         },
       })
-
-      console.log('Signup link result:', { signupLink, signupError })
 
       let userHandled = false
 
@@ -187,10 +177,11 @@ export async function GET(request: NextRequest) {
         userEmail = userEmailToUse
         console.log('User created in Supabase Auth via signup:', userId)
 
-        // Crear usuario en la tabla users
-        const { data: dbData, error: dbError } = await supabaseAdmin
+        // El trigger de auth puede haber creado ya el perfil. Upsert garantiza
+        // que los datos de Discord queden guardados desde el primer acceso.
+        const { error: dbError } = await supabaseAdmin
           .from('users')
-          .insert({
+          .upsert({
             id: userId,
             email: userEmailToUse,
             full_name: discordUser.global_name || discordUser.username,
@@ -199,36 +190,14 @@ export async function GET(request: NextRequest) {
             discord_avatar: discordUser.avatar,
             avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
             role: 'client',
-          })
-          .select()
-
-        console.log('DB insert result:', { dbData, dbError })
+          }, { onConflict: 'id' })
 
         if (dbError) {
-          console.error('Error creating user in database:', dbError)
-          console.error('DB Error details:', JSON.stringify(dbError, null, 2))
-          
-          // Si el error es de duplicado (usuario ya existe en tabla users), buscarlo y usarlo
-          if (dbError.code === '23505') {
-            console.log('User already exists in database, fetching by ID:', userId)
-            const { data: existingDbUser } = await supabaseAdmin
-              .from('users')
-              .select('*')
-              .eq('id', userId)
-              .single()
-            
-            if (existingDbUser) {
-              console.log('Found existing database user:', existingDbUser.id)
-              // Continuar con el usuario existente
-            } else {
-              return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
-            }
-          } else {
-            return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
-          }
+          console.error('Error creating or updating user profile:', dbError)
+          return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
         }
 
-        console.log('User created successfully in database:', userId)
+        console.log('User profile synchronized successfully')
       }
     }
 
@@ -287,3 +256,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login?error=oauth_error', request.url))
   }
 }
+
