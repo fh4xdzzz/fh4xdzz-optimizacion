@@ -39,7 +39,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data: messages, error } = await supabase
+    const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const messageClient = serviceUrl && serviceKey
+      ? createServiceClient(serviceUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      : supabase
+
+    const { data: messages, error } = await messageClient
       .from('chat_messages')
       .select('*')
       .eq('session_id', sessionId)
@@ -49,7 +55,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 })
     }
 
-    return NextResponse.json({ messages })
+    const senderIds = [...new Set((messages || []).map(item => item.sender_id).filter(Boolean))]
+    const { data: senders } = senderIds.length
+      ? await messageClient.from('users').select('id, full_name, email, avatar_url, discord_avatar, role, online').in('id', senderIds)
+      : { data: [] }
+    const senderMap = new Map((senders || []).map(sender => [sender.id, sender]))
+    const enrichedMessages = (messages || []).map(message => ({
+      ...message,
+      sender: message.sender_role === 'assistant'
+        ? { id: null, full_name: 'Dulcan AI', email: null, avatar_url: null, discord_avatar: null, role: 'assistant', online: true }
+        : senderMap.get(message.sender_id) || null,
+    }))
+
+    return NextResponse.json({ messages: enrichedMessages })
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -186,12 +204,14 @@ export async function POST(request: NextRequest) {
         const notificationMessage = message_type === 'attachment'
           ? `Archivo privado: ${attachment_name || 'adjunto'}`
           : message.trim().slice(0, 1500)
-        await getDiscordService().notifyTicketMessage({
+        // Mientras Dulcan AI recopila contexto, evitamos alertar al equipo por
+        // cada respuesta. El resumen final sí se envía cuando el triaje termina.
+        if (userRole !== 'client') await getDiscordService().notifyTicketMessage({
           ticket_id: chat.conversation_number,
           customer_name: client?.full_name || client?.email || 'Cliente',
           message: notificationMessage,
-          sender: userRole === 'client' ? 'customer' : 'staff',
-          discord_user_id: userRole === 'client' ? undefined : (client?.discord_id || undefined),
+          sender: 'staff',
+          discord_user_id: client?.discord_id || undefined,
         })
       }
     }

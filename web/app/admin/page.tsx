@@ -74,18 +74,30 @@ interface ChatSession {
   client_id: string
   client_name?: string
   client_email?: string
+  ai_handoff_ready?: boolean
+  ai_summary?: string | null
+  ai_intake?: Record<string, string | null>
 }
 
 interface ChatMessage {
   id: string
   session_id: string
-  sender_id: string
+  sender_id: string | null
   sender_role: string
   message: string
   message_type: string
   attachment_path?: string | null
   attachment_name?: string | null
   created_at: string
+  sender?: {
+    id: string | null
+    full_name: string | null
+    email: string | null
+    avatar_url: string | null
+    discord_avatar: string | null
+    role: string
+    online: boolean
+  } | null
 }
 
 export default function AdminPage() {
@@ -622,15 +634,10 @@ export default function AdminPage() {
   }
 
   const loadChatMessages = async (sessionId: string) => {
-    const supabase = createClient()
-    const { data: messagesData } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: true })
-    if (messagesData) {
-      setChatMessages(messagesData)
-    }
+    const response = await fetch(`/api/chat/messages?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' })
+    if (!response.ok) return
+    const data = await response.json()
+    setChatMessages(data.messages || [])
   }
 
   const loadLastMessages = async (sessions: ChatSession[]) => {
@@ -1419,9 +1426,25 @@ export default function AdminPage() {
                           )}
                         </div>
                       </div>
+                      {selectedChat.ai_summary && (
+                        <div className="border-b border-violet-500/20 bg-violet-500/[0.08] px-4 py-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-violet-500/20 px-2.5 py-1 text-[11px] font-bold text-violet-200">Resumen de Dulcan AI</span>
+                            {selectedChat.ai_handoff_ready && <span className="text-xs font-semibold text-emerald-300">✓ Listo para atender</span>}
+                          </div>
+                          <p className="mt-2 text-sm leading-relaxed text-white/75">{selectedChat.ai_summary}</p>
+                        </div>
+                      )}
                       <div className="h-[400px] overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-[#0a0a0a]">
                         {chatMessages.map((message) => {
                           const isClient = message.sender_role === 'client'
+                          const isAssistant = message.sender_role === 'assistant'
+                          const senderName = isAssistant
+                            ? 'Dulcan AI'
+                            : message.sender?.full_name || message.sender?.email?.split('@')[0] || (isClient ? 'Cliente' : 'Agente de soporte')
+                          const senderAvatar = message.sender?.avatar_url || (message.sender?.discord_avatar && message.sender.id
+                            ? `https://cdn.discordapp.com/avatars/${message.sender.id}/${message.sender.discord_avatar}.png`
+                            : null)
                           const isAttachment = message.message_type === 'attachment'
                           const isImage = Boolean(
                             isAttachment && message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
@@ -1434,8 +1457,22 @@ export default function AdminPage() {
                               key={message.id}
                               className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}
                             >
+                              {!isClient && (
+                                <div className={`mr-2 mt-1 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 text-xs font-black text-white ${isAssistant ? 'bg-gradient-to-br from-indigo-500 to-violet-600' : 'bg-[#292933]'}`}>
+                                  {senderAvatar ? <img src={senderAvatar} alt={senderName} className="h-full w-full object-cover" /> : isAssistant ? 'AI' : senderName.slice(0, 1).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 max-w-[80%]">
+                                <div className={`mb-1 flex items-center gap-2 px-1 ${isClient ? 'justify-end' : ''}`}>
+                                  <span className="text-xs font-bold text-white/80">{isClient ? 'Cliente' : senderName}</span>
+                                  {!isClient && (
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isAssistant ? 'bg-violet-500/20 text-violet-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
+                                      {isAssistant ? 'Triaje automático' : 'Agente verificado'}
+                                    </span>
+                                  )}
+                                </div>
                               <div
-                                className={`min-w-0 max-w-[80%] rounded-2xl p-3 ${
+                                className={`min-w-0 rounded-2xl p-3 ${
                                   isClient
                                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
                                     : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
@@ -1472,6 +1509,7 @@ export default function AdminPage() {
                                 <p className={`text-xs mt-1 ${isClient ? 'text-white/80' : 'text-[#6b7280]'}`}>
                                   {new Date(message.created_at).toLocaleTimeString('es-ES')}
                                 </p>
+                              </div>
                               </div>
                             </div>
                           )

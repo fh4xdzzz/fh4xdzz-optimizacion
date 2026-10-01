@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
-import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, Search, ShieldCheck, Sparkles, ChevronRight } from 'lucide-react'
+import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, Search, ShieldCheck, Sparkles, ChevronRight, Bot } from 'lucide-react'
 import { useNotificationStore } from '@/lib/notifications-store'
 
 interface Message {
   id: string
-  sender_id: string
+  sender_id: string | null
   sender_role: string
   message: string
   message_type: string
@@ -16,6 +16,15 @@ interface Message {
   read_at: string | null
   attachment_path?: string
   attachment_name?: string
+  sender?: {
+    id: string | null
+    full_name: string | null
+    email: string | null
+    avatar_url: string | null
+    discord_avatar: string | null
+    role: string
+    online: boolean
+  } | null
 }
 
 interface ChatSession {
@@ -51,7 +60,8 @@ export default function SupportChatWidget() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
   const [onlineAgents, setOnlineAgents] = useState<any[]>([])
-  const [assignedAgentName, setAssignedAgentName] = useState<string | null>(null)
+  const [assignedAgent, setAssignedAgent] = useState<Message['sender']>(null)
+  const [aiTyping, setAiTyping] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -107,30 +117,6 @@ export default function SupportChatWidget() {
     return !query || `${article.title} ${article.description}`.toLowerCase().includes(query)
   })
 
-  // Respuestas automáticas del bot
-  const botResponses = [
-    {
-      keywords: ['obs', 'streaming', 'twitch', 'kick', 'configurar'],
-      response: 'Para configurar OBS, te recomiendo: 1) Usar x264 encoder en nivel 5-6, 2) Bitrate de 4500-6000 kbps para 1080p60, 3) Keyframe interval de 2 segundos. ¿Necesitas ayuda más específica?'
-    },
-    {
-      keywords: ['windows', 'gaming', 'optimizar', 'rendimiento', 'pc'],
-      response: 'Para optimizar Windows para gaming: 1) Activa el modo de alto rendimiento, 2) Desactiva Game DVR, 3) Actualiza drivers de GPU, 4) Cierra apps en segundo plano. ¿Te ayudo con alguno de estos pasos?'
-    },
-    {
-      keywords: ['frames', 'lag', 'caída', 'stutter', 'perdida'],
-      response: 'Para solucionar pérdida de frames: 1) Verifica tu conexión a internet, 2) Reduce la resolución o bitrate, 3) Cierra programas que consuman CPU, 4) Actualiza OBS. ¿Cuál es tu configuración actual?'
-    },
-    {
-      keywords: ['precio', 'costo', 'servicio', 'pagar'],
-      response: 'Nuestros servicios incluyen: 1) Configuración OBS: $25, 2) Optimización PC: $30, 3) Soporte técnico: $20/hora. ¿Te interesa alguno de estos servicios?'
-    },
-    {
-      keywords: ['hola', 'buenos días', 'buenas tardes', 'buenas noches'],
-      response: '¡Hola! 👋 Soy el asistente virtual de TheDulcanDesign. Estoy aquí para ayudarte. Si no hay agentes disponibles, te daré respuestas básicas. ¿En qué puedo ayudarte?'
-    }
-  ]
-
   // Cargar sesión del usuario
   useEffect(() => {
     loadUserSession()
@@ -141,7 +127,7 @@ export default function SupportChatWidget() {
     if (session?.assigned_agent_id) {
       loadAssignedAgentName(session.assigned_agent_id)
     } else {
-      setAssignedAgentName(null)
+      setAssignedAgent(null)
     }
   }, [session?.assigned_agent_id])
 
@@ -183,7 +169,7 @@ export default function SupportChatWidget() {
   // Cargar nombre del agente asignado
   async function loadAssignedAgentName(agentId: string | null) {
     if (!agentId) {
-      setAssignedAgentName(null)
+      setAssignedAgent(null)
       return
     }
 
@@ -191,17 +177,17 @@ export default function SupportChatWidget() {
       const supabase = createClient()
       const { data: agent } = await supabase
         .from('users')
-        .select('full_name, email')
+        .select('id, full_name, email, avatar_url, discord_avatar, role, online')
         .eq('id', agentId)
         .single()
 
       if (agent) {
-        setAssignedAgentName(agent.full_name || agent.email?.split('@')[0] || 'Agente')
+        setAssignedAgent(agent)
       } else {
-        setAssignedAgentName(null)
+        setAssignedAgent(null)
       }
     } catch (error) {
-      setAssignedAgentName(null)
+      setAssignedAgent(null)
     }
   }
 
@@ -262,30 +248,7 @@ export default function SupportChatWidget() {
         const newMessage = payload.new as Message
         
         // Verificar si el mensaje ya existe para evitar duplicados
-        setMessages(prev => {
-          if (prev.some(msg => msg.id === newMessage.id)) {
-            return prev
-          }
-          
-          // Solo agregar mensajes al estado si el chat está abierto
-          if (!open) {
-            return prev
-          }
-          
-          // Extraer solo los campos necesarios para evitar errores
-          const cleanMessage: Message = {
-            id: newMessage.id,
-            sender_id: newMessage.sender_id,
-            sender_role: newMessage.sender_role,
-            message: newMessage.message,
-            message_type: newMessage.message_type,
-            created_at: newMessage.created_at,
-            read_at: newMessage.read_at,
-            attachment_path: newMessage.attachment_path,
-            attachment_name: newMessage.attachment_name,
-          }
-          return [...prev, cleanMessage]
-        })
+        if (open) loadMessages(session.id)
 
         // Incrementar contador si el chat está cerrado y el mensaje es del soporte
         if (newMessage.sender_role !== 'client' && !open) {
@@ -504,6 +467,19 @@ export default function SupportChatWidget() {
 
       if (response.ok) {
         setText('')
+        if (!currentSession.assigned_agent_id) {
+          setAiTyping(true)
+          try {
+            await fetch('/api/chat/ai', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: currentSession.id }),
+            })
+            await loadMessages(currentSession.id)
+          } finally {
+            setAiTyping(false)
+          }
+        }
       }
     } catch (error) {
     } finally {
@@ -632,7 +608,7 @@ export default function SupportChatWidget() {
               </div>
             </div>
             <h2 className="text-xl font-black tracking-tight text-white">
-              {assignedAgentName ? `Soporte con ${assignedAgentName}` : 'Soporte'}
+              {assignedAgent ? `Soporte con ${assignedAgent.full_name || assignedAgent.email?.split('@')[0] || 'tu agente'}` : 'Soporte inteligente'}
             </h2>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-white/85">
               <ShieldCheck size={14} />
@@ -795,16 +771,38 @@ export default function SupportChatWidget() {
 
             {messages.map((message) => {
               const isClient = message.sender_role === 'client'
+              const isAssistant = message.sender_role === 'assistant'
               const isAttachment = message.message_type === 'attachment'
               const isImage = isAttachment && message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+              const senderName = isAssistant
+                ? 'Dulcan AI'
+                : message.sender?.full_name || message.sender?.email?.split('@')[0] || 'Agente de soporte'
+              const avatar = message.sender?.avatar_url || (message.sender?.discord_avatar && message.sender.id
+                ? `https://cdn.discordapp.com/avatars/${message.sender.id}/${message.sender.discord_avatar}.png`
+                : null)
               
               return (
                 <div
                   key={message.id}
                   className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}
                 >
+                  {!isClient && (
+                    <div className="mr-2 mt-1 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md">
+                      {avatar ? <img src={avatar} alt={senderName} className="h-full w-full object-cover" /> : isAssistant ? <Bot size={17} /> : <span className="text-xs font-black">{senderName.slice(0, 1).toUpperCase()}</span>}
+                    </div>
+                  )}
+                  <div className="min-w-0 max-w-[80%]">
+                    {!isClient && (
+                      <div className="mb-1 flex items-center gap-2 px-1">
+                        <span className="text-xs font-bold text-white">{senderName}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isAssistant ? 'bg-violet-500/20 text-violet-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
+                          {isAssistant ? 'Asistente virtual' : 'Agente verificado'}
+                        </span>
+                        {!isAssistant && message.sender?.online && <span className="h-2 w-2 rounded-full bg-emerald-400" aria-label="En línea" />}
+                      </div>
+                    )}
                   <div
-                    className={`min-w-0 max-w-[80%] rounded-2xl p-3 ${
+                    className={`min-w-0 rounded-2xl p-3 ${
                       isClient
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
                         : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
@@ -835,14 +833,18 @@ export default function SupportChatWidget() {
                       {formatTime(message.created_at)}
                     </p>
                   </div>
+                  </div>
                 </div>
               )
             })}
 
-            {isTyping && (
+            {(isTyping || aiTyping) && (
               <div className="flex justify-start">
                 <div className="rounded-2xl rounded-bl-md border border-white/10 bg-[#1a1a1f] px-4 py-3 shadow-sm" role="status" aria-live="polite">
-                  <span className="sr-only">El agente está escribiendo</span>
+                  <span className="sr-only">{aiTyping ? 'Dulcan AI está escribiendo' : 'El agente está escribiendo'}</span>
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-white/55">
+                    {aiTyping && <Bot size={13} />} {aiTyping ? 'Dulcan AI está preparando tu siguiente pregunta' : `${assignedAgent?.full_name || 'Tu agente'} está escribiendo`}
+                  </p>
                   <div className="flex items-center gap-1.5" aria-hidden="true">
                     <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-400 [animation-delay:-0.3s]" />
                     <span className="h-2 w-2 animate-bounce rounded-full bg-violet-400 [animation-delay:-0.15s]" />
