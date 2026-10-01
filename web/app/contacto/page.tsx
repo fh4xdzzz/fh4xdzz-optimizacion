@@ -18,13 +18,12 @@ function ContactFormContent() {
     description: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
-  const [orderNumber, setOrderNumber] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [services, setServices] = useState<Array<{id: string, name: string, slug: string, price: number}>>([])
-  const [userEmail, setUserEmail] = useState<string>('')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const cancelled = searchParams.get('cancelled') === '1'
+  const selectedService = services.find(item => item.name === formData.service)
 
   // Cargar servicios desde Supabase
   useEffect(() => {
@@ -54,7 +53,6 @@ function ContactFormContent() {
     const loadUserEmail = async () => {
       const session = await getSession()
       if (session) {
-        setUserEmail(session.user.email)
         setFormData(prev => ({ ...prev, email: session.user.email }))
       }
     }
@@ -112,65 +110,19 @@ function ContactFormContent() {
         throw new Error('Servicio no encontrado')
       }
 
-      // Guardar en Supabase
-      const supabase = createClient()
-      const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const uniquePart = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
-      const newOrderNumber = `ORD${datePart}${uniquePart}`
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: newOrderNumber,
-          user_id: session.user.id,
-          service_id: service.id,
-          client_name: formData.name,
-          client_email: formData.email,
-          client_discord: formData.discord || null,
+      const response = await fetch('/api/stripe/create-service-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: service.id,
+          name: formData.name,
+          discord: formData.discord,
           description: formData.description,
-          price: service.price,
-          status: 'pending',
-        })
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      // Enviar webhook al bot de Discord
-      // TODO: Configurar URL pública del webhook en Pterodactyl
-      // try {
-      //   await fetch('https://v-mfl-04.apollopanel.com:5000/webhook', {
-      //     method: 'POST',
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //     },
-      //     body: JSON.stringify({
-      //       event_id: `order_${orderData.id}_${Date.now()}`,
-      //       event_type: 'order.created',
-      //       created_at: new Date().toISOString(),
-      //       payload: {
-      //         order_id: orderData.id,
-      //         order_number: orderData.order_number,
-      //         customer_name: formData.name,
-      //         customer_email: formData.email,
-      //         service_name: service.name,
-      //         description: formData.description
-      //       }
-      //     })
-      //   })
-      // } catch (webhookError) {
-      //   console.error('Error enviando webhook:', webhookError)
-      //   // No fallar el pedido si el webhook falla
-      // }
-
-      // Redirigir a la página de pago
-      router.push(`/pago?orderId=${orderData.id}`)
-      setFormData({
-        name: '',
-        email: '',
-        discord: '',
-        service: '',
-        description: ''
+        }),
       })
+      const payload = await response.json() as { url?: string; error?: string }
+      if (!response.ok || !payload.url) throw new Error(payload.error || 'No se pudo abrir el pago seguro')
+      window.location.assign(payload.url)
     } catch (error) {
       console.error('Error al crear pedido:', error)
       const message = error instanceof Error
@@ -202,62 +154,6 @@ function ContactFormContent() {
     }
   }
 
-  if (submitSuccess) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto max-w-2xl">
-            <Card className="border-green-500/50">
-              <CardHeader>
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <CardTitle className="text-2xl">¡Solicitud Creada!</CardTitle>
-                  <CardDescription className="mt-2">
-                    Tu pedido ha sido creado exitosamente
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-card p-4 rounded-lg border border-border">
-                    <div className="text-sm text-muted mb-1">Número de pedido</div>
-                    <div className="text-2xl font-bold text-primary">{orderNumber}</div>
-                  </div>
-
-                  <div className="bg-card p-4 rounded-lg border border-border">
-                    <div className="text-sm text-muted mb-1">Estado actual</div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                      <span className="font-medium">Pendiente</span>
-                    </div>
-                  </div>
-
-                  <div className="text-center space-y-4 pt-4">
-                    <p className="text-muted">
-                      Te contactaremos pronto por email o Discord para coordinar tu servicio.
-                    </p>
-                    <Button variant="primary" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
-                      Unirse a Discord
-                    </Button>
-                    <Button variant="outline" onClick={() => router.push('/pedidos')}>
-                      Ver mis pedidos
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-        <Footer />
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -265,20 +161,18 @@ function ContactFormContent() {
       {/* Header */}
       <section className="pt-32 pb-12 px-4">
         <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Solicitar Servicio</h1>
+          <div className="mb-5 inline-flex rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">Contratación segura</div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Cuéntanos qué necesitas</h1>
           <p className="text-xl text-muted max-w-2xl mx-auto">
-            Completa el formulario para crear tu pedido. Te contactaremos pronto para coordinar el servicio.
+            Revisaremos estos datos después de confirmar tu pago. Si cancelas, no se creará ningún pedido.
           </p>
-          <div className="mt-4 bg-blue-500/10 border border-blue-500/50 text-blue-500 px-4 py-2 rounded-lg inline-block">
-            🔒 Se requiere iniciar sesión para crear pedidos
-          </div>
         </div>
       </section>
 
       {/* Contact Form */}
       <section className="pb-20 px-4">
-        <div className="container mx-auto max-w-2xl">
-          <Card>
+        <div className="container mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_340px]">
+          <Card className="border-white/10 bg-card/80 shadow-2xl shadow-primary/5">
             <CardHeader>
               <CardTitle>Formulario de Solicitud</CardTitle>
               <CardDescription>
@@ -290,6 +184,11 @@ function ContactFormContent() {
                 {errors.general && (
                   <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm">
                     {errors.general}
+                  </div>
+                )}
+                {cancelled && (
+                  <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+                    Pago cancelado. No se realizó ningún cargo ni se creó un pedido.
                   </div>
                 )}
 
@@ -394,39 +293,24 @@ function ContactFormContent() {
                   className="w-full"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Creando pedido...' : 'Crear Pedido'}
+                  {isSubmitting ? 'Abriendo pago seguro…' : 'Continuar al pago seguro →'}
                 </Button>
+                <p className="text-center text-xs text-muted">Tu tarjeta se procesa directamente en Stripe. No almacenamos datos bancarios.</p>
               </form>
             </CardContent>
           </Card>
 
-          {/* Alternative Contact Methods */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Discord</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted mb-4">
-                  Únete a nuestro servidor para soporte en tiempo real
-                </p>
-                <Button variant="outline" className="w-full" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
-                  Unirse al Servidor
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Email</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted mb-4">
-                  Envíanos un email para consultas formales
-                </p>
-                <Button variant="outline" className="w-full" href="mailto:thedulcandesign@gmail.com">
-                  thedulcandesign@gmail.com
-                </Button>
+          <div className="space-y-4">
+            <Card className="border-primary/25 bg-gradient-to-b from-primary/10 to-card lg:sticky lg:top-28">
+              <CardHeader><CardTitle>Resumen</CardTitle><CardDescription>Todo claro antes de pagar.</CardDescription></CardHeader>
+              <CardContent className="space-y-4">
+                {selectedService ? <>
+                  <div><p className="text-xs uppercase tracking-wider text-muted">Servicio</p><p className="mt-1 font-semibold">{formData.service}</p></div>
+                  <div className="flex items-end justify-between border-t border-white/10 pt-4"><span className="text-sm text-muted">Total</span><span className="text-3xl font-bold text-primary">${Number(selectedService.price).toFixed(2)}</span></div>
+                </> : <p className="text-sm text-muted">Selecciona un servicio para ver el resumen.</p>}
+                <ul className="space-y-3 border-t border-white/10 pt-4 text-sm">
+                  <li>✓ Pago protegido por Stripe</li><li>✓ Pedido creado solo al pagar</li><li>✓ Soporte posterior incluido</li>
+                </ul>
               </CardContent>
             </Card>
           </div>
