@@ -51,46 +51,107 @@ export default function Home() {
         <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
-        <div className="container mx-auto text-center">
-          <div className="max-w-4xl mx-auto animate-fade-in-up">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-display gradient-text-primary hero-title-glow hero-title-stroke">
-              Optimización Profesional para Streaming y Gaming
+      <section className="premium-grid relative overflow-hidden px-4 pb-16 pt-32 md:pb-24 md:pt-40">
+        <div className="pointer-events-none absolute left-1/2 top-24 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]" />
+        <div className="container relative mx-auto grid items-center gap-14 lg:grid-cols-[1.08fr_.92fr]">
+          <div className="animate-fade-in-up text-center lg:text-left">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              Atención personalizada disponible
+            </div>
+            <h1 className="mb-6 text-5xl font-black leading-[1.02] tracking-[-0.045em] text-foreground md:text-7xl">
+              Tu setup, más rápido.
+              <span className="mt-2 block gradient-text-primary">Tu contenido, más profesional.</span>
             </h1>
-            <p className="text-xl md:text-2xl text-muted mb-8 max-w-2xl mx-auto text-headline">
-              Expertos en configuración de OBS, streaming, optimización de PC y soporte técnico.
-              Lleva tu setup al siguiente nivel con resultados profesionales.
+            <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-muted md:text-xl lg:mx-0">
+              Optimizamos OBS, Windows y tu flujo de streaming con una configuración hecha para tu equipo, tus juegos y tus objetivos.
             </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center relative z-30">
-              <Button variant="primary" size="lg" href="/servicios" className="shimmer-button animate-bounce-subtle text-lg px-8 py-4">
-                Ver Servicios
+            <div className="relative z-30 flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
+              <Button variant="primary" size="lg" href="/servicios" className="premium-button h-14 px-8 text-base shadow-[0_16px_45px_rgba(88,101,242,.32)]">
+                Optimizar mi setup
+                <span aria-hidden="true" className="ml-2">→</span>
               </Button>
-              <a
-                href="https://discord.gg/DXkEXrYRvM"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-secondary text-white h-12 px-6 text-lg cursor-pointer pointer-events-auto"
-              >
-                Unirse a Discord
-              </a>
+              <Button variant="outline" size="lg" href="/contacto" className="h-14 border-white/15 bg-white/[.03] px-8 text-base hover:bg-white/[.07]">
+                Hablar con un especialista
+              </Button>
+            </div>
+            <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm text-muted lg:justify-start">
+              {['Pago seguro con Stripe', 'Soporte privado', 'Configuración personalizada'].map((item) => (
+                <span key={item} className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-400/10 text-xs text-emerald-400">✓</span>
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
+
+          <div className="relative mx-auto w-full max-w-xl animate-fade-in-scale">
+            <div className="absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-primary/25 via-transparent to-secondary/20 blur-2xl" />
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d0f17]/90 p-4 shadow-[0_35px_100px_rgba(0,0,0,.55)] backdrop-blur-2xl sm:p-6">
+              <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-400/80" /><span className="h-2.5 w-2.5 rounded-full bg-amber-300/80" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" /></div>
+                  <span className="text-xs font-medium uppercase tracking-[.22em] text-muted">Performance Center</span>
+                </div>
+                <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-400">Optimizado</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[['FPS estable', '+38%', 'text-emerald-400'], ['Latencia', '-27%', 'text-cyan-300'], ['Calidad OBS', '1080p', 'text-primary']].map(([label, value, color]) => (
+                  <div key={label} className="rounded-2xl border border-white/10 bg-white/[.035] p-4">
+                    <p className="mb-2 text-xs text-muted">{label}</p>
+                    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-primary/[.08] to-transparent p-5">
+                <div className="mb-5 flex items-center justify-between"><span className="text-sm font-semibold">Rendimiento del sistema</span><span className="text-xs text-muted">En tiempo real</span></div>
+                <div className="flex h-32 items-end gap-2" aria-hidden="true">
+                  {[42, 55, 48, 70, 62, 79, 68, 88, 76, 94, 84, 100].map((height, index) => (
+                    <div key={index} className="flex-1 rounded-t-md bg-gradient-to-t from-primary/30 to-primary" style={{ height: `${height}%`, opacity: .45 + index * .045 }} />
+                  ))}
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.025] px-5 py-4">
+                <div><p className="text-sm font-semibold">Diagnóstico personalizado</p><p className="mt-1 text-xs text-muted">Configuración basada en tu hardware</p></div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">✦</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-white/[.07] bg-white/[.02] px-4 py-6">
+        <div className="container mx-auto grid grid-cols-2 gap-6 text-center md:grid-cols-4">
+          {[['Atención', '1 a 1'], ['Pago', '100% seguro'], ['Soporte', 'Antes y después'], ['Enfoque', 'Resultados reales']].map(([label, value]) => (
+            <div key={label}><p className="text-lg font-bold text-foreground">{value}</p><p className="mt-1 text-xs uppercase tracking-[.16em] text-muted">{label}</p></div>
+          ))}
         </div>
       </section>
 
       {/* Featured Services */}
       <section className="py-24 px-4 bg-card/30">
         <div className="container mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-primary animate-fade-in-up">Servicios Destacados</h2>
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[.2em] text-primary">Soluciones especializadas</p>
+            <h2 className="text-4xl font-bold tracking-tight md:text-5xl">Servicios creados para rendir más</h2>
+            <p className="mt-4 text-lg text-muted">Elige el punto de partida. Cada servicio se adapta a tu hardware, plataforma y objetivos.</p>
+          </div>
           {loading ? (
-            <div className="text-center text-muted">Cargando servicios destacados...</div>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3" aria-label="Cargando servicios destacados">
+              {[0, 1, 2].map((item) => <div key={item} className="h-80 animate-pulse rounded-3xl border border-white/10 bg-white/[.04]" />)}
+            </div>
           ) : featuredServices.length === 0 ? (
             <div className="text-center text-muted">No hay servicios destacados aún.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {featuredServices.map((service, index) => (
-                <Card key={service.id} className={`border-${index === 0 ? 'primary' : index === 1 ? 'secondary' : 'accent'}/50 transition-all glass-card`}>
+                <Card key={service.id} className="group relative overflow-hidden rounded-3xl border-white/10 bg-[#11131b]/85 transition duration-300 hover:-translate-y-2 hover:border-primary/40 hover:shadow-[0_25px_70px_rgba(0,0,0,.38)]">
+                  <div className={`absolute inset-x-0 top-0 h-1 ${index === 1 ? 'bg-secondary' : 'bg-primary'}`} />
                   <CardHeader>
+                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-xl text-primary">{index === 0 ? '◫' : index === 1 ? '⌁' : '◉'}</div>
                     <CardTitle className="text-2xl mb-2">{service.name}</CardTitle>
                     <CardDescription className="text-base">{service.description}</CardDescription>
                   </CardHeader>
@@ -100,12 +161,12 @@ export default function Home() {
                         <li key={idx} className="flex items-center gap-2">✓ <span className="text-foreground">{feature}</span></li>
                       ))}
                     </ul>
-                    <div className="mt-6 flex items-center justify-between">
-                      <span className={`text-3xl font-bold gradient-text-${index === 0 ? 'primary' : index === 1 ? 'secondary' : 'accent'}`}>
+                    <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
+                      <span className="text-3xl font-bold text-foreground">
                         ${service.price.toFixed(2)}
                       </span>
-                      <Button variant="outline" size="lg" href={`/servicios/${service.slug}`} className="shimmer-button">
-                        Ver detalles
+                      <Button variant="outline" size="lg" href={`/servicios/${service.slug}`} className="border-white/15 group-hover:border-primary/50 group-hover:bg-primary/10">
+                        Explorar <span aria-hidden="true" className="ml-2">→</span>
                       </Button>
                     </div>
                   </CardContent>

@@ -33,6 +33,25 @@ body {
   min-height: 100vh;
 }
 
+.premium-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+
+.premium-button {
+  background: linear-gradient(135deg, #6674ff 0%, #5865f2 48%, #7c5cff 100%);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.premium-button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 55px rgba(88, 101, 242, 0.42);
+}
+
 .animated-bg {
   position: fixed;
   top: 0;
@@ -389,4 +408,13 @@ body {
 .backdrop-blur-strong {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
