@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe-server'
 import { getDiscordService } from '@/lib/discord-integration'
+import { sendOrderNotificationEmail } from '@/lib/order-notifications'
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe()
@@ -66,18 +67,30 @@ export async function POST(request: NextRequest) {
       if (!orderId) return NextResponse.json({ received: true })
 
       const { data: order } = await supabase.from('orders')
-        .select('id, order_number, client_name, services(name), users(discord_id)')
+        .select('id, order_number, client_name, client_email, services(name), users(discord_id)')
         .eq('id', orderId).maybeSingle()
       if (order && shouldNotify) {
         const service = Array.isArray(order.services) ? order.services[0] : order.services
         const user = Array.isArray(order.users) ? order.users[0] : order.users
-        await getDiscordService().notifyOrderPaid({
-          order_id: order.id,
-          order_number: order.order_number,
-          service_name: service?.name || 'Servicio',
-          customer_name: order.client_name,
-          discord_user_id: user?.discord_id || undefined,
-        })
+        await Promise.allSettled([
+          getDiscordService().notifyOrderPaid({
+            order_id: order.id,
+            order_number: order.order_number,
+            service_name: service?.name || 'Servicio',
+            customer_name: order.client_name,
+            discord_user_id: user?.discord_id || undefined,
+          }),
+          sendOrderNotificationEmail({
+            kind: 'paid',
+            eventId: `order-paid-${order.id}`,
+            orderId: order.id,
+            orderNumber: order.order_number,
+            customerName: order.client_name,
+            customerEmail: order.client_email,
+            serviceName: service?.name || 'Servicio',
+            status: 'reviewing',
+          }),
+        ])
       }
     }
   }

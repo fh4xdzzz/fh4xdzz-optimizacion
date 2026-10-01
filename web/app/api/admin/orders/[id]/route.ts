@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminRole } from '@/lib/admin-api'
+import { getDiscordService } from '@/lib/discord-integration'
+import { sendOrderNotificationEmail } from '@/lib/order-notifications'
 
 const updateOrderSchema = z.object({
   status: z.enum(['reviewing', 'in_progress', 'waiting_client', 'completed', 'cancelled']),
@@ -19,21 +21,23 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const { id } = await context.params
   const { data: currentOrder } = await auth.supabase
     .from('orders')
-    .select('id, status, assigned_to, estimated_completion')
+    .select('id, user_id, order_number, client_name, client_email, status, assigned_to, estimated_completion, services(name)')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
 
   if (!currentOrder) return NextResponse.json({ error: 'Pedido no encontrado.' }, { status: 404 })
 
+  let assignedName: string | null = null
   if (parsed.data.assignedTo) {
     const { data: assignee } = await auth.supabase
       .from('users')
-      .select('id, role')
+      .select('id, role, full_name')
       .eq('id', parsed.data.assignedTo)
       .in('role', ['staff', 'admin', 'owner'])
       .maybeSingle()
     if (!assignee) return NextResponse.json({ error: 'El responsable seleccionado no es válido.' }, { status: 400 })
+    assignedName = assignee.full_name || null
   }
 
   const updatePayload: Record<string, string | null> = {
@@ -70,15 +74,64 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       ? 'assigned'
       : 'note_added'
 
-  const { error: eventError } = await auth.supabase.from('order_events').insert({
+  const { data: orderEvent, error: eventError } = await auth.supabase.from('order_events').insert({
     order_id: id,
     event_type: eventType,
     old_status: currentOrder.status,
     new_status: parsed.data.status,
     description: changes.join(' · ') || 'Pedido actualizado',
     created_by: auth.session.user.id,
-  })
+  }).select('id').single()
 
   if (eventError) console.error('[admin/orders] No se pudo registrar el historial', eventError)
+
+  if (changes.length > 0) {
+    const service = Array.isArray(currentOrder.services) ? currentOrder.services[0] : currentOrder.services
+    const { data: customer } = await auth.supabase
+      .from('users')
+      .select('discord_id')
+      .eq('id', currentOrder.user_id)
+      .maybeSingle()
+    const notificationKind = currentOrder.status !== parsed.data.status
+      ? parsed.data.status === 'waiting_client'
+        ? 'waiting_client'
+        : parsed.data.status === 'completed'
+          ? 'completed'
+          : parsed.data.status === 'cancelled'
+            ? 'cancelled'
+            : 'status_changed'
+      : currentOrder.assigned_to !== parsed.data.assignedTo
+        ? 'assigned'
+        : 'status_changed'
+    const notificationEventId = orderEvent?.id || `${id}-${Date.now()}`
+
+    await Promise.allSettled([
+      sendOrderNotificationEmail({
+        kind: notificationKind,
+        eventId: notificationEventId,
+        orderId: id,
+        orderNumber: currentOrder.order_number,
+        customerName: currentOrder.client_name,
+        customerEmail: currentOrder.client_email,
+        serviceName: service?.name || 'Servicio',
+        status: parsed.data.status,
+        note: parsed.data.note || undefined,
+        estimatedCompletion: parsed.data.estimatedCompletion,
+        assignedName,
+      }),
+      getDiscordService().notifyOrderStatus({
+        event_id: notificationEventId,
+        order_id: id,
+        order_number: currentOrder.order_number,
+        service_name: service?.name || 'Servicio',
+        customer_name: currentOrder.client_name,
+        discord_user_id: customer?.discord_id || undefined,
+        status: parsed.data.status,
+        note: parsed.data.note || undefined,
+        estimated_completion: parsed.data.estimatedCompletion,
+        assigned_name: assignedName,
+      }),
+    ])
+  }
   return NextResponse.json({ success: true })
 }

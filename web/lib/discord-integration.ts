@@ -149,6 +149,46 @@ class DiscordIntegrationService {
   }
 
   /**
+   * Notificar cambios operativos del pedido al cliente por Discord privado.
+   */
+  async notifyOrderStatus(orderData: {
+    event_id: string
+    order_id: string
+    order_number: string
+    service_name: string
+    customer_name: string
+    discord_user_id?: string
+    status: string
+    note?: string
+    estimated_completion?: string | null
+    assigned_name?: string | null
+  }): Promise<boolean> {
+    const eventTypes: Record<string, string> = {
+      completed: 'order.completed',
+      cancelled: 'order.cancelled',
+    }
+    const event: DiscordEvent = {
+      event_id: `order_update_${orderData.event_id}`,
+      event_type: eventTypes[orderData.status] || 'order.processing',
+      created_at: new Date().toISOString(),
+      organization_id: 'thedulcandesign',
+      payload: {
+        order_id: orderData.order_id,
+        order_number: orderData.order_number,
+        service_name: orderData.service_name,
+        customer_name: orderData.customer_name,
+        discord_user_id: orderData.discord_user_id,
+        status: orderData.status,
+        note: orderData.note,
+        estimated_completion: orderData.estimated_completion,
+        assigned_name: orderData.assigned_name,
+      }
+    }
+
+    return this.sendDiscordEvent(event)
+  }
+
+  /**
    * Notificar nuevo ticket
    */
   async notifyNewTicket(ticketData: {
