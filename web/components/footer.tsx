@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { SupportChatLink } from '@/components/support-chat-trigger'
 
 export default function Footer() {
   return (
@@ -54,9 +55,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/contacto" className="hover:text-foreground transition-colors hover:scale-105 transform inline-block">
+                <SupportChatLink className="hover:text-foreground transition-colors hover:scale-105 transform inline-block">
                   Contacto
-                </Link>
+                </SupportChatLink>
               </li>
               <li>
                 <Link href="/terms" className="hover:text-foreground transition-colors hover:scale-105 transform inline-block">
@@ -101,3 +102,4 @@ export default function Footer() {
     </footer>
   )
 }
+
