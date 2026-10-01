@@ -7,7 +7,6 @@ import { getStripe } from '@/lib/stripe-server'
 const checkoutSchema = z.object({
   serviceId: z.string().uuid(),
   name: z.string().trim().min(2).max(100),
-  discord: z.string().trim().max(100).optional().default(''),
   description: z.string().trim().min(10).max(500),
 })
 
@@ -15,6 +14,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
+    if (!session.user.discord_username) {
+      return NextResponse.json({ error: 'Debes vincular tu cuenta de Discord desde tu perfil antes de continuar.' }, { status: 400 })
+    }
 
     const parsed = checkoutSchema.safeParse(await request.json())
     if (!parsed.success) {
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         user_id: session.user.id,
         service_id: service.id,
         client_name: parsed.data.name,
-        client_discord: parsed.data.discord,
+        client_discord: session.user.discord_username,
         description: parsed.data.description,
       },
       line_items: [{
@@ -75,3 +77,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No se pudo abrir el pago seguro. Inténtalo nuevamente.' }, { status: 500 })
   }
 }
+
