@@ -185,9 +185,12 @@ export default function ServicesPage() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto text-center">
-            <p>Cargando servicios...</p>
+        <section className="px-4 pb-20 pt-36">
+          <div className="container mx-auto">
+            <div className="mx-auto mb-12 h-32 max-w-2xl animate-pulse rounded-3xl bg-white/[.04]" />
+            <div className="grid gap-7 md:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="h-96 animate-pulse rounded-3xl border border-white/10 bg-white/[.04]" />)}
+            </div>
           </div>
         </section>
         <Footer />
@@ -222,26 +225,31 @@ export default function ServicesPage() {
         <Navbar />
 
       {/* Header */}
-      <section className="pt-32 pb-12 px-4">
-        <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text-primary animate-fade-in-up">Nuestros Servicios</h1>
-          <p className="text-xl md:text-2xl text-muted max-w-2xl mx-auto text-headline animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            Soluciones profesionales para optimizar tu experiencia de streaming, gaming y soporte técnico
+      <section className="premium-grid relative overflow-hidden px-4 pb-14 pt-36 md:pt-40">
+        <div className="pointer-events-none absolute left-1/2 top-20 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/20 blur-[110px]" />
+        <div className="container relative mx-auto text-center">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-[.22em] text-primary">Servicios profesionales</p>
+          <h1 className="mx-auto mb-5 max-w-4xl text-5xl font-black tracking-[-.04em] md:text-7xl">La mejora correcta para <span className="gradient-text-primary">cada etapa de tu setup</span></h1>
+          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted md:text-xl">
+            Soluciones claras, precio transparente y configuración personalizada. Elige tu objetivo y nosotros nos encargamos de la parte técnica.
           </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm text-muted">
+            {['Diagnóstico incluido', 'Pago seguro', 'Soporte post-servicio'].map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/[.035] px-4 py-2">✓ {item}</span>)}
+          </div>
         </div>
       </section>
 
       {/* Category Filters */}
       <section className="pb-8 px-4 relative z-30">
         <div className="container mx-auto">
-          <div className="flex flex-wrap gap-3 justify-center">
+          <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2 rounded-2xl border border-white/10 bg-[#0d0f17]/75 p-2 backdrop-blur-xl">
             {categories.map((category) => (
               <button
                 key={category.id}
-                className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 text-sm pointer-events-auto cursor-pointer ${
+                className={`inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   selectedCategory === category.id
-                    ? 'bg-primary text-white'
-                    : 'border border-border bg-transparent'
+                    ? 'bg-primary text-white shadow-[0_8px_24px_rgba(88,101,242,.3)]'
+                    : 'text-muted hover:bg-white/[.05] hover:text-foreground'
                 }`}
                 onClick={() => setSelectedCategory(category.id)}
               >
@@ -255,80 +263,38 @@ export default function ServicesPage() {
       {/* Services Grid */}
       <section className="pb-20 px-4">
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
             {filteredServices.map((service, index) => (
               <Card
                 key={service.id}
-                className={`border-2 transition-all glass-card animate-fade-in-up ${
-                  service.featured
-                    ? 'border-primary shadow-lg shadow-primary/20'
-                    : 'border-border/50'
-                }`}
+                className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-[#11131b]/90 transition duration-300 hover:-translate-y-2 hover:border-primary/40 hover:shadow-[0_24px_70px_rgba(0,0,0,.4)] animate-fade-in-up ${service.is_featured ? 'border-primary/40' : 'border-white/10'}`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 {service.is_featured && (
-                  <div className="bg-primary text-white text-xs font-bold px-4 py-2 text-center rounded-b-xl">
-                    ⭐ DESTACADO
+                  <div className="absolute right-5 top-5 z-10 rounded-full border border-primary/30 bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                    Recomendado
                   </div>
                 )}
                 <CardHeader>
-                  <CardTitle className="text-2xl mb-2">{service.name}</CardTitle>
-                  <CardDescription className="text-base">{service.description}</CardDescription>
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-xl text-primary">{service.category === 'streaming' ? '◫' : service.category === 'pc_windows' ? '⌁' : service.category === 'support' ? '?' : '◉'}</div>
+                  <CardTitle className="mb-2 pr-20 text-2xl">{service.name}</CardTitle>
+                  <CardDescription className="min-h-12 text-base leading-relaxed">{service.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-4 border border-border/50 rounded-xl glass-card">
-                      <h4 className="font-semibold text-base mb-3">Beneficios:</h4>
-                      <ul className="space-y-2">
-                        {service.benefits && service.benefits.length > 0 ? (
-                          service.benefits.map((benefit, index) => (
-                            <li key={index} className="text-sm text-muted flex items-start">
-                              <span className="text-primary mr-2 text-base">✓</span>
-                              <span className="text-foreground">{benefit}</span>
-                            </li>
-                          ))
-                        ) : (
-                          <li className="text-sm text-muted">No hay beneficios especificados</li>
-                        )}
-                      </ul>
+                <CardContent className="flex flex-1 flex-col">
+                  <ul className="mb-7 space-y-3">
+                    {(service.benefits || []).slice(0, 4).map((benefit) => (
+                      <li key={benefit} className="flex items-start gap-3 text-sm"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-400/10 text-xs text-emerald-400">✓</span><span className="text-foreground/85">{benefit}</span></li>
+                    ))}
+                  </ul>
+                  <div className="mt-auto border-t border-white/10 pt-6">
+                    <div className="mb-5 flex items-end justify-between">
+                      <div><p className="text-xs uppercase tracking-wider text-muted">Desde</p><p className="mt-1 text-3xl font-bold text-foreground">${Number(service.price).toFixed(2)}</p></div>
+                      <div className="text-right"><p className="text-xs uppercase tracking-wider text-muted">Entrega</p><p className="mt-1 text-sm font-medium">{service.duration_estimate}</p></div>
                     </div>
-
-                    <div className="p-4 border border-border/50 rounded-xl glass-card">
-                      <h4 className="font-semibold text-base mb-3">Incluye:</h4>
-                      <ul className="space-y-2">
-                        {service.includes && service.includes.length > 0 ? (
-                          service.includes.map((item, index) => (
-                            <li key={index} className="text-sm text-muted flex items-start">
-                              <span className="text-secondary mr-2 text-base">•</span>
-                              <span className="text-foreground">{item}</span>
-                            </li>
-                          ))
-                        ) : (
-                          <li className="text-sm text-muted">No hay detalles especificados</li>
-                        )}
-                      </ul>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                      <div>
-                        <div className="text-3xl font-bold gradient-text-primary">${service.price}</div>
-                        <div className="text-sm text-muted">{service.duration_estimate}</div>
-                      </div>
-                      <div className="flex gap-3">
-                        <a
-                          href={`/servicios/${service.slug}`}
-                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 border border-border bg-transparent pointer-events-auto cursor-pointer"
-                        >
-                          Ver detalles
-                        </a>
-                        <button
-                          onClick={() => handleRequestService(service.id)}
-                          className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 px-4 bg-primary text-white pointer-events-auto cursor-pointer shimmer-button"
-                        >
-                          Solicitar
-                        </button>
-                      </div>
-                    </div>
+                    <Button variant="primary" href={`/servicios/${service.slug}`} className="premium-button h-12 w-full">
+                      Ver servicio <span aria-hidden="true" className="ml-2">→</span>
+                    </Button>
+                    <button onClick={() => handleRequestService(service.id)} className="mt-3 w-full py-2 text-sm font-medium text-muted transition hover:text-foreground">Solicitar directamente</button>
                   </div>
                 </CardContent>
               </Card>

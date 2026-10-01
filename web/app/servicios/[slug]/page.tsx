@@ -3,7 +3,7 @@ import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
 
 interface Service {
   id: string
@@ -22,7 +22,7 @@ interface Service {
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: service } = await supabase
     .from('services')
     .select('*')
@@ -50,36 +50,33 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="min-h-screen bg-background">
+      <div className="animated-bg" />
+      <div className="animated-bg-overlay" />
+      <div className="relative z-10">
       <Navbar />
 
       {/* Header */}
-      <section className="pt-32 pb-12 px-4">
+      <section className="premium-grid relative overflow-hidden px-4 pb-14 pt-32 md:pt-40">
+        <div className="pointer-events-none absolute right-1/4 top-16 h-80 w-80 rounded-full bg-primary/20 blur-[110px]" />
         <div className="container mx-auto">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-2 text-sm text-muted mb-4">
-              <Link href="/servicios" className="text-foreground">
+          <div className="relative mx-auto max-w-6xl">
+            <div className="mb-8 flex items-center gap-2 text-sm text-muted">
+              <Link href="/servicios" className="transition hover:text-foreground">
                 Servicios
               </Link>
               <span>/</span>
               <span className="text-foreground">{service.name}</span>
             </div>
-            
-            {/* Image */}
-            {service.image_url && (
-              <div className="mb-8 rounded-lg overflow-hidden border border-border">
-                <img 
-                  src={service.image_url} 
-                  alt={service.name}
-                  className="w-full h-auto object-cover"
-                />
+            <div className="grid items-end gap-10 lg:grid-cols-[1fr_auto]">
+              <div>
+                <div className="mb-5 inline-flex rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[.18em] text-primary">Configuración personalizada</div>
+                <h1 className="mb-5 max-w-4xl text-5xl font-black tracking-[-.04em] md:text-7xl">{service.name}</h1>
+                <p className="max-w-3xl text-lg leading-relaxed text-muted md:text-xl">{service.description}</p>
               </div>
-            )}
-            
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">{service.name}</h1>
-            <p className="text-xl text-muted mb-6">{service.description}</p>
-            <div className="flex items-center gap-4">
-              <div className="text-3xl font-bold">${service.price}</div>
-              <div className="text-muted">• {service.duration_estimate}</div>
+              <div className="flex gap-3 lg:pb-2">
+                <div className="rounded-2xl border border-white/10 bg-white/[.035] px-5 py-4"><p className="text-xs uppercase tracking-wider text-muted">Entrega</p><p className="mt-1 font-semibold">{service.duration_estimate}</p></div>
+                <div className="rounded-2xl border border-white/10 bg-white/[.035] px-5 py-4"><p className="text-xs uppercase tracking-wider text-muted">Soporte</p><p className="mt-1 font-semibold">Incluido</p></div>
+              </div>
             </div>
           </div>
         </div>
@@ -88,11 +85,11 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       {/* Main Content */}
       <section className="pb-20 px-4">
         <div className="container mx-auto">
-          <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
             {/* Details */}
             <div className="lg:col-span-2 space-y-8">
               {service.details && (
-                <Card>
+                <Card className="rounded-3xl border-white/10 bg-[#11131b]/85">
                   <CardHeader>
                     <CardTitle>Detalles del Servicio</CardTitle>
                   </CardHeader>
@@ -102,9 +99,10 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                 </Card>
               )}
 
-              <Card>
+              <Card className="rounded-3xl border-white/10 bg-[#11131b]/85">
                 <CardHeader>
-                  <CardTitle>Beneficios</CardTitle>
+                  <p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Resultados</p>
+                  <CardTitle className="text-3xl">Lo que vas a mejorar</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
@@ -116,7 +114,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
-                          <span className="text-muted">{benefit}</span>
+                          <span className="text-foreground/85">{benefit}</span>
                         </li>
                       ))
                     ) : (
@@ -126,9 +124,10 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="rounded-3xl border-white/10 bg-[#11131b]/85">
                 <CardHeader>
-                  <CardTitle>Qué Incluye</CardTitle>
+                  <p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Alcance claro</p>
+                  <CardTitle className="text-3xl">Todo lo que incluye</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
@@ -138,7 +137,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                           <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                             <div className="w-2 h-2 rounded-full bg-secondary" />
                           </div>
-                          <span className="text-muted">{item}</span>
+                          <span className="text-foreground/85">{item}</span>
                         </li>
                       ))
                     ) : (
@@ -147,45 +146,59 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                   </ul>
                 </CardContent>
               </Card>
+
+              <Card className="rounded-3xl border-white/10 bg-gradient-to-br from-primary/[.09] to-[#11131b]">
+                <CardHeader><p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Proceso</p><CardTitle className="text-3xl">Así trabajaremos</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-5 sm:grid-cols-3">
+                    {[['01', 'Diagnóstico', 'Revisamos tu equipo, objetivos y problemas actuales.'], ['02', 'Optimización', 'Aplicamos la configuración y comprobamos cada cambio.'], ['03', 'Entrega', 'Validamos el resultado contigo y explicamos lo realizado.']].map(([number, title, text]) => (
+                      <div key={number} className="rounded-2xl border border-white/10 bg-black/10 p-5"><span className="text-sm font-bold text-primary">{number}</span><h3 className="mt-4 font-semibold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-muted">{text}</p></div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-6">
-              <Card className="border-primary/50">
+            <div className="space-y-6 lg:sticky lg:top-28 lg:self-start">
+              <Card className="overflow-hidden rounded-3xl border-primary/35 bg-[#11131b]/95 shadow-[0_25px_80px_rgba(0,0,0,.4)] backdrop-blur-xl">
+                <div className="h-1 bg-gradient-to-r from-primary via-secondary to-primary" />
                 <CardHeader>
-                  <CardTitle className="text-lg">Solicitar Servicio</CardTitle>
+                  <p className="text-sm text-muted">Inversión desde</p>
+                  <CardTitle className="text-4xl">${Number(service.price).toFixed(2)} <span className="text-sm font-normal text-muted">USD</span></CardTitle>
                   <CardDescription>
-                    Completa el formulario y te contactaremos para coordinar
+                    Pago seguro. No aparecerá como pedido confirmado hasta completar el pago.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center py-2 border-b border-border">
-                      <span className="text-muted">Precio</span>
-                      <span className="font-bold">${service.price}</span>
+                      <span className="text-muted">Diagnóstico</span>
+                      <span className="font-semibold text-emerald-400">Incluido</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <span className="text-muted">Duración</span>
                       <span>{service.duration_estimate}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
-                      <span className="text-muted">Categoría</span>
-                      <span className="capitalize">{service.category}</span>
+                      <span className="text-muted">Soporte posterior</span>
+                      <span className="font-semibold text-emerald-400">Incluido</span>
                     </div>
-                    <Button variant="primary" className="w-full" href={`/contacto?service=${service.id}`}>
-                      Solicitar Ahora
+                    <Button variant="primary" size="lg" className="premium-button h-14 w-full" href={`/contacto?service=${service.id}`}>
+                      Contratar servicio →
                     </Button>
+                    <div className="flex items-center justify-center gap-2 pt-1 text-xs text-muted"><span className="text-emerald-400">●</span> Pago protegido mediante Stripe</div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="rounded-3xl border-white/10 bg-white/[.025]">
                 <CardHeader>
                   <CardTitle className="text-lg">¿Tienes dudas?</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted text-sm mb-4">
-                    Únete a nuestro Discord para consultar con nuestro equipo antes de solicitar.
+                    Consulta con nuestro equipo antes de contratar. Te ayudamos a elegir sin compromiso.
                   </p>
                   <Button variant="outline" className="w-full" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
                     Unirse a Discord
@@ -198,6 +211,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       </section>
 
       <Footer />
+      </div>
     </div>
   )
 }
