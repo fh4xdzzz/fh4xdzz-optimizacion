@@ -248,6 +248,7 @@ class DiscordIntegrationService {
    * Notificar una transferencia solamente al nuevo agente responsable.
    */
   async notifyTicketTransferred(ticketData: {
+    session_id: string
     ticket_id: string
     customer_name: string
     from_agent_name: string
@@ -260,6 +261,7 @@ class DiscordIntegrationService {
       created_at: new Date().toISOString(),
       organization_id: 'thedulcandesign',
       payload: {
+        session_id: ticketData.session_id,
         ticket_id: ticketData.ticket_id,
         customer_name: ticketData.customer_name,
         from_agent_name: ticketData.from_agent_name,

@@ -5,8 +5,10 @@ Procesa eventos desde la web y genera embeds profesionales en Discord
 
 import discord
 import json
+import os
 from datetime import datetime
 from typing import Dict, Any
+from urllib.parse import urlencode
 from utils.logger import logger
 
 class EventProcessor:
@@ -227,7 +229,22 @@ class EventProcessor:
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
         embed.timestamp = datetime.fromisoformat(event.get('created_at'))
 
-        await self.notify_discord_user(payload.get('target_discord_user_id'), embed, "agente receptor")
+        base_url = os.getenv('WEB_APP_URL', 'https://www.thedulcandesign.com').rstrip('/')
+        chat_url = f"{base_url}/admin?{urlencode({'supportChat': payload.get('session_id', '')})}"
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(
+            label="Abrir chat",
+            emoji="💬",
+            style=discord.ButtonStyle.link,
+            url=chat_url
+        ))
+
+        await self.notify_discord_user(
+            payload.get('target_discord_user_id'),
+            embed,
+            "agente receptor",
+            view=view
+        )
 
     async def handle_user_created(self, event: Dict[str, Any]):
         """Manejar evento de usuario creado"""
@@ -331,14 +348,20 @@ class EventProcessor:
         except (ValueError, discord.Forbidden, discord.NotFound) as error:
             logger.warning(f"No se pudo enviar DM privado al cliente: {error}")
 
-    async def notify_discord_user(self, discord_user_id: Any, embed: discord.Embed, recipient: str):
+    async def notify_discord_user(
+        self,
+        discord_user_id: Any,
+        embed: discord.Embed,
+        recipient: str,
+        view: discord.ui.View | None = None
+    ):
         """Enviar un DM a un único usuario de Discord."""
         if not discord_user_id:
             logger.warning(f"No se pudo notificar al {recipient}: Discord ID no configurado")
             return
         try:
             user = self.bot.get_user(int(discord_user_id)) or await self.bot.fetch_user(int(discord_user_id))
-            await user.send(embed=embed)
+            await user.send(embed=embed, view=view)
             logger.info(f"Notificación privada enviada al {recipient} ({discord_user_id})")
         except (ValueError, discord.Forbidden, discord.NotFound) as error:
             logger.warning(f"No se pudo enviar DM privado al {recipient}: {error}")

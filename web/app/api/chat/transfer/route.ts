@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
       ])
 
       await getDiscordService().notifyTicketTransferred({
+        session_id: currentChat.id,
         ticket_id: currentChat.conversation_number,
         customer_name: customer?.full_name || customer?.email || 'Cliente',
         from_agent_name: sourceAgent?.full_name || sourceAgent?.email || 'Otro agente',

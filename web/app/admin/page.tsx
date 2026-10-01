@@ -653,6 +653,19 @@ export default function AdminPage() {
     setLastMessages(lastMessagesMap)
   }
 
+  useEffect(() => {
+    const chatId = new URLSearchParams(window.location.search).get('supportChat')
+    if (!chatId || selectedChat?.id === chatId) return
+
+    const linkedChat = [...chatSessions, ...chatHistory].find(chat => chat.id === chatId)
+    if (!linkedChat) return
+
+    setActiveTab('support')
+    setSupportFilter(linkedChat.status === 'closed' ? 'closed' : 'all')
+    setSelectedChat(linkedChat)
+    loadChatMessages(linkedChat.id)
+  }, [chatSessions, chatHistory, selectedChat?.id])
+
   // Respaldo para instalaciones donde Supabase Realtime no esté publicado o
   // el websocket se desconecte. Realtime sigue siendo la vía inmediata.
   useEffect(() => {
