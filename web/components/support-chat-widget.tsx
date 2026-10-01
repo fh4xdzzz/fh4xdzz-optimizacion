@@ -564,7 +564,7 @@ export default function SupportChatWidget() {
   }, [])
 
   // Los agentes atienden desde /admin; la burbuja es exclusiva para clientes.
-  if (!authLoading && currentUser && ['admin', 'staff', 'owner'].includes(currentUser.role)) {
+  if (!open && !authLoading && currentUser && ['admin', 'staff', 'owner'].includes(currentUser.role)) {
     return null
   }
 
@@ -948,3 +948,4 @@ export default function SupportChatWidget() {
     </section>
   )
 }
+
