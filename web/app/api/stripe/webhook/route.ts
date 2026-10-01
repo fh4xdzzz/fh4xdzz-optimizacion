@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
           orderId = existingOrder.id
         } else {
           const { data: createdOrder, error: createError } = await supabase.from('orders').insert({
-            order_number: `PAID-${checkout.id}`,
+            order_number: checkout.metadata.request_code || `PAID-${checkout.id}`,
             user_id: checkout.metadata.user_id,
             service_id: checkout.metadata.service_id,
             status: 'reviewing',

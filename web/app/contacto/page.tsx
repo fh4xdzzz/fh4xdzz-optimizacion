@@ -8,6 +8,19 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
+import { Modal } from '@/components/ui/modal'
+
+interface CheckoutInvoice {
+  code: string
+  customerName: string
+  customerEmail: string
+  discordUsername: string
+  serviceName: string
+  description: string
+  subtotal: number
+  total: number
+  currency: string
+}
 
 function ContactFormContent() {
   const [formData, setFormData] = useState({
@@ -20,6 +33,7 @@ function ContactFormContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [services, setServices] = useState<Array<{id: string, name: string, slug: string, price: number}>>([])
+  const [checkoutPreview, setCheckoutPreview] = useState<{ url: string; invoice: CheckoutInvoice } | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const cancelled = searchParams.get('cancelled') === '1'
@@ -128,9 +142,9 @@ function ContactFormContent() {
           description: formData.description,
         }),
       })
-      const payload = await response.json() as { url?: string; error?: string }
-      if (!response.ok || !payload.url) throw new Error(payload.error || 'No se pudo abrir el pago seguro')
-      window.location.assign(payload.url)
+      const payload = await response.json() as { url?: string; invoice?: CheckoutInvoice; error?: string }
+      if (!response.ok || !payload.url || !payload.invoice) throw new Error(payload.error || 'No se pudo preparar el pago seguro')
+      setCheckoutPreview({ url: payload.url, invoice: payload.invoice })
     } catch (error) {
       console.error('Error al crear pedido:', error)
       const message = error instanceof Error
@@ -146,6 +160,12 @@ function ContactFormContent() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const proceedToPayment = () => {
+    if (!checkoutPreview || isSubmitting) return
+    setIsSubmitting(true)
+    window.location.assign(checkoutPreview.url)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -306,7 +326,7 @@ function ContactFormContent() {
                   className="w-full"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Abriendo pago seguro…' : 'Continuar al pago seguro →'}
+                  {isSubmitting ? 'Preparando factura…' : 'Revisar código y factura →'}
                 </Button>
                 <p className="text-center text-xs text-muted">Tu tarjeta se procesa directamente en Stripe. No almacenamos datos bancarios.</p>
               </form>
@@ -329,6 +349,38 @@ function ContactFormContent() {
           </div>
         </div>
       </section>
+
+      <Modal
+        isOpen={Boolean(checkoutPreview)}
+        onClose={() => setCheckoutPreview(null)}
+        title="Revisa tu factura proforma"
+        description="Confirma los datos antes de ir al pago seguro. El pedido se creará únicamente después de pagar."
+        className="max-w-2xl"
+      >
+        {checkoutPreview && (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Código de solicitud</p>
+              <p className="mt-2 font-mono text-2xl font-black tracking-wider text-white">{checkoutPreview.invoice.code}</p>
+              <p className="mt-2 text-xs text-muted">Guarda este código. Será el número de tu pedido después del pago.</p>
+            </div>
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4"><p className="text-xs uppercase tracking-wider text-muted">Cliente</p><p className="mt-1 font-semibold">{checkoutPreview.invoice.customerName}</p><p className="mt-1 break-all text-xs text-muted">{checkoutPreview.invoice.customerEmail}</p></div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4"><p className="text-xs uppercase tracking-wider text-muted">Servicio</p><p className="mt-1 font-semibold">{checkoutPreview.invoice.serviceName}</p><p className="mt-1 text-xs text-muted">Discord: {checkoutPreview.invoice.discordUsername}</p></div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4"><p className="text-xs uppercase tracking-wider text-muted">Solicitud</p><p className="mt-2 whitespace-pre-wrap break-words text-sm">{checkoutPreview.invoice.description}</p></div>
+            <div className="space-y-2 border-t border-white/10 pt-4 text-sm">
+              <div className="flex justify-between"><span className="text-muted">Subtotal</span><span>${checkoutPreview.invoice.subtotal.toFixed(2)} {checkoutPreview.invoice.currency}</span></div>
+              <div className="flex items-end justify-between border-t border-white/10 pt-3"><span className="font-semibold">Total a pagar</span><span className="text-3xl font-black text-primary">${checkoutPreview.invoice.total.toFixed(2)}</span></div>
+            </div>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => setCheckoutPreview(null)}>Corregir información</Button>
+              <Button type="button" onClick={proceedToPayment} disabled={isSubmitting}>{isSubmitting ? 'Abriendo Stripe…' : 'Proceder al pago seguro →'}</Button>
+            </div>
+            <p className="text-center text-xs text-muted">Esto no es un comprobante de pago. Stripe emitirá la confirmación cuando el cargo sea aprobado.</p>
+          </div>
+        )}
+      </Modal>
 
       <Footer />
     </div>

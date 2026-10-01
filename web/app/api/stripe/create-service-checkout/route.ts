@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getServerSession } from '@/lib/auth-server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe-server'
+import { randomBytes } from 'node:crypto'
 
 const checkoutSchema = z.object({
   serviceId: z.string().uuid(),
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     if (!stripe) return NextResponse.json({ error: 'Stripe aún no está configurado.' }, { status: 503 })
 
     const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+    const requestCode = `TDD-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomBytes(3).toString('hex').toUpperCase()}`
     const checkout = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -51,6 +53,7 @@ export async function POST(request: NextRequest) {
         client_name: parsed.data.name,
         client_discord: session.user.discord_username,
         description: parsed.data.description,
+        request_code: requestCode,
       },
       line_items: [{
         quantity: 1,
@@ -70,7 +73,20 @@ export async function POST(request: NextRequest) {
     })
 
     if (!checkout.url) return NextResponse.json({ error: 'Stripe no devolvió una página de pago.' }, { status: 502 })
-    return NextResponse.json({ url: checkout.url })
+    return NextResponse.json({
+      url: checkout.url,
+      invoice: {
+        code: requestCode,
+        customerName: parsed.data.name,
+        customerEmail: session.user.email,
+        discordUsername: session.user.discord_username,
+        serviceName: service.name,
+        description: parsed.data.description,
+        subtotal: Number(service.price),
+        total: Number(service.price),
+        currency: 'USD',
+      },
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error desconocido'
     console.error('[stripe/create-service-checkout] No se pudo crear la sesión', { message })
