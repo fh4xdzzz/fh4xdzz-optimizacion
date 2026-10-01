@@ -1,442 +1,211 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Check, Clock3, MessageCircle, PackageCheck, Paperclip, UserRound } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
 import { useNotificationStore } from '@/lib/notifications-store'
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pendiente', color: 'bg-yellow-500' },
-  reviewing: { label: 'Revisando', color: 'bg-blue-500' },
-  in_progress: { label: 'En proceso', color: 'bg-purple-500' },
-  waiting_client: { label: 'Esperando cliente', color: 'bg-orange-500' },
-  completed: { label: 'Completado', color: 'bg-green-500' },
-  cancelled: { label: 'Cancelado', color: 'bg-red-500' },
+const STATUS_LABELS: Record<string, { label: string; tone: string }> = {
+  reviewing: { label: 'En revisión', tone: 'border-blue-400/30 bg-blue-500/10 text-blue-300' },
+  in_progress: { label: 'En proceso', tone: 'border-violet-400/30 bg-violet-500/10 text-violet-300' },
+  waiting_client: { label: 'Esperando tu respuesta', tone: 'border-amber-400/30 bg-amber-500/10 text-amber-300' },
+  completed: { label: 'Completado', tone: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300' },
+  cancelled: { label: 'Cancelado', tone: 'border-red-400/30 bg-red-500/10 text-red-300' },
 }
+
+const TRACKING_STEPS = [
+  { key: 'reviewing', label: 'Pago confirmado', description: 'Revisamos tu solicitud y preparamos el trabajo.' },
+  { key: 'in_progress', label: 'Servicio en proceso', description: 'Nuestro equipo está trabajando en tu configuración.' },
+  { key: 'completed', label: 'Entrega y soporte', description: 'Recibes el resultado y el soporte posterior incluido.' },
+]
+
+const STATUS_PROGRESS: Record<string, number> = { reviewing: 1, in_progress: 2, waiting_client: 2, completed: 3, cancelled: 0 }
 
 interface Order {
   id: string
   order_number: string
   service_id: string
-  service_name?: string
+  service_name: string
   client_name: string
   client_email: string
-  client_discord?: string
+  client_discord?: string | null
   description: string
   price: number
   status: string
+  assigned_to?: string | null
+  estimated_completion?: string | null
+  actual_completion?: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface OrderEvent {
+  id: string
+  event_type: string
+  description: string | null
+  new_status: string | null
   created_at: string
 }
 
 export default function OrdersPage() {
-  const [orderNumber, setOrderNumber] = useState('')
-  const [searchResult, setSearchResult] = useState<Order | null>(null)
-  const [searchError, setSearchError] = useState('')
-  const [showAllOrders, setShowAllOrders] = useState(false)
-  const [allOrders, setAllOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
-  const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [events, setEvents] = useState<OrderEvent[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const notifyInfo = useNotificationStore(state => state.info)
 
-  // Cargar pedidos del usuario desde Supabase
-  const loadOrders = async () => {
-    setLoading(true)
-    try {
-      // Limpiar localStorage para evitar datos mezclados
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('orders')
-      }
-
-      const session = await getSession()
-      if (!session) {
-        setAllOrders([])
-        return
-      }
-
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, services(name)')
-        .eq('user_id', session.user.id)
-        .neq('status', 'pending')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      // Añadir service_name a cada pedido
-      const ordersWithServiceName = (data || []).map((order: any) => ({
-        ...order,
-        service_name: order.services?.name || 'Servicio desconocido'
-      }))
-      setAllOrders(ordersWithServiceName)
-    } catch (error) {
-    } finally {
+  const loadOrders = useCallback(async () => {
+    const session = await getSession()
+    if (!session) {
+      setOrders([])
       setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadOrders()
-    checkUserRole()
-  }, [])
-
-  // Suscribirse a cambios en tiempo real de pedidos
-  useEffect(() => {
-    const channel = supabase
-      .channel('orders-changes')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'orders'
-      }, (payload) => {
-        const updatedOrder = payload.new as Order
-        
-        // Los pedidos pendientes de pago están ocultos. Al confirmarse el pago,
-        // el webhook cambia el estado y esta actualización los hace aparecer.
-        if (allOrders.some(order => order.id === updatedOrder.id)) {
-          // Notificar cambio de estado
-          const oldStatus = payload.old.status
-          const newStatus = updatedOrder.status
-          
-          if (oldStatus !== newStatus) {
-            const statusLabel = STATUS_LABELS[newStatus]?.label || newStatus
-            notifyInfo(`El pedido ${updatedOrder.order_number} cambió a: ${statusLabel}`)
-          }
-          
-        }
-
-        loadOrders()
-      })
-      .subscribe((status) => {
-      })
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [allOrders, notifyInfo])
-
-  const checkUserRole = async () => {
-    try {
-      const session = await getSession()
-      if (session?.user?.role === 'owner') {
-        setUserRole('owner')
-      }
-    } catch (error) {
-    }
-  }
-
-  const handleDeleteOrder = async (orderId: string) => {
-    try {
-      const session = await getSession()
-      if (!session) {
-        notifyWarning('Debes iniciar sesión para eliminar pedidos')
-        return
-      }
-
-      if (session.user.role !== 'owner') {
-        notifyWarning('Solo el owner puede eliminar pedidos')
-        return
-      }
-
-      // Importar la función de eliminación
-      const { deleteSupabaseOrder } = await import('@/lib/supabase/orders')
-
-      await deleteSupabaseOrder(orderId, session.user.id, session.user.role)
-
-      // Recargar pedidos
-      if (searchResult?.id === orderId) {
-        setSearchResult(null)
-      }
-      loadOrders()
-      setDeleteConfirm(null)
-      setOrderToDelete(null)
-      setShowDeleteModal(false)
-      notifySuccess('Pedido eliminado exitosamente')
-    } catch (error) {
-      notifyError('Error al eliminar pedido: ' + (error as Error).message)
-    }
-  }
-
-  const handleDeleteClick = (orderId: string) => {
-    setOrderToDelete(orderId)
-    setShowDeleteModal(true)
-  }
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSearchError('')
-    setSearchResult(null)
-
-    if (!orderNumber.trim()) {
-      setSearchError('Ingresa un número de pedido')
       return
     }
 
-    try {
-      const session = await getSession()
-      if (!session) {
-        setSearchError('Debes iniciar sesión para buscar pedidos')
-        return
-      }
+    setUserId(session.user.id)
+    const { data, error: ordersError } = await supabase
+      .from('orders')
+      .select('id, order_number, service_id, client_name, client_email, client_discord, description, price, status, assigned_to, estimated_completion, actual_completion, created_at, updated_at, services(name)')
+      .eq('user_id', session.user.id)
+      .neq('status', 'pending')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
 
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, services(name)')
-        .eq('order_number', orderNumber.trim())
-        .eq('user_id', session.user.id)
-        .neq('status', 'pending')
-        .is('deleted_at', null)
-        .single()
-
-      if (error) throw error
-      if (!data) {
-        setSearchError('Pedido no encontrado')
-        return
-      }
-
-      const orderWithServiceName = {
-        ...data,
-        service_name: data.services?.name || 'Servicio desconocido'
-      }
-      setSearchResult(orderWithServiceName)
-    } catch (error) {
-      setSearchError('Error al buscar pedido')
+    if (ordersError) {
+      setError('No pudimos cargar tus pedidos. Inténtalo nuevamente.')
+      setLoading(false)
+      return
     }
-  }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+    const mapped = (data || []).map((order: any) => ({
+      ...order,
+      service_name: Array.isArray(order.services) ? order.services[0]?.name : order.services?.name,
+    })) as Order[]
+    setOrders(mapped)
+    setSelectedId(current => current && mapped.some(order => order.id === current) ? current : mapped[0]?.id || null)
+    setError('')
+    setLoading(false)
+  }, [supabase])
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price)
+  useEffect(() => { loadOrders() }, [loadOrders])
+
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`client-orders-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${userId}` }, payload => {
+        if (payload.eventType === 'UPDATE' && payload.old && payload.new && payload.old.status !== payload.new.status) {
+          const nextStatus = STATUS_LABELS[String(payload.new.status)]?.label || String(payload.new.status)
+          notifyInfo(`Tu pedido cambió a: ${nextStatus}`)
+        }
+        loadOrders()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [loadOrders, notifyInfo, supabase, userId])
+
+  useEffect(() => {
+    if (!selectedId) {
+      setEvents([])
+      return
+    }
+    const loadEvents = async () => {
+      const { data } = await supabase
+        .from('order_events')
+        .select('id, event_type, description, new_status, created_at')
+        .eq('order_id', selectedId)
+        .order('created_at', { ascending: false })
+      setEvents((data || []) as OrderEvent[])
+    }
+    loadEvents()
+  }, [selectedId, supabase])
+
+  const selectedOrder = orders.find(order => order.id === selectedId) || null
+  const progress = selectedOrder ? STATUS_PROGRESS[selectedOrder.status] ?? 1 : 0
+  const formatDate = (value?: string | null) => value
+    ? new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+    : 'Por confirmar'
+
+  const openPrivateSupport = () => {
+    if (!selectedOrder) return
+    window.dispatchEvent(new CustomEvent('open-support-chat', {
+      detail: { message: `Hola, necesito ayuda privada con mi pedido ${selectedOrder.order_number}.` },
+    }))
   }
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <main className="px-4 pb-24 pt-32">
+        <section className="container mx-auto mb-10 max-w-6xl">
+          <div className="mb-5 inline-flex rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">Área privada</div>
+          <h1 className="text-4xl font-bold md:text-5xl">Seguimiento de tus pedidos</h1>
+          <p className="mt-4 max-w-2xl text-lg text-muted">Consulta cada etapa, la fecha estimada y comunícate con nuestro equipo sin salir de la página.</p>
+        </section>
 
-      {/* Header */}
-      <section className="pt-32 pb-12 px-4">
-        <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Mis Pedidos</h1>
-          <p className="text-xl text-muted max-w-2xl mx-auto">
-            Consulta el estado de tus solicitudes de servicio
-          </p>
-        </div>
-      </section>
+        <section className="container mx-auto max-w-6xl">
+          {loading ? (
+            <div className="grid gap-6 lg:grid-cols-[330px_1fr]"><div className="h-64 animate-pulse rounded-2xl bg-white/5" /><div className="h-[520px] animate-pulse rounded-2xl bg-white/5" /></div>
+          ) : error ? (
+            <Card className="border-red-500/30"><CardContent className="p-8 text-center text-red-300">{error}</CardContent></Card>
+          ) : orders.length === 0 ? (
+            <Card className="border-dashed border-primary/30 bg-primary/5"><CardContent className="p-12 text-center"><PackageCheck className="mx-auto mb-5 h-14 w-14 text-primary" /><h2 className="text-2xl font-bold">Todavía no tienes pedidos confirmados</h2><p className="mx-auto mb-6 mt-3 max-w-lg text-muted">Los pedidos aparecerán aquí automáticamente después de completar el pago.</p><Button href="/servicios" size="lg">Explorar servicios</Button></CardContent></Card>
+          ) : (
+            <div className="grid items-start gap-6 lg:grid-cols-[330px_1fr]">
+              <aside className="space-y-3 lg:sticky lg:top-28">
+                <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted">Tus pedidos ({orders.length})</p>
+                {orders.map(order => {
+                  const status = STATUS_LABELS[order.status] || { label: order.status, tone: 'border-white/10 bg-white/5 text-muted' }
+                  return <button key={order.id} type="button" onClick={() => setSelectedId(order.id)} className={`w-full rounded-2xl border p-4 text-left transition ${selectedId === order.id ? 'border-primary/60 bg-primary/10 shadow-lg shadow-primary/10' : 'border-white/10 bg-card/70 hover:border-primary/30'}`}>
+                    <div className="flex items-start justify-between gap-3"><span className="font-semibold">{order.service_name}</span><span className="text-sm font-bold text-primary">${Number(order.price).toFixed(2)}</span></div>
+                    <p className="mt-2 text-xs text-muted">{order.order_number}</p>
+                    <span className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs ${status.tone}`}>{status.label}</span>
+                  </button>
+                })}
+              </aside>
 
-      {/* Search Section */}
-      <section className="pb-20 px-4">
-        <div className="container mx-auto max-w-2xl">
-          <Card className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-900/10 to-blue-900/10">
-            <CardHeader>
-              <CardTitle className="text-2xl">Consultar Pedido</CardTitle>
-              <CardDescription>
-                Ingresa el número de pedido para ver su estado actual
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSearch} className="space-y-4">
-                <div>
-                  <input
-                    type="text"
-                    value={orderNumber}
-                    onChange={(e) => setOrderNumber(e.target.value)}
-                    placeholder="Número de pedido (ej: ORD202409120001)"
-                    className="w-full px-4 py-3 rounded-lg border border-purple-500/30 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                  />
-                </div>
-                {searchError && (
-                  <p className="text-red-500 text-sm bg-red-500/10 border border-red-500/30 rounded-lg p-2">{searchError}</p>
-                )}
-                <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all">
-                  Consultar
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+              {selectedOrder && <div className="space-y-6">
+                <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card shadow-2xl shadow-primary/5">
+                  <CardHeader className="border-b border-white/10 p-6 md:p-8">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><CardDescription>{selectedOrder.order_number}</CardDescription><CardTitle className="mt-2 text-3xl">{selectedOrder.service_name}</CardTitle></div><span className={`w-fit rounded-full border px-3 py-1.5 text-sm ${STATUS_LABELS[selectedOrder.status]?.tone || ''}`}>{STATUS_LABELS[selectedOrder.status]?.label || selectedOrder.status}</span></div>
+                  </CardHeader>
+                  <CardContent className="space-y-8 p-6 md:p-8">
+                    {selectedOrder.status === 'cancelled' ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">Este pedido fue cancelado. Puedes comunicarte con soporte si necesitas ayuda.</div> : <div className="grid gap-5 md:grid-cols-3">
+                      {TRACKING_STEPS.map((step, index) => {
+                        const done = progress > index
+                        const active = progress === index + 1 && progress < 3
+                        return <div key={step.key}><div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-full border ${done ? 'border-primary bg-primary text-white' : 'border-white/20 bg-white/5 text-muted'}`}>{done && !active ? <Check className="h-5 w-5" /> : index + 1}</div><h3 className={done ? 'font-semibold text-foreground' : 'font-semibold text-muted'}>{step.label}</h3><p className="mt-1 text-sm text-muted">{step.description}</p></div>
+                      })}
+                    </div>}
 
-          {/* Search Result */}
-          {searchResult && (
-            <Card className="mt-6 border-2 border-purple-500/30 bg-gradient-to-br from-purple-900/20 to-blue-900/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Detalle del Pedido</CardTitle>
-                  <div className="text-sm bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
-                    {searchResult.order_number}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
-                      <div className="text-sm text-muted mb-1">Servicio</div>
-                      <div className="font-medium text-foreground">{searchResult.service_name || 'ID: ' + searchResult.service_id}</div>
+                    <div className="grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
+                      <div className="rounded-xl bg-white/[0.03] p-4"><Clock3 className="mb-3 h-5 w-5 text-primary" /><p className="text-xs uppercase tracking-wider text-muted">Entrega estimada</p><p className="mt-1 font-medium">{formatDate(selectedOrder.estimated_completion)}</p></div>
+                      <div className="rounded-xl bg-white/[0.03] p-4"><UserRound className="mb-3 h-5 w-5 text-primary" /><p className="text-xs uppercase tracking-wider text-muted">Responsable</p><p className="mt-1 font-medium">{selectedOrder.assigned_to ? 'Especialista asignado' : 'Equipo TheDulcanDesign'}</p></div>
+                      <div className="rounded-xl bg-white/[0.03] p-4"><PackageCheck className="mb-3 h-5 w-5 text-primary" /><p className="text-xs uppercase tracking-wider text-muted">Última actualización</p><p className="mt-1 font-medium">{formatDate(selectedOrder.updated_at)}</p></div>
                     </div>
-                    <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
-                      <div className="text-sm text-muted mb-1">Precio</div>
-                      <div className="font-medium text-green-400 text-lg">{formatPrice(searchResult.price)}</div>
-                    </div>
-                  </div>
 
-                  <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
-                    <div className="text-sm text-muted mb-1">Estado</div>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${STATUS_LABELS[searchResult.status]?.color || 'bg-gray-500'} animate-pulse`} />
-                      <span className="font-medium text-foreground">{STATUS_LABELS[searchResult.status]?.label || searchResult.status}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
-                    <div className="text-sm text-muted mb-1">Fecha de creación</div>
-                    <div className="font-medium text-foreground">{formatDate(searchResult.created_at)}</div>
-                  </div>
-
-                  <div className="bg-background/50 p-3 rounded-lg border border-purple-500/20">
-                    <div className="text-sm text-muted mb-1">Descripción</div>
-                    <div className="text-sm text-muted">{searchResult.description}</div>
-                  </div>
-
-                  <div className="pt-4 border-t border-purple-500/20">
-                    <div className="text-sm text-muted mb-2">Información de contacto</div>
-                    <div className="space-y-1 text-sm bg-background/30 p-3 rounded-lg">
-                      <div><span className="text-muted">Nombre:</span> {searchResult.client_name}</div>
-                      <div><span className="text-muted">Email:</span> {searchResult.client_email}</div>
-                      {searchResult.client_discord && (
-                        <div><span className="text-muted">Discord:</span> {searchResult.client_discord}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Botón de eliminar - solo para owner */}
-                  {userRole === 'owner' && (
-                    <div className="pt-4 border-t border-purple-500/20">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteClick(searchResult.id)}
-                      >
-                        Eliminar pedido
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* All Orders Toggle */}
-          {allOrders.length > 0 && (
-            <div className="mt-6 text-center">
-              <Button
-                variant="outline"
-                onClick={() => setShowAllOrders(!showAllOrders)}
-                className="border-purple-500/30 text-purple-300 transition-all"
-              >
-                {showAllOrders ? 'Ocultar todos los pedidos' : `Ver todos mis pedidos (${allOrders.length})`}
-              </Button>
-            </div>
-          )}
-
-          {/* All Orders List */}
-          {showAllOrders && allOrders.length > 0 && (
-            <div className="mt-6 space-y-4">
-              {allOrders.map((order) => (
-                <Card key={order.id} className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-900/10 to-blue-900/10 transition-all">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="font-medium text-foreground">{order.order_number}</div>
-                          <div className={`w-2 h-2 rounded-full ${STATUS_LABELS[order.status]?.color || 'bg-gray-500'} animate-pulse`} />
-                          <span className="text-sm text-purple-300">{STATUS_LABELS[order.status]?.label || order.status}</span>
-                        </div>
-                        <div className="text-sm text-muted">{order.service_name || 'ID: ' + order.service_id}</div>
-                        <div className="text-xs text-muted mt-1">{formatDate(order.created_at)}</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setOrderNumber(order.order_number)
-                            setSearchResult(order)
-                            setShowAllOrders(false)
-                          }}
-                          className="border-purple-500/30 text-purple-300 transition-all"
-                        >
-                          Ver detalles
-                        </Button>
-                        {userRole === 'owner' && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteClick(order.id)}
-                          >
-                            Eliminar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/10 p-5"><p className="text-xs uppercase tracking-wider text-muted">Tu solicitud</p><p className="mt-3 break-words text-sm leading-6 text-foreground/90">{selectedOrder.description}</p></div>
+                    <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold">Canal privado del pedido</h3><p className="mt-1 text-sm text-muted">Escribe al equipo o envía capturas y archivos de hasta 4 MB.</p></div><Button onClick={openPrivateSupport} className="shrink-0"><MessageCircle className="mr-2 h-4 w-4" />Abrir soporte</Button></div>
                   </CardContent>
                 </Card>
-              ))}
+
+                <Card className="border-white/10"><CardHeader><CardTitle className="text-xl">Actividad reciente</CardTitle><CardDescription>Historial privado de actualizaciones del pedido.</CardDescription></CardHeader><CardContent><div className="space-y-4">
+                  {events.length > 0 ? events.slice(0, 6).map(event => <div key={event.id} className="flex gap-3 border-b border-white/10 pb-4 last:border-0"><div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary" /><div><p className="text-sm font-medium">{event.description || STATUS_LABELS[event.new_status || '']?.label || 'Pedido actualizado'}</p><p className="mt-1 text-xs text-muted">{formatDate(event.created_at)}</p></div></div>) : <div className="flex items-center gap-3 text-sm text-muted"><Paperclip className="h-4 w-4" />El historial aparecerá cuando el equipo actualice tu pedido.</div>}
+                </div></CardContent></Card>
+              </div>}
             </div>
           )}
-
-          {/* No Orders */}
-          {allOrders.length === 0 && (
-            <Card className="mt-6 border-2 border-dashed border-purple-500/30 bg-gradient-to-br from-purple-900/5 to-blue-900/5">
-              <CardContent className="p-12 text-center">
-                <div className="text-6xl mb-4">📦</div>
-                <div className="text-muted mb-4 text-lg">
-                  No tienes pedidos aún. Crea tu primera solicitud de servicio.
-                </div>
-                <Button variant="primary" href="/contacto" className="bg-gradient-to-r from-purple-600 to-blue-600 transition-all">
-                  Crear Pedido
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </section>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false)
-          setOrderToDelete(null)
-        }}
-        onConfirm={() => orderToDelete && handleDeleteOrder(orderToDelete)}
-        title="Eliminar Pedido"
-        description="¿Estás seguro de que quieres eliminar este pedido? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-        variant="destructive"
-      />
-
+        </section>
+      </main>
       <Footer />
     </div>
   )

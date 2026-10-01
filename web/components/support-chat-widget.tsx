@@ -59,6 +59,17 @@ export default function SupportChatWidget() {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
+  useEffect(() => {
+    const openFromOrder = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail
+      setOpen(true)
+      setTab('chat')
+      if (detail?.message) setText(detail.message)
+    }
+    window.addEventListener('open-support-chat', openFromOrder)
+    return () => window.removeEventListener('open-support-chat', openFromOrder)
+  }, [])
+
   // Estado para emoji picker y subida de archivos
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
