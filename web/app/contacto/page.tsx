@@ -22,14 +22,90 @@ interface CheckoutInvoice {
   currency: string
 }
 
+type Questionnaire = {
+  objective: string
+  platform: string
+  currentSetup: string
+  mainIssue: string
+  expectedResult: string
+  availability: string
+}
+
+const EMPTY_QUESTIONNAIRE: Questionnaire = {
+  objective: '',
+  platform: '',
+  currentSetup: '',
+  mainIssue: '',
+  expectedResult: '',
+  availability: '',
+}
+
+const QUESTION_SETS = {
+  obs: {
+    objectiveLabel: '¿Qué quieres lograr con OBS?',
+    objectives: ['Transmitir con mejor calidad', 'Grabar contenido profesional', 'Eliminar lag o pérdida de frames', 'Configurar escenas, audio y cámara'],
+    platformLabel: 'Plataforma principal',
+    platforms: ['Twitch', 'YouTube', 'Kick', 'Facebook Gaming', 'Solo grabación', 'Otra'],
+    setupPlaceholder: 'Ej.: Ryzen 5 5600X, RTX 3060, 16 GB RAM, internet 300/50 Mbps',
+    issuePlaceholder: 'Ej.: el directo pierde frames al iniciar el juego y el micrófono se escucha bajo.',
+    resultPlaceholder: 'Ej.: transmitir a 1080p/60 FPS con imagen estable y audio limpio.',
+  },
+  pc: {
+    objectiveLabel: '¿Cuál es tu prioridad?',
+    objectives: ['Más FPS en juegos', 'Windows más rápido', 'Menos temperatura y consumo', 'Mejor rendimiento para trabajar', 'Optimización completa'],
+    platformLabel: 'Uso principal del equipo',
+    platforms: ['Gaming competitivo', 'Gaming casual', 'Streaming', 'Edición de video', 'Trabajo y estudio', 'Uso mixto'],
+    setupPlaceholder: 'Ej.: Windows 11, i5-12400F, RTX 4060, 16 GB RAM, SSD 1 TB',
+    issuePlaceholder: 'Ej.: tirones al jugar, inicio lento y uso alto del procesador.',
+    resultPlaceholder: 'Ej.: FPS estables, menos procesos en segundo plano y arranque más rápido.',
+  },
+  design: {
+    objectiveLabel: '¿Qué pieza visual necesitas?',
+    objectives: ['Overlay completo', 'Alertas y transiciones', 'Escenas para OBS', 'Paquete de identidad visual', 'Diseño personalizado'],
+    platformLabel: '¿Dónde lo utilizarás?',
+    platforms: ['Twitch', 'YouTube', 'Kick', 'TikTok', 'Varias plataformas', 'Otra'],
+    setupPlaceholder: 'Indica tu nombre de canal, colores, estilo y referencias visuales.',
+    issuePlaceholder: 'Cuéntanos qué materiales tienes actualmente y qué deseas reemplazar.',
+    resultPlaceholder: 'Describe cómo quieres que se vea el resultado final.',
+  },
+  support: {
+    objectiveLabel: '¿Qué tipo de ayuda necesitas?',
+    objectives: ['Resolver un error', 'Instalar o configurar software', 'Revisar compatibilidad', 'Asesoría técnica', 'Otro problema'],
+    platformLabel: 'Área afectada',
+    platforms: ['Windows', 'OBS o streaming', 'Hardware', 'Red o internet', 'Audio y video', 'Otra'],
+    setupPlaceholder: 'Indica equipo, sistema operativo, programa y versión si la conoces.',
+    issuePlaceholder: 'Describe el error, cuándo comenzó y qué intentaste antes.',
+    resultPlaceholder: 'Explica qué debería funcionar al finalizar el servicio.',
+  },
+} as const
+
+function getQuestionSet(service?: { name: string; slug: string }) {
+  const value = `${service?.name || ''} ${service?.slug || ''}`.toLowerCase()
+  if (value.includes('obs') || value.includes('stream')) return QUESTION_SETS.obs
+  if (value.includes('pc') || value.includes('windows') || value.includes('gaming') || value.includes('juego')) return QUESTION_SETS.pc
+  if (value.includes('dise') || value.includes('overlay') || value.includes('visual')) return QUESTION_SETS.design
+  return QUESTION_SETS.support
+}
+
+function buildRequestDescription(answers: Questionnaire) {
+  return [
+    `Objetivo: ${answers.objective}`,
+    `Plataforma/uso: ${answers.platform}`,
+    `Equipo actual: ${answers.currentSetup.trim()}`,
+    `Situación: ${answers.mainIssue.trim()}`,
+    `Resultado esperado: ${answers.expectedResult.trim()}`,
+    `Disponibilidad: ${answers.availability}`,
+  ].join('\n')
+}
+
 function ContactFormContent() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     discord: '',
-    service: '',
-    description: ''
+    service: ''
   })
+  const [questionnaire, setQuestionnaire] = useState<Questionnaire>(EMPTY_QUESTIONNAIRE)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [services, setServices] = useState<Array<{id: string, name: string, slug: string, price: number}>>([])
@@ -38,6 +114,7 @@ function ContactFormContent() {
   const searchParams = useSearchParams()
   const cancelled = searchParams.get('cancelled') === '1'
   const selectedService = services.find(item => item.name === formData.service)
+  const questionSet = getQuestionSet(selectedService)
 
   // Cargar servicios desde Supabase
   useEffect(() => {
@@ -101,11 +178,12 @@ function ContactFormContent() {
       newErrors.service = 'Debes seleccionar un servicio'
     }
 
-    if (!formData.description.trim()) {
-      newErrors.description = 'La descripción es requerida'
-    } else if (formData.description.length < 10) {
-      newErrors.description = 'La descripción debe tener al menos 10 caracteres'
-    }
+    if (!questionnaire.objective) newErrors.objective = 'Selecciona tu objetivo principal'
+    if (!questionnaire.platform) newErrors.platform = 'Selecciona la plataforma o uso principal'
+    if (questionnaire.currentSetup.trim().length < 10) newErrors.currentSetup = 'Incluye al menos 10 caracteres sobre tu equipo o configuración'
+    if (questionnaire.mainIssue.trim().length < 15) newErrors.mainIssue = 'Explícanos el problema con un poco más de detalle'
+    if (questionnaire.expectedResult.trim().length < 10) newErrors.expectedResult = 'Indica el resultado que esperas obtener'
+    if (!questionnaire.availability) newErrors.availability = 'Selecciona tu disponibilidad'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -133,13 +211,14 @@ function ContactFormContent() {
         throw new Error('Servicio no encontrado')
       }
 
+      const description = buildRequestDescription(questionnaire)
       const response = await fetch('/api/stripe/create-service-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceId: service.id,
           name: formData.name,
-          description: formData.description,
+          description,
         }),
       })
       const payload = await response.json() as { url?: string; invoice?: CheckoutInvoice; error?: string }
@@ -182,6 +261,16 @@ function ContactFormContent() {
     }
   }
 
+  const handleQuestionChange = (field: keyof Questionnaire, value: string) => {
+    setQuestionnaire(previous => ({ ...previous, [field]: value }))
+    if (errors[field]) setErrors(previous => ({ ...previous, [field]: '' }))
+  }
+
+  const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleChange(e)
+    setQuestionnaire(EMPTY_QUESTIONNAIRE)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -208,7 +297,7 @@ function ContactFormContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-8">
                 {errors.general && (
                   <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm">
                     {errors.general}
@@ -220,6 +309,12 @@ function ContactFormContent() {
                   </div>
                 )}
 
+                <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">1</span>
+                    <div><h3 className="font-semibold">Datos de contacto</h3><p className="text-xs text-muted">Información vinculada a tu cuenta.</p></div>
+                  </div>
+                  <div className="space-y-5">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium mb-2">
                     Nombre completo *
@@ -275,7 +370,15 @@ function ContactFormContent() {
                   <p className="mt-1 text-sm text-muted">Usuario vinculado a tu cuenta (no editable)</p>
                   {errors.discord && <p className="mt-1 text-sm text-red-500">{errors.discord}</p>}
                 </div>
+                  </div>
+                </div>
 
+                <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">2</span>
+                    <div><h3 className="font-semibold">Servicio y diagnóstico</h3><p className="text-xs text-muted">Las preguntas cambian según el servicio seleccionado.</p></div>
+                  </div>
+                  <div className="space-y-5">
                 <div>
                   <label htmlFor="service" className="block text-sm font-medium mb-2">
                     Servicio solicitado *
@@ -285,7 +388,7 @@ function ContactFormContent() {
                     name="service"
                     required
                     value={formData.service}
-                    onChange={handleChange}
+                    onChange={handleServiceChange}
                     className={`w-full px-4 py-2 rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 ${
                       errors.service ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
                     }`}
@@ -300,23 +403,47 @@ function ContactFormContent() {
                   {errors.service && <p className="text-red-500 text-sm mt-1">{errors.service}</p>}
                 </div>
 
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium mb-2">
-                    Descripción del requerimiento *
-                  </label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    required
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={5}
-                    className={`w-full px-4 py-2 rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 resize-none ${
-                      errors.description ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
-                    }`}
-                    placeholder="Describe detalladamente lo que necesitas, tu hardware actual, problemas que tienes, etc..."
-                  />
-                  {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+                {selectedService ? <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="objective" className="mb-2 block text-sm font-medium">{questionSet.objectiveLabel} *</label>
+                    <select id="objective" value={questionnaire.objective} onChange={event => handleQuestionChange('objective', event.target.value)} className={`w-full rounded-lg border bg-background px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 ${errors.objective ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`}>
+                      <option value="">Selecciona una opción</option>
+                      {questionSet.objectives.map(option => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                    {errors.objective && <p className="mt-1 text-sm text-red-500">{errors.objective}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="platform" className="mb-2 block text-sm font-medium">{questionSet.platformLabel} *</label>
+                    <select id="platform" value={questionnaire.platform} onChange={event => handleQuestionChange('platform', event.target.value)} className={`w-full rounded-lg border bg-background px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 ${errors.platform ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`}>
+                      <option value="">Selecciona una opción</option>
+                      {questionSet.platforms.map(option => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                    {errors.platform && <p className="mt-1 text-sm text-red-500">{errors.platform}</p>}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="currentSetup" className="mb-2 block text-sm font-medium">Equipo o configuración actual *</label>
+                    <input id="currentSetup" maxLength={80} value={questionnaire.currentSetup} onChange={event => handleQuestionChange('currentSetup', event.target.value)} className={`w-full rounded-lg border bg-background px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 ${errors.currentSetup ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`} placeholder={questionSet.setupPlaceholder} />
+                    <div className="mt-1 flex justify-between text-xs"><span className="text-red-500">{errors.currentSetup}</span><span className="text-muted">{questionnaire.currentSetup.length}/80</span></div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="mainIssue" className="mb-2 block text-sm font-medium">¿Qué está ocurriendo actualmente? *</label>
+                    <textarea id="mainIssue" rows={3} maxLength={120} value={questionnaire.mainIssue} onChange={event => handleQuestionChange('mainIssue', event.target.value)} className={`w-full resize-none rounded-lg border bg-background px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 ${errors.mainIssue ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`} placeholder={questionSet.issuePlaceholder} />
+                    <div className="mt-1 flex justify-between text-xs"><span className="text-red-500">{errors.mainIssue}</span><span className="text-muted">{questionnaire.mainIssue.length}/120</span></div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="expectedResult" className="mb-2 block text-sm font-medium">Resultado que esperas obtener *</label>
+                    <textarea id="expectedResult" rows={2} maxLength={80} value={questionnaire.expectedResult} onChange={event => handleQuestionChange('expectedResult', event.target.value)} className={`w-full resize-none rounded-lg border bg-background px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 ${errors.expectedResult ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`} placeholder={questionSet.resultPlaceholder} />
+                    <div className="mt-1 flex justify-between text-xs"><span className="text-red-500">{errors.expectedResult}</span><span className="text-muted">{questionnaire.expectedResult.length}/80</span></div>
+                  </div>
+                  <fieldset className="sm:col-span-2">
+                    <legend className="mb-3 text-sm font-medium">¿Cuándo puedes recibir el servicio? *</legend>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {['Lo antes posible', 'Esta semana', 'Fecha flexible'].map(option => <label key={option} className={`cursor-pointer rounded-xl border px-3 py-3 text-center text-sm transition ${questionnaire.availability === option ? 'border-primary bg-primary/15 text-white' : 'border-white/10 bg-black/10 text-muted hover:border-primary/50'}`}><input type="radio" name="availability" value={option} checked={questionnaire.availability === option} onChange={event => handleQuestionChange('availability', event.target.value)} className="sr-only" />{option}</label>)}
+                    </div>
+                    {errors.availability && <p className="mt-2 text-sm text-red-500">{errors.availability}</p>}
+                  </fieldset>
+                </div> : <div className="rounded-xl border border-dashed border-white/15 bg-black/10 px-5 py-8 text-center text-sm text-muted">Selecciona un servicio para ver las preguntas específicas de diagnóstico.</div>}
+                  </div>
                 </div>
 
                 <Button
