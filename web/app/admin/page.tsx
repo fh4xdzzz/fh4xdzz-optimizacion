@@ -725,6 +725,10 @@ export default function AdminPage() {
 
   const handleTransferChat = async () => {
     if (!selectedChat || !transferAgentId) return
+    if (transferTargetBusy) {
+      notifyWarning('Ese agente ya está atendiendo otro chat. Debe cerrar o transferir su conversación actual primero.')
+      return
+    }
 
     try {
       const response = await fetch('/api/chat/transfer', {
@@ -833,6 +837,11 @@ export default function AdminPage() {
 
   const orderHistory = orders.filter(order => ['completed', 'cancelled'].includes(order.status))
   const activeOrders = orders.filter(order => !['completed', 'cancelled'].includes(order.status))
+  const transferTargetBusy = Boolean(
+    transferAgentId && chatSessions.some(chat => (
+      chat.assigned_agent_id === transferAgentId && chat.status !== 'closed' && chat.id !== selectedChat?.id
+    ))
+  )
 
   // Filtrar, buscar y ordenar sesiones de chat
   const getFilteredAndSortedSessions = () => {
@@ -1368,16 +1377,21 @@ export default function AdminPage() {
                                 <option value="">Transferir a...</option>
                                 {users
                                   .filter(user => ['admin', 'staff', 'owner'].includes(user.role) && user.id !== currentUserId)
-                                  .map(user => (
-                                    <option key={user.id} value={user.id}>
-                                      {user.full_name || user.email}{user.online ? ' · online' : ''}
-                                    </option>
-                                  ))}
+                                  .map(user => {
+                                    const isBusy = chatSessions.some(chat => (
+                                      chat.assigned_agent_id === user.id && chat.status !== 'closed' && chat.id !== selectedChat.id
+                                    ))
+                                    return (
+                                      <option key={user.id} value={user.id} disabled={isBusy}>
+                                        {user.full_name || user.email}{isBusy ? ' · ocupado' : user.online ? ' · disponible' : ' · offline'}
+                                      </option>
+                                    )
+                                  })}
                               </select>
                               <button
                                 type="button"
                                 onClick={handleTransferChat}
-                                disabled={!transferAgentId}
+                                disabled={!transferAgentId || transferTargetBusy}
                                 className="rounded-lg bg-blue-600 px-4 py-2 text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
                               >
                                 Transferir

@@ -60,14 +60,16 @@ export async function POST(request: NextRequest) {
 
     const { data: targetActiveChat } = await supabase
       .from('chat_sessions')
-      .select('id')
+      .select('id, conversation_number')
       .eq('assigned_agent_id', target_agent_id)
       .neq('status', 'closed')
       .limit(1)
       .maybeSingle()
 
     if (targetActiveChat) {
-      return NextResponse.json({ error: 'El agente de destino ya está atendiendo otro chat.' }, { status: 409 })
+      return NextResponse.json({
+        error: `El agente de destino está ocupado con ${targetActiveChat.conversation_number}. Debe cerrar o transferir ese chat primero.`,
+      }, { status: 409 })
     }
 
     // Transferir la sesión
