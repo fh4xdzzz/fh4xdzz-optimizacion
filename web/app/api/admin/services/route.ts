@@ -16,6 +16,7 @@ export async function GET() {
   const { data, error } = await auth.supabase
     .from('services')
     .select('*')
+    .order('is_featured', { ascending: false })
     .order('sort_order', { ascending: true })
 
   if (error) return NextResponse.json({ error: 'No se pudieron cargar los servicios' }, { status: 500 })

@@ -140,6 +140,7 @@ export default function ServicesPage() {
           .from('services')
           .select('*')
           .eq('is_active', true)
+          .order('is_featured', { ascending: false })
           .order('sort_order', { ascending: true })
 
         if (error) throw error

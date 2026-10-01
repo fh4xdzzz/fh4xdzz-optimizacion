@@ -33,6 +33,7 @@ function ContactFormContent() {
         .from('services')
         .select('id, name, slug, price')
         .eq('is_active', true)
+        .order('is_featured', { ascending: false })
         .order('sort_order', { ascending: true })
       if (data) {
         setServices(data)
