@@ -9,7 +9,8 @@
     <AssemblyName>AetherBoost</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DulcanBoost.Core\AetherBoost.Core.csproj" />
-    <ProjectReference Include="..\AetherBoost.Infrastructure\AetherBoost.Infrastructure.csproj" />
+    <Compile Include="..\AetherBoost.Core\Models.cs" Link="Core\Models.cs" />
+    <Compile Include="..\AetherBoost.Infrastructure\AdminGuard.cs" Link="Infrastructure\AdminGuard.cs" />
+    <Compile Include="..\AetherBoost.Infrastructure\WindowsDiagnosticsService.cs" Link="Infrastructure\WindowsDiagnosticsService.cs" />
   </ItemGroup>
 </Project>

@@ -4,7 +4,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AetherBoost.App", "src\AetherBoost.App\AetherBoost.App.csproj", "{3D77A6A6-5D48-4F6E-AE75-11B12CC99F01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AetherBoost.Core", "src\DulcanBoost.Core\AetherBoost.Core.csproj", "{0B4D8551-0D03-45DB-8CC9-A9EE65C25C7F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AetherBoost.Core", "src\\AetherBoost.Core\\AetherBoost.Core.csproj", "{0B4D8551-0D03-45DB-8CC9-A9EE65C25C7F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AetherBoost.Infrastructure", "src\AetherBoost.Infrastructure\AetherBoost.Infrastructure.csproj", "{D7CB4C74-0BD0-4BAB-ABF9-6E8471A8B3D1}"
 EndProject
