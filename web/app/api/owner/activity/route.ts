@@ -21,7 +21,7 @@ export async function GET() {
   const { supabase } = auth
   const [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult] = await Promise.all([
     supabase.from('users').select('id, email, full_name, role, created_at').order('created_at', { ascending: false }).limit(1000),
-    supabase.from('orders').select('id, order_number, status, client_name, client_email, service_name, price, user_id, assigned_to, created_at, updated_at').order('updated_at', { ascending: false }).limit(1000),
+    supabase.from('orders').select('id, order_number, status, client_name, client_email, price, user_id, assigned_to, created_at, updated_at, services(name)').order('updated_at', { ascending: false }).limit(1000),
     supabase.from('services').select('id, name, category, price, is_active, is_featured, created_at').order('is_featured', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
     supabase.from('chat_sessions').select('id, conversation_number, status, priority, subject, client_id, assigned_agent_id, created_at, updated_at').order('updated_at', { ascending: false }).limit(1000),
     supabase.from('order_events').select('id, order_id, event_type, description, old_status, new_status, created_by, created_at, orders(order_number, client_name)').order('created_at', { ascending: false }).limit(150),
@@ -36,7 +36,10 @@ export async function GET() {
   }
 
   const users = usersResult.data || []
-  const orders = ordersResult.data || []
+  const orders = (ordersResult.data || []).map(order => {
+    const service = Array.isArray(order.services) ? order.services[0] : order.services
+    return { ...order, service_name: service?.name || 'Servicio eliminado' }
+  })
   const services = servicesResult.data || []
   const sessions = sessionsResult.data || []
   const userMap = new Map(users.map(user => [user.id, user]))
