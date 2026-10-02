@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
 
     // Rutas protegidas que requieren autenticación
-    const protectedPaths = ['/dashboard', '/perfil', '/pedidos']
+    const protectedPaths = ['/dashboard', '/perfil', '/pedidos', '/admin', '/owner']
     const isProtectedPath = protectedPaths.some(path =>
       request.nextUrl.pathname.startsWith(path)
     )
@@ -42,6 +42,18 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = new URL('/auth/login', request.url)
       redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
+    }
+
+    if (request.nextUrl.pathname.startsWith('/owner') && session) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        const redirectUrl = new URL('/auth/login', request.url)
+        redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+      if (!profile || profile.role !== 'owner') return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
     // Verificar rol de admin o owner para rutas de administración

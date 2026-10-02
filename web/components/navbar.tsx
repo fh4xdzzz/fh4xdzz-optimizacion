@@ -67,6 +67,9 @@ export default function Navbar() {
           ...(session.user.role === 'admin' || session.user.role === 'owner'
             ? [{ href: '/admin', label: 'Admin', emphasized: true }]
             : []),
+          ...(session.user.role === 'owner'
+            ? [{ href: '/owner', label: 'Owner', emphasized: true }]
+            : []),
         ]
       : [
           { href: '/pedidos', label: 'Mis pedidos' },
