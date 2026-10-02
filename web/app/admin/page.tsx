@@ -533,64 +533,6 @@ export default function AdminPage() {
     setShowDeleteModal(true)
   }
 
-  const toggleFeatured = async (serviceId: string, currentFeatured: boolean) => {
-    try {
-      if (isDemo) {
-        notifyWarning('No se pueden cambiar servicios destacados en modo demo')
-        return
-      }
-
-      if (userRole !== 'owner') {
-        notifyWarning('Solo el owner puede cambiar servicios destacados')
-        return
-      }
-
-      const session = await getSession()
-
-      if (!session) {
-        notifyError('No hay sesión activa')
-        return
-      }
-
-      const response = await fetch('/api/admin/services/featured', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceId,
-          isFeatured: !currentFeatured
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al actualizar el servicio')
-      }
-
-      await loadAdminData()
-      notifySuccess(currentFeatured ? 'Servicio quitado de destacados' : 'Servicio marcado como destacado')
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      notifyError('Error al cambiar destacado: ' + errorMessage)
-    }
-  }
-
-  const updateUserRole = async (userId: string, role: User['role']) => {
-    try {
-      const response = await fetch('/api/admin/users/role', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role }),
-      })
-      const body = await response.json()
-      if (!response.ok) throw new Error(body.error || 'No se pudo cambiar el rol')
-      setUsers((current) => current.map((user) => user.id === userId ? { ...user, role } : user))
-      notifySuccess('Rol actualizado correctamente')
-    } catch (error) {
-      notifyError(error instanceof Error ? error.message : 'No se pudo cambiar el rol')
-    }
-  }
-
   const editService = async (service: Service) => {
     const name = window.prompt('Nombre del servicio', service.name)
     if (name === null) return
@@ -982,16 +924,6 @@ export default function AdminPage() {
             </button>
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'users'
-                  ? 'bg-primary text-white'
-                  : 'border border-border bg-transparent'
-              }`}
-              onClick={() => setActiveTab('users')}
-            >
-              Usuarios ({users.length})
-            </button>
-            <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'orders'
                   ? 'bg-primary text-white'
                   : 'border border-border bg-transparent'
@@ -1047,7 +979,7 @@ export default function AdminPage() {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }} onClick={() => setActiveTab('users')}>
+              <Card className="transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <CardHeader>
                   <CardTitle className="text-xl mb-2">Total Usuarios</CardTitle>
                 </CardHeader>
@@ -1091,56 +1023,6 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
-          )}
-
-          {/* Users Tab */}
-          {activeTab === 'users' && (
-            <Card className="glass-card hover-glow animate-fade-in-up">
-              <CardHeader>
-                <CardTitle className="text-2xl">Usuarios Registrados</CardTitle>
-                <CardDescription className="text-base">Gestión de usuarios y roles</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {users.length > 0 ? (
-                  <div className="space-y-4">
-                    {users.map((user, index) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="font-medium text-lg">{user.email}</div>
-                            <div className={`w-3 h-3 rounded-full ${ROLE_LABELS[user.role]?.color || 'bg-gray-500'} animate-pulse`} />
-                            <span className="text-sm text-muted font-medium">{ROLE_LABELS[user.role]?.label || user.role}</span>
-                          </div>
-                          <div className="text-base text-muted">
-                            {user.full_name || 'Sin nombre'} • {formatDate(user.created_at)}
-                          </div>
-                        </div>
-                        {userRole === 'owner' && user.role !== 'owner' && (
-                          <select
-                            aria-label={`Rol de ${user.email}`}
-                            value={user.role}
-                            onChange={(event) => updateUserRole(user.id, event.target.value as User['role'])}
-                            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground"
-                          >
-                            <option value="client">Cliente</option>
-                            <option value="staff">Staff</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted text-lg">No hay usuarios registrados</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           )}
 
           {/* Orders Tab */}
@@ -1235,9 +1117,6 @@ export default function AdminPage() {
                             {!service.is_active && (
                               <span className="text-xs bg-gray-500 text-white px-3 py-1 rounded-full">Inactivo</span>
                             )}
-                            {service.is_featured && (
-                              <span className="text-xs bg-yellow-500 text-white px-3 py-1 rounded-full">Destacado</span>
-                            )}
                           </div>
                           <div className="text-base text-muted">
                             {service.category} • ${service.price}
@@ -1249,9 +1128,6 @@ export default function AdminPage() {
                               <Button variant="outline" size="sm" onClick={() => editService(service)}>Editar</Button>
                               <Button variant="outline" size="sm" onClick={() => toggleServiceActive(service)}>
                                 {service.is_active ? 'Desactivar' : 'Activar'}
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => toggleFeatured(service.id, service.is_featured)}>
-                                {service.is_featured ? 'Quitar destacado' : 'Marcar destacado'}
                               </Button>
                             </>
                           )}

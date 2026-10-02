@@ -1,142 +1,65 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Activity, BadgeDollarSign, Headphones, MessageSquareText, RefreshCw, Search, ShieldCheck, ShoppingBag, Users } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Activity, BadgeDollarSign, Headphones, RefreshCw, Search, ShieldCheck, ShoppingBag, Star, Users } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 
-type ActivityItem = {
-  id: string
-  type: 'user' | 'order' | 'support' | 'message'
-  action: string
-  title: string
-  description: string
-  actorId: string | null
-  actorName: string
-  actorRole: string
-  reference: string | null
-  createdAt: string
-}
+type User = { id: string; email: string; full_name: string | null; role: 'owner' | 'admin' | 'staff' | 'client'; created_at: string }
+type Order = { id: string; order_number: string; status: string; client_name: string; client_email: string; service_name: string; price: number; created_at: string }
+type Service = { id: string; name: string; category: string; price: number; is_active: boolean; is_featured: boolean }
+type Chat = { id: string; conversation_number: string; status: string; subject: string; clientName: string; assignedAgent: string | null; updated_at: string }
+type Audit = { id: string; type: string; title: string; description: string; actorName: string; actorRole: string; reference: string | null; createdAt: string }
+type Data = { generatedAt: string; metrics: { users: number; clients: number; team: number; orders: number; activeOrders: number; revenue: number; openChats: number; closedChats: number }; users: User[]; orders: Order[]; services: Service[]; chats: Chat[]; activities: Audit[] }
+type Tab = 'overview' | 'users' | 'services' | 'orders' | 'chats' | 'activity'
+const roles: Record<string, string> = { owner: 'Owner', admin: 'Administrador', staff: 'Staff', client: 'Cliente', assistant: 'Dulcan AI', system: 'Sistema' }
+const statuses: Record<string, string> = { pending: 'Pendiente', reviewing: 'Por revisar', in_progress: 'En proceso', waiting_client: 'Esperando cliente', completed: 'Completado', cancelled: 'Cancelado', waiting: 'En espera', active: 'Activo', closed: 'Cerrado' }
+const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+const date = (value: string) => new Intl.DateTimeFormat('es-DO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 
-type OwnerData = {
-  generatedAt: string
-  metrics: { users: number; clients: number; team: number; orders: number; activeOrders: number; revenue: number; openChats: number; closedChats: number }
-  activities: ActivityItem[]
-}
-
-const TYPE_LABELS = { all: 'Todo', user: 'Usuarios', order: 'Pedidos', support: 'Soporte', message: 'Mensajes' } as const
-const ROLE_LABELS: Record<string, string> = { owner: 'Owner', admin: 'Administrador', staff: 'Staff', client: 'Cliente', assistant: 'Dulcan AI', system: 'Sistema' }
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('es-DO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
-}
-
-function TypeIcon({ type }: { type: ActivityItem['type'] }) {
-  if (type === 'user') return <Users className="h-4 w-4" />
-  if (type === 'order') return <ShoppingBag className="h-4 w-4" />
-  if (type === 'support') return <Headphones className="h-4 w-4" />
-  return <MessageSquareText className="h-4 w-4" />
-}
-
-async function fetchOwnerData(): Promise<OwnerData> {
-  const response = await fetch('/api/owner/activity', { cache: 'no-store' })
-  const payload = await response.json()
-  if (!response.ok) throw new Error(payload.error || 'No se pudo cargar el centro del owner')
-  return payload
-}
+async function getData(): Promise<Data> { const response = await fetch('/api/owner/activity', { cache: 'no-store' }); const payload = await response.json(); if (!response.ok) throw new Error(payload.error || 'No se pudo cargar el centro Owner'); return payload }
 
 export default function OwnerPage() {
-  const [data, setData] = useState<OwnerData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [type, setType] = useState<keyof typeof TYPE_LABELS>('all')
-  const [role, setRole] = useState('all')
+  const [data, setData] = useState<Data | null>(null)
+  const [tab, setTab] = useState<Tab>('overview')
   const [query, setQuery] = useState('')
-
-  const loadActivity = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      setData(await fetchOwnerData())
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Error inesperado')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const load = useCallback(async () => { setLoading(true); setError(''); try { setData(await getData()) } catch (cause) { setError(cause instanceof Error ? cause.message : 'Error inesperado') } finally { setLoading(false) } }, [])
   useEffect(() => {
     let active = true
-    fetchOwnerData()
-      .then(payload => { if (active) setData(payload) })
-      .catch(loadError => { if (active) setError(loadError instanceof Error ? loadError.message : 'Error inesperado') })
-      .finally(() => { if (active) setLoading(false) })
+    getData().then(value => { if (active) setData(value) }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Error inesperado') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return (data?.activities || []).filter(item => {
-      if (type !== 'all' && item.type !== type) return false
-      if (role !== 'all' && item.actorRole !== role) return false
-      return !needle || `${item.title} ${item.description} ${item.actorName} ${item.reference || ''}`.toLowerCase().includes(needle)
-    })
-  }, [data, query, role, type])
+  const changeRole = async (user: User, role: User['role']) => { if (role === 'owner') return; setSaving(user.id); setError(''); setMessage(''); try { const response = await fetch('/api/admin/users/role', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id, role }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error); setData(current => current ? { ...current, users: current.users.map(item => item.id === user.id ? { ...item, role } : item) } : current); setMessage('Rol actualizado correctamente.') } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo cambiar el rol') } finally { setSaving('') } }
+  const feature = async (service: Service) => { setSaving(service.id); setError(''); setMessage(''); try { const response = await fetch('/api/admin/services/featured', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serviceId: service.id, isFeatured: !service.is_featured }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error); setData(current => current ? { ...current, services: current.services.map(item => item.id === service.id ? { ...item, is_featured: !item.is_featured } : item).sort((a, b) => Number(b.is_featured) - Number(a.is_featured)) } : current); setMessage(service.is_featured ? 'Se quitó el destacado.' : 'Servicio destacado y colocado primero.') } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar') } finally { setSaving('') } }
 
-  const cards = data ? [
-    { label: 'Usuarios', value: data.metrics.users, detail: `${data.metrics.clients} clientes`, icon: Users, color: 'text-cyan-300' },
-    { label: 'Equipo', value: data.metrics.team, detail: 'Admin y staff', icon: ShieldCheck, color: 'text-violet-300' },
-    { label: 'Pedidos', value: data.metrics.orders, detail: `${data.metrics.activeOrders} activos`, icon: ShoppingBag, color: 'text-blue-300' },
-    { label: 'Ingresos', value: `$${data.metrics.revenue.toFixed(2)}`, detail: 'Pagos confirmados', icon: BadgeDollarSign, color: 'text-emerald-300' },
-    { label: 'Soportes abiertos', value: data.metrics.openChats, detail: `${data.metrics.closedChats} cerrados`, icon: Headphones, color: 'text-amber-300' },
-  ] : []
+  const needle = query.trim().toLowerCase(); const matches = (...values: unknown[]) => !needle || values.join(' ').toLowerCase().includes(needle)
+  const users = data?.users.filter(x => matches(x.full_name, x.email, x.role)) || []
+  const services = data?.services.filter(x => matches(x.name, x.category)) || []
+  const orders = data?.orders.filter(x => matches(x.order_number, x.client_name, x.client_email, x.service_name, x.status)) || []
+  const chats = data?.chats.filter(x => matches(x.conversation_number, x.clientName, x.subject, x.assignedAgent, x.status)) || []
+  const audit = data?.activities.filter(x => matches(x.title, x.description, x.actorName, x.reference)) || []
+  const tabs: [Tab, string][] = [['overview', 'Resumen'], ['users', 'Usuarios y roles'], ['services', 'Destacados'], ['orders', 'Pedidos e ingresos'], ['chats', 'Chats'], ['activity', 'Auditoría']]
 
-  return <div className="min-h-screen bg-background">
-    <Navbar />
-    <main className="px-4 pb-20 pt-28">
-      <div className="container mx-auto max-w-7xl">
-        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[.2em] text-violet-300"><ShieldCheck className="h-4 w-4" /> Acceso exclusivo</div>
-            <h1 className="text-4xl font-black tracking-tight md:text-5xl">Centro del Owner</h1>
-            <p className="mt-3 max-w-2xl text-lg text-muted">Visibilidad general de usuarios, equipo, pedidos, soporte y actividad operativa.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {data && <p className="hidden text-xs text-muted sm:block">Actualizado {formatDate(data.generatedAt)}</p>}
-            <Button variant="outline" onClick={loadActivity} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Actualizar</Button>
-          </div>
-        </div>
-
-        {error && <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
-
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Resumen del negocio">
-          {cards.map(card => <div key={card.label} className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[.055] to-white/[.02] p-5 shadow-xl shadow-black/10">
-            <div className="flex items-start justify-between"><p className="text-sm text-muted">{card.label}</p><card.icon className={`h-5 w-5 ${card.color}`} /></div>
-            <p className="mt-4 text-3xl font-black">{card.value}</p><p className="mt-1 text-xs text-muted">{card.detail}</p>
-          </div>)}
-        </section>
-
-        <section className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-card/75 shadow-2xl shadow-black/20">
-          <div className="border-b border-white/10 p-5 md:p-6">
-            <div className="flex items-center gap-3"><span className="rounded-xl bg-primary/15 p-2 text-primary"><Activity className="h-5 w-5" /></span><div><h2 className="text-xl font-bold">Actividad del sistema</h2><p className="text-sm text-muted">{filtered.length} eventos visibles</p></div></div>
-            <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-              <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4"><Search className="h-4 w-4 text-muted" /><span className="sr-only">Buscar actividad</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar persona, pedido, chat o acción..." className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-muted" /></label>
-              <select value={type} onChange={event => setType(event.target.value as keyof typeof TYPE_LABELS)} className="h-11 rounded-xl border border-white/10 bg-background px-4 text-sm">{Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-              <select value={role} onChange={event => setRole(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-background px-4 text-sm"><option value="all">Todos los roles</option><option value="admin">Administradores</option><option value="staff">Staff</option><option value="client">Clientes</option><option value="assistant">Dulcan AI</option><option value="system">Sistema</option></select>
-            </div>
-          </div>
-
-          <div className="divide-y divide-white/[.07]">
-            {loading && !data ? <div className="p-12 text-center text-muted"><RefreshCw className="mx-auto mb-3 h-6 w-6 animate-spin" />Cargando actividad...</div> : filtered.length ? filtered.map(item => <article key={item.id} className="grid gap-4 p-5 transition hover:bg-white/[.025] md:grid-cols-[auto_1fr_auto] md:items-center md:p-6">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${item.type === 'order' ? 'border-blue-400/20 bg-blue-400/10 text-blue-300' : item.type === 'support' ? 'border-amber-400/20 bg-amber-400/10 text-amber-300' : item.type === 'message' ? 'border-violet-400/20 bg-violet-400/10 text-violet-300' : 'border-cyan-400/20 bg-cyan-400/10 text-cyan-300'}`}><TypeIcon type={item.type} /></div>
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3><span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[11px] text-muted">{ROLE_LABELS[item.actorRole] || item.actorRole}</span>{item.reference && <span className="font-mono text-xs text-primary">{item.reference}</span>}</div><p className="mt-1 break-words text-sm text-muted">{item.description}</p><p className="mt-2 text-xs text-foreground/70">{item.actorName}</p></div>
-              <time className="whitespace-nowrap text-xs text-muted md:text-right" dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-            </article>) : <div className="p-12 text-center text-muted">No hay eventos que coincidan con estos filtros.</div>}
-          </div>
-        </section>
-      </div>
-    </main>
-    <Footer />
-  </div>
+  return <div className="min-h-screen bg-background"><Navbar /><main className="px-4 pb-20 pt-28"><div className="container mx-auto max-w-7xl">
+    <header className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[.2em] text-violet-300"><ShieldCheck className="h-4 w-4" /> Control exclusivo</div><h1 className="text-4xl font-black md:text-5xl">Centro de operaciones Owner</h1><p className="mt-3 max-w-3xl text-lg text-muted">Control total de usuarios, permisos, catálogo, pedidos, ingresos, soporte y auditoría.</p></div><Button variant="outline" onClick={load} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Actualizar</Button></header>
+    {error && <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}{message && <div className="mb-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">{message}</div>}
+    <nav className="mb-7 flex flex-wrap gap-2 border-b border-white/10 pb-5">{tabs.map(([id, label]) => <button key={id} onClick={() => { setTab(id); setQuery('') }} className={`rounded-xl border px-4 py-2.5 text-sm font-semibold ${tab === id ? 'border-primary bg-primary text-white' : 'border-white/10 bg-white/[.03]'}`}>{label}</button>)}</nav>
+    {tab === 'overview' && data && <><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Usuarios" value={String(data.metrics.users)} detail={`${data.metrics.clients} clientes`} icon={<Users />} onClick={() => setTab('users')} /><Metric label="Equipo" value={String(data.metrics.team)} detail="Admin y staff" icon={<ShieldCheck />} onClick={() => setTab('users')} /><Metric label="Pedidos" value={String(data.metrics.orders)} detail={`${data.metrics.activeOrders} activos`} icon={<ShoppingBag />} onClick={() => setTab('orders')} /><Metric label="Ingresos" value={money(data.metrics.revenue)} detail="Pagos confirmados" icon={<BadgeDollarSign />} onClick={() => setTab('orders')} /><Metric label="Soportes" value={String(data.metrics.openChats)} detail={`${data.metrics.closedChats} cerrados`} icon={<Headphones />} onClick={() => setTab('chats')} /></section><div className="mt-8 rounded-2xl border border-violet-400/20 bg-violet-400/[.07] p-6"><h2 className="text-xl font-bold">Tu espacio privado de control</h2><p className="mt-2 text-sm text-muted">Roles, destacados, ingresos y supervisión global están aquí. Admin queda enfocado en la operación diaria.</p></div></>}
+    {tab !== 'overview' && <label className="mb-5 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4"><Search className="h-4 w-4 text-muted" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nombre, correo, código o estado..." className="h-11 w-full bg-transparent text-sm outline-none" /></label>}
+    {tab === 'users' && <Panel title="Usuarios y permisos" detail={`${users.length} usuarios · control exclusivo del Owner`}>{users.map(user => <Row key={user.id}><div><b>{user.full_name || 'Sin nombre'}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{roles[user.role]}</span><p className="text-sm text-muted">{user.email} · {date(user.created_at)}</p></div>{user.role === 'owner' ? <b className="text-violet-300">Cuenta protegida</b> : <select disabled={saving === user.id} value={user.role} onChange={event => void changeRole(user, event.target.value as User['role'])} className="h-10 rounded-lg border border-white/10 bg-background px-3"><option value="client">Cliente</option><option value="staff">Staff</option><option value="admin">Administrador</option></select>}</Row>)}</Panel>}
+    {tab === 'services' && <Panel title="Servicios destacados" detail="Los destacados aparecen primero en el catálogo">{services.map(service => <Row key={service.id}><div><b>{service.name}</b>{service.is_featured && <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-1 text-xs text-amber-300"><Star className="h-3 w-3 fill-current" />Destacado</span>}<p className="text-sm text-muted">{service.category} · {money(Number(service.price))}</p></div><Button variant="outline" disabled={saving === service.id} onClick={() => void feature(service)}>{service.is_featured ? 'Quitar destacado' : 'Destacar'}</Button></Row>)}</Panel>}
+    {tab === 'orders' && <Panel title="Pedidos e ingresos" detail={`${orders.length} pedidos · ${money(data?.metrics.revenue || 0)} completados`}>{orders.map(order => <Row key={order.id}><div><b className="font-mono text-primary">{order.order_number}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{statuses[order.status] || order.status}</span><p className="text-sm">{order.client_name} · {order.service_name}</p><p className="text-xs text-muted">{order.client_email} · {date(order.created_at)}</p></div><b className="text-xl text-emerald-300">{money(Number(order.price))}</b></Row>)}</Panel>}
+    {tab === 'chats' && <Panel title="Supervisión de chats" detail={`${chats.length} conversaciones visibles`}>{chats.map(chat => <Row key={chat.id}><div><b className="font-mono text-primary">{chat.conversation_number}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{statuses[chat.status] || chat.status}</span><p className="text-sm">{chat.clientName} · {chat.subject || 'Soporte web'}</p><p className="text-xs text-muted">Agente: {chat.assignedAgent || 'Sin asignar'} · {date(chat.updated_at)}</p></div><a href="/admin?tab=support" className="rounded-lg border border-white/10 px-3 py-2 text-sm">Abrir soporte</a></Row>)}</Panel>}
+    {tab === 'activity' && <Panel title="Auditoría del sistema" detail={`${audit.length} eventos recientes`}>{audit.map(item => <Row key={item.id}><div><b>{item.title}</b>{item.reference && <span className="ml-2 font-mono text-xs text-primary">{item.reference}</span>}<p className="text-sm text-muted">{item.description}</p><p className="text-xs">{item.actorName} · {roles[item.actorRole] || item.actorRole}</p></div><time className="text-xs text-muted">{date(item.createdAt)}</time></Row>)}</Panel>}
+  </div></main><Footer /></div>
 }
+
+function Metric({ label, value, detail, icon, onClick }: { label: string; value: string; detail: string; icon: React.ReactNode; onClick: () => void }) { return <button onClick={onClick} className="rounded-2xl border border-white/10 bg-white/[.035] p-5 text-left transition hover:border-primary/40"><div className="flex justify-between text-sm text-muted"><span>{label}</span><span className="h-5 w-5 text-primary">{icon}</span></div><p className="mt-4 text-3xl font-black">{value}</p><p className="text-xs text-muted">{detail}</p></button> }
+function Panel({ title, detail, children }: { title: string; detail: string; children: React.ReactNode }) { return <section className="overflow-hidden rounded-3xl border border-white/10 bg-card/75"><div className="flex items-center gap-3 border-b border-white/10 p-5"><Activity className="h-5 w-5 text-primary" /><div><h2 className="text-xl font-bold">{title}</h2><p className="text-sm text-muted">{detail}</p></div></div><div className="divide-y divide-white/[.07]">{children}</div></section> }
+function Row({ children }: { children: React.ReactNode }) { return <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">{children}</div> }
