@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RootNamespace>AetherBoost.App</RootNamespace>
+    <AssemblyName>AetherBoost</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DulcanBoost.Core\AetherBoost.Core.csproj" />
+    <ProjectReference Include="..\AetherBoost.Infrastructure\AetherBoost.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

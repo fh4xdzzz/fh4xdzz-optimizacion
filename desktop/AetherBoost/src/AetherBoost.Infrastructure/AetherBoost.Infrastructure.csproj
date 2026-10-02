@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>AetherBoost.Infrastructure</RootNamespace>
+    <AssemblyName>AetherBoost.Infrastructure</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DulcanBoost.Core\AetherBoost.Core.csproj" />
+  </ItemGroup>
+</Project>
