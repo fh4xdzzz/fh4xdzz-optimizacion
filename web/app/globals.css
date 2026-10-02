@@ -440,3 +440,26 @@ body {
   }
 }
 
+@keyframes recent-alert-in {
+  from { opacity: 0; transform: translate3d(-18px, 16px, 0) scale(.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.recent-activity-alert {
+  animation: recent-alert-in .45s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.recent-activity-alert__line {
+  height: 2px;
+  margin: 12px 4px 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ef4444, #f97316, transparent);
+  animation: recent-alert-progress 9s linear both;
+  transform-origin: left;
+}
+
+@keyframes recent-alert-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
