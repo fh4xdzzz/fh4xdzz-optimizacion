@@ -5,6 +5,7 @@ import { Activity, BadgeDollarSign, Headphones, RefreshCw, Search, ShieldCheck, 
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
+import AdminSettings from '@/components/admin/admin-settings'
 
 type User = { id: string; email: string; full_name: string | null; role: 'owner' | 'admin' | 'staff' | 'client'; created_at: string }
 type Order = { id: string; order_number: string; status: string; client_name: string; client_email: string; service_name: string; price: number; created_at: string }
@@ -12,7 +13,7 @@ type Service = { id: string; name: string; category: string; price: number; is_a
 type Chat = { id: string; conversation_number: string; status: string; subject: string; clientName: string; assignedAgent: string | null; updated_at: string }
 type Audit = { id: string; type: string; title: string; description: string; actorName: string; actorRole: string; reference: string | null; createdAt: string }
 type Data = { generatedAt: string; metrics: { users: number; clients: number; team: number; orders: number; activeOrders: number; revenue: number; openChats: number; closedChats: number }; users: User[]; orders: Order[]; services: Service[]; chats: Chat[]; activities: Audit[] }
-type Tab = 'overview' | 'users' | 'services' | 'orders' | 'chats' | 'activity'
+type Tab = 'overview' | 'users' | 'services' | 'orders' | 'chats' | 'activity' | 'settings'
 const roles: Record<string, string> = { owner: 'Owner', admin: 'Administrador', staff: 'Staff', client: 'Cliente', assistant: 'Dulcan AI', system: 'Sistema' }
 const statuses: Record<string, string> = { pending: 'Pendiente', reviewing: 'Por revisar', in_progress: 'En proceso', waiting_client: 'Esperando cliente', completed: 'Completado', cancelled: 'Cancelado', waiting: 'En espera', active: 'Activo', closed: 'Cerrado' }
 const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
@@ -44,7 +45,7 @@ export default function OwnerPage() {
   const orders = data?.orders.filter(x => matches(x.order_number, x.client_name, x.client_email, x.service_name, x.status)) || []
   const chats = data?.chats.filter(x => matches(x.conversation_number, x.clientName, x.subject, x.assignedAgent, x.status)) || []
   const audit = data?.activities.filter(x => matches(x.title, x.description, x.actorName, x.reference)) || []
-  const tabs: [Tab, string][] = [['overview', 'Resumen'], ['users', 'Usuarios y roles'], ['services', 'Destacados'], ['orders', 'Pedidos e ingresos'], ['chats', 'Chats'], ['activity', 'Auditoría']]
+  const tabs: [Tab, string][] = [['overview', 'Resumen'], ['users', 'Usuarios y roles'], ['services', 'Destacados'], ['orders', 'Pedidos e ingresos'], ['chats', 'Chats'], ['activity', 'Auditoría'], ['settings', 'Configuración']]
 
   return <div className="min-h-screen bg-background"><Navbar /><main className="px-4 pb-20 pt-28"><div className="container mx-auto max-w-7xl">
     <header className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[.2em] text-violet-300"><ShieldCheck className="h-4 w-4" /> Control exclusivo</div><h1 className="text-4xl font-black md:text-5xl">Centro de operaciones Owner</h1><p className="mt-3 max-w-3xl text-lg text-muted">Control total de usuarios, permisos, catálogo, pedidos, ingresos, soporte y auditoría.</p></div><Button variant="outline" onClick={load} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Actualizar</Button></header>
@@ -57,6 +58,7 @@ export default function OwnerPage() {
     {tab === 'orders' && <Panel title="Pedidos e ingresos" detail={`${orders.length} pedidos · ${money(data?.metrics.revenue || 0)} completados`}>{orders.map(order => <Row key={order.id}><div><b className="font-mono text-primary">{order.order_number}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{statuses[order.status] || order.status}</span><p className="text-sm">{order.client_name} · {order.service_name}</p><p className="text-xs text-muted">{order.client_email} · {date(order.created_at)}</p></div><b className="text-xl text-emerald-300">{money(Number(order.price))}</b></Row>)}</Panel>}
     {tab === 'chats' && <Panel title="Supervisión de chats" detail={`${chats.length} conversaciones visibles`}>{chats.map(chat => <Row key={chat.id}><div><b className="font-mono text-primary">{chat.conversation_number}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{statuses[chat.status] || chat.status}</span><p className="text-sm">{chat.clientName} · {chat.subject || 'Soporte web'}</p><p className="text-xs text-muted">Agente: {chat.assignedAgent || 'Sin asignar'} · {date(chat.updated_at)}</p></div><a href="/admin?tab=support" className="rounded-lg border border-white/10 px-3 py-2 text-sm">Abrir soporte</a></Row>)}</Panel>}
     {tab === 'activity' && <Panel title="Auditoría del sistema" detail={`${audit.length} eventos recientes`}>{audit.map(item => <Row key={item.id}><div><b>{item.title}</b>{item.reference && <span className="ml-2 font-mono text-xs text-primary">{item.reference}</span>}<p className="text-sm text-muted">{item.description}</p><p className="text-xs">{item.actorName} · {roles[item.actorRole] || item.actorRole}</p></div><time className="text-xs text-muted">{date(item.createdAt)}</time></Row>)}</Panel>}
+    {tab === 'settings' && <section className="rounded-3xl border border-white/10 bg-card/75 p-5 md:p-6"><div className="mb-6"><h2 className="text-2xl font-bold">Configuración del negocio</h2><p className="mt-1 text-sm text-muted">Información pública, redes sociales, formulario y pagos. Solo visible para el Owner.</p></div><AdminSettings /></section>}
   </div></main><Footer /></div>
 }
 

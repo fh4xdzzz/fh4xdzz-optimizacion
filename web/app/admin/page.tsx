@@ -11,7 +11,6 @@ import { Modal } from '@/components/ui/modal'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
 import { useNotificationStore } from '@/lib/notifications-store'
-import AdminSettings from '@/components/admin/admin-settings'
 
 interface User {
   id: string
@@ -110,7 +109,7 @@ export default function AdminPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [selectedChatImage, setSelectedChatImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders' | 'services' | 'support' | 'history' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'services' | 'support' | 'history'>('overview')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -962,18 +961,6 @@ export default function AdminPage() {
             >
               Historial ({orderHistory.length})
             </button>
-            {(userRole === 'owner') && (
-              <button
-                className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                  activeTab === 'settings'
-                    ? 'bg-primary text-white'
-                    : 'border border-border bg-transparent'
-                }`}
-                onClick={() => setActiveTab('settings')}
-              >
-                Configuración
-              </button>
-            )}
           </div>
 
           {/* Overview Tab */}
@@ -1696,7 +1683,6 @@ export default function AdminPage() {
           )}
 
           {/* Settings Tab */}
-          {activeTab === 'settings' && <AdminSettings />}
 
         </div>
       </section>
