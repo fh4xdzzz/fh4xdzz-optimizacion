@@ -94,7 +94,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex h-20 items-center justify-between gap-4">
           <Link href="/" onClick={() => setIsOpen(false)} className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="TheDulcanDesign, ir al inicio">
-            <Image src="/logo.png" alt="" width={40} height={40} priority className="h-10 w-auto rounded-lg" />
+            <Image src="/icon.png" alt="" width={44} height={44} preload className="h-11 w-11 shrink-0 object-contain" />
             <span className="truncate text-lg font-bold gradient-text-primary sm:text-xl">TheDulcanDesign</span>
           </Link>
 
