@@ -34,6 +34,7 @@ const serviceIcons: Record<string, string> = {
   pc_windows: '⌁',
   discord: '◈',
   support: '?',
+  custom: '◆',
 }
 
 export default function ServicesPage() {
@@ -158,6 +159,19 @@ export default function ServicesPage() {
           },
           {
             id: '9',
+            name: 'Página web profesional',
+            slug: 'pagina-web-profesional',
+            description: 'Página web moderna, adaptable y lista para presentar tu marca, negocio o proyecto',
+            category: 'custom',
+            benefits: ['Diseño adaptable', 'Imagen profesional', 'Carga optimizada', 'Lista para publicar'],
+            includes: ['Diseño de hasta 5 secciones', 'Adaptación para móvil y escritorio', 'Formulario de contacto', 'Enlaces a redes sociales', 'Configuración SEO básica', 'Publicación inicial'],
+            price: 99.99,
+            duration_estimate: '5-10 días',
+            is_active: true,
+            is_featured: false
+          },
+          {
+            id: '10',
             name: 'Servicios Personalizados',
             slug: 'servicios-personalizados',
             description: 'Soluciones a medida según tus necesidades',

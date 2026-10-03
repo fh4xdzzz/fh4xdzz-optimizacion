@@ -199,11 +199,39 @@ const QUESTION_SETS = {
     resultPlaceholder:
       'Ej.: un bot estable 24/7 que modere y automatice las tareas de mi comunidad.',
   },
+  web: {
+    objectiveLabel: '¿Qué tipo de página necesitas?',
+    objectives: [
+      'Página para negocio o empresa',
+      'Portafolio profesional',
+      'Página para creador o streamer',
+      'Landing page para vender un servicio',
+      'Página para evento o proyecto',
+      'Otra',
+    ],
+    platformLabel: 'Objetivo principal',
+    platforms: [
+      'Presentar mi marca',
+      'Conseguir clientes',
+      'Mostrar trabajos o proyectos',
+      'Recibir solicitudes',
+      'Promocionar un producto o servicio',
+      'Otro',
+    ],
+    setupPlaceholder:
+      'Indica si ya tienes dominio, hosting, logotipo, textos, imágenes o una página existente.',
+    issuePlaceholder:
+      'Describe las secciones y funciones que necesitas: inicio, servicios, galería, formulario, redes, etc.',
+    resultPlaceholder:
+      'Ej.: una página moderna, rápida y lista para compartir con mis clientes.',
+  },
 } as const
 
 function getQuestionSet(service?: { name: string; slug: string }) {
   const value = `${service?.name || ''} ${service?.slug || ''}`.toLowerCase()
   if (value.includes('bot')) return QUESTION_SETS.discordBot
+  if (value.includes('pagina-web') || value.includes('página web'))
+    return QUESTION_SETS.web
   if (value.includes('discord') || value.includes('servidor'))
     return QUESTION_SETS.discord
   if (value.includes('obs') || value.includes('stream'))
@@ -702,6 +730,8 @@ function ContactFormContent() {
                               ? 'Servidor, bot o código actual'
                               : questionSet === QUESTION_SETS.discord
                               ? 'Servidor actual o punto de partida'
+                              : questionSet === QUESTION_SETS.web
+                              ? 'Materiales y servicios que ya tienes'
                               : 'Equipo o configuración actual'}{' '}
                             *
                           </label>
@@ -736,6 +766,8 @@ function ContactFormContent() {
                               ? '¿Qué funciones debe tener el bot?'
                               : questionSet === QUESTION_SETS.discord
                               ? '¿Qué estructura y funciones necesitas?'
+                              : questionSet === QUESTION_SETS.web
+                              ? '¿Qué secciones y funciones debe incluir?'
                               : '¿Qué está ocurriendo actualmente?'}{' '}
                             *
                           </label>

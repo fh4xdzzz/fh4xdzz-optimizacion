@@ -53,6 +53,11 @@ export default function Footer() {
                   Soporte Técnico
                 </Link>
               </li>
+              <li>
+                <Link href="/servicios/pagina-web-profesional" className="hover:text-foreground transition-colors hover:scale-105 transform inline-block">
+                  Página web profesional
+                </Link>
+              </li>
             </ul>
           </div>
 

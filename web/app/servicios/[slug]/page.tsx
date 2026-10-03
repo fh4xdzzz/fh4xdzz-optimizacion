@@ -33,7 +33,13 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
     )
   }
 
-  const processSteps = service.slug === 'bot-de-discord'
+  const processSteps = service.slug === 'pagina-web-profesional'
+    ? [
+        ['01', 'Definición', 'Acordamos el objetivo, las secciones, el contenido y el estilo visual de tu página.'],
+        ['02', 'Diseño y desarrollo', 'Construimos una experiencia adaptable, rápida y alineada con tu marca.'],
+        ['03', 'Revisión y publicación', 'Aplicamos tus ajustes, comprobamos la página y realizamos la publicación inicial.'],
+      ]
+    : service.slug === 'bot-de-discord'
     ? [
         ['01', 'Definición', 'Acordamos las funciones, comandos, permisos e integraciones que necesita el bot.'],
         ['02', 'Desarrollo', 'Creamos, configuramos y probamos el bot de forma segura en tu servidor.'],
