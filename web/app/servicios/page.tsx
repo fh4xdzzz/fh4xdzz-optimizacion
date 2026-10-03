@@ -244,7 +244,7 @@ export default function ServicesPage() {
     <div className="min-h-screen bg-background">
       <div className="animated-bg"></div>
       <div className="animated-bg-overlay"></div>
-      <div className="relative z-10 [&_h1]:uppercase [&_h2]:uppercase [&_h3]:uppercase">
+      <div className="relative z-10">
         <Navbar />
 
       {/* Header */}
@@ -252,7 +252,7 @@ export default function ServicesPage() {
         <div className="pointer-events-none absolute left-1/2 top-20 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/20 blur-[110px]" />
         <div className="container relative mx-auto text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[.22em] text-primary">Servicios profesionales</p>
-          <h1 className="mx-auto mb-5 max-w-4xl text-5xl font-black tracking-[-.04em] md:text-7xl">La mejora correcta para <span className="gradient-text-primary">cada etapa de tu setup</span></h1>
+          <h1 className="mx-auto mb-5 max-w-4xl text-5xl font-black uppercase tracking-[-.04em] md:text-7xl">La mejora correcta para <span className="gradient-text-primary">cada etapa de tu setup</span></h1>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted md:text-xl">
             Soluciones claras, precio transparente y configuración personalizada. Elige tu objetivo y nosotros nos encargamos de la parte técnica.
           </p>
@@ -330,7 +330,7 @@ export default function ServicesPage() {
       <section className="py-24 px-4 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10">
         <div className="container mx-auto text-center">
           <div className="max-w-3xl mx-auto animate-fade-in-scale">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 gradient-text-secondary">¿No encuentras lo que buscas?</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 uppercase gradient-text-secondary">¿No encuentras lo que buscas?</h2>
             <p className="text-xl text-muted mb-8 max-w-2xl mx-auto text-headline">
               Ofrecemos servicios personalizados adaptados a tus necesidades específicas. Contáctanos para discutir tu proyecto.
             </p>

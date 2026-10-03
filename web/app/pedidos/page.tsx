@@ -178,7 +178,7 @@ export default function OrdersPage() {
       <main className="px-4 pb-24 pt-32">
         <section className="container mx-auto mb-10 max-w-6xl">
           <div className="mb-5 inline-flex rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">Área privada</div>
-          <h1 className="text-4xl font-bold md:text-5xl">Seguimiento de tus pedidos</h1>
+          <h1 className="text-4xl font-bold uppercase md:text-5xl">Seguimiento de tus pedidos</h1>
           <p className="mt-4 max-w-2xl text-lg text-muted">Consulta cada etapa, la fecha estimada y comunícate con nuestro equipo sin salir de la página.</p>
         </section>
 

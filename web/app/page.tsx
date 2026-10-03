@@ -64,7 +64,7 @@ export default function Home() {
               </span>
               Atención personalizada disponible
             </div>
-            <h1 className="mb-6 text-5xl font-black leading-[1.02] tracking-[-0.045em] text-foreground md:text-7xl">
+            <h1 className="mb-6 text-5xl font-black uppercase leading-[1.02] tracking-[-0.045em] text-foreground md:text-7xl">
               Tu setup, más rápido.
               <span className="mt-2 block gradient-text-primary">Tu contenido, más profesional.</span>
             </h1>
@@ -138,7 +138,7 @@ export default function Home() {
         <div className="container mx-auto">
           <div className="mx-auto mb-14 max-w-2xl text-center">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[.2em] text-primary">Soluciones especializadas</p>
-            <h2 className="text-4xl font-bold tracking-tight md:text-5xl">Servicios creados para rendir más</h2>
+            <h2 className="text-4xl font-bold uppercase tracking-tight md:text-5xl">Servicios creados para rendir más</h2>
             <p className="mt-4 text-lg text-muted">Elige el punto de partida. Cada servicio se adapta a tu hardware, plataforma y objetivos.</p>
           </div>
           {loading ? (
@@ -182,7 +182,7 @@ export default function Home() {
       {/* How It Works */}
       <section className="py-24 px-4 md:px-8">
         <div className="container mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-secondary animate-fade-in-up">Cómo Funciona</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 uppercase gradient-text-secondary animate-fade-in-up">Cómo Funciona</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
             <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 transition-transform cursor-pointer">
@@ -219,7 +219,7 @@ export default function Home() {
       {/* Benefits */}
       <section className="py-24 px-4 md:px-8 bg-card/30">
         <div className="container mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-secondary animate-fade-in-up">¿Por Qué Elegirnos?</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 uppercase gradient-text-secondary animate-fade-in-up">¿Por Qué Elegirnos?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center glass-card p-8 rounded-2xl animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <div className="text-6xl mb-6 animate-float">🎯</div>
@@ -243,7 +243,7 @@ export default function Home() {
       {/* Testimonials */}
       <section className="py-24 px-4 md:px-8">
         <div className="container mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-primary animate-fade-in-up">Lo Que Dicen Nuestros Clientes</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 uppercase gradient-text-primary animate-fade-in-up">Lo Que Dicen Nuestros Clientes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <CardHeader>
@@ -291,7 +291,7 @@ export default function Home() {
       {/* FAQ */}
       <section className="py-24 px-4 md:px-8 bg-card/30">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 gradient-text-secondary animate-fade-in-up">Preguntas Frecuentes</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 uppercase gradient-text-secondary animate-fade-in-up">Preguntas Frecuentes</h2>
           <div className="space-y-6">
             <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <CardHeader>
@@ -333,7 +333,7 @@ export default function Home() {
       <section className="py-24 px-4 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10">
         <div className="container mx-auto text-center">
           <div className="max-w-3xl mx-auto animate-fade-in-scale">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 gradient-text-primary">¿Listo para Optimizar tu Setup?</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 uppercase gradient-text-primary">¿Listo para Optimizar tu Setup?</h2>
             <p className="text-xl text-muted mb-8 text-headline">
               Únete a cientos de clientes satisfechos que han mejorado su experiencia de streaming y gaming.
             </p>
