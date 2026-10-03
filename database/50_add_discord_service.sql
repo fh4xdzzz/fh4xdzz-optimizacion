@@ -65,7 +65,7 @@ INSERT INTO public.services (
         'Capacitación administrativa',
         '7 días de soporte'
     ],
-    20.00,
+    20.99,
     '2-4 días',
     true,
     true,

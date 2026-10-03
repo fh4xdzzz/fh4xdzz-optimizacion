@@ -175,6 +175,7 @@ En el SQL Editor de Supabase, ejecuta los scripts en orden:
 7. `10_add_service_images.sql` - Imágenes y detalles ampliados de los servicios
 8. `11_orders_delete_policy.sql` - Política RLS para eliminación de pedidos por owner
 9. `50_add_discord_service.sql` - Categoría y servicio de creación de servidores de Discord
+10. `51_update_discord_service_price.sql` - Actualización del precio del servicio de Discord
 
 ### 3. Configurar variables de entorno
 Copia las credenciales de Supabase a tu archivo `.env`:

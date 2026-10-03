@@ -79,7 +79,7 @@ export default function ServicesPage() {
             category: 'discord',
             benefits: ['Comunidad organizada', 'Permisos seguros', 'Moderación automatizada', 'Experiencia profesional'],
             includes: ['Estructura de canales', 'Roles y permisos', 'Sistema de bienvenida y reglas', 'Bots, tickets y AutoMod', 'Capacitación administrativa', '7 días de soporte'],
-            price: 20,
+            price: 20.99,
             duration_estimate: '2-4 días',
             is_active: true,
             is_featured: true
