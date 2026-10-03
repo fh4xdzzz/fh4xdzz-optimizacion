@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
 import { MessageCircle, X, Send, Paperclip, Smile, BookOpen, MessagesSquare, Search, ShieldCheck, Sparkles, ChevronRight, Bot } from 'lucide-react'
@@ -44,6 +45,50 @@ const QUICK_ACTIONS = [
   { label: 'OBS o streaming', message: 'Hola, necesito ayuda con OBS o mi configuración de streaming.' },
   { label: 'Pagos y pedidos', message: 'Hola, necesito ayuda con un pago o pedido.' },
 ]
+
+const MESSAGE_URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi
+const INTERNAL_HOSTS = new Set(['thedulcandesign.com', 'www.thedulcandesign.com'])
+
+function LinkifiedMessage({ text, onInternalNavigate }: { text: string; onInternalNavigate: () => void }) {
+  return (
+    <>
+      {text.split(MESSAGE_URL_PATTERN).map((part, index) => {
+        if (!/^(?:https?:\/\/|www\.)/i.test(part)) return part
+
+        const trailingPunctuation = part.match(/[),.!?;:]+$/)?.[0] || ''
+        const displayedUrl = trailingPunctuation ? part.slice(0, -trailingPunctuation.length) : part
+        const absoluteUrl = displayedUrl.startsWith('www.') ? `https://${displayedUrl}` : displayedUrl
+
+        try {
+          const parsedUrl = new URL(absoluteUrl)
+          const isInternal = INTERNAL_HOSTS.has(parsedUrl.hostname.toLowerCase())
+          const linkClass = 'font-semibold text-cyan-200 underline decoration-cyan-300/60 underline-offset-2 transition hover:text-white'
+
+          return (
+            <Fragment key={`${displayedUrl}-${index}`}>
+              {isInternal ? (
+                <Link
+                  href={`${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`}
+                  className={linkClass}
+                  onClick={onInternalNavigate}
+                >
+                  {displayedUrl}
+                </Link>
+              ) : (
+                <a href={parsedUrl.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                  {displayedUrl}
+                </a>
+              )}
+              {trailingPunctuation}
+            </Fragment>
+          )
+        } catch {
+          return part
+        }
+      })}
+    </>
+  )
+}
 
 export default function SupportChatWidget() {
   const supabase = createClient()
@@ -824,7 +869,11 @@ export default function SupportChatWidget() {
                         <span className="min-w-0 break-words [overflow-wrap:anywhere] text-sm">{message.attachment_name}</span>
                       </div>
                     )}
-                    {!isAttachment && <p className="break-words [overflow-wrap:anywhere] text-sm">{message.message}</p>}
+                    {!isAttachment && (
+                      <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm">
+                        <LinkifiedMessage text={message.message} onInternalNavigate={() => setOpen(false)} />
+                      </p>
+                    )}
                     <p
                       className={`text-xs mt-1 ${
                         isClient ? 'text-white/80' : 'text-[#6b7280]'
