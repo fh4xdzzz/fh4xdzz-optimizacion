@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { isDemoMode, getSession } from '@/lib/auth-hybrid'
+import { SupportChatButton } from '@/components/support-chat-trigger'
 
 interface Service {
   id: string
@@ -334,12 +335,13 @@ export default function ServicesPage() {
             <p className="text-xl text-muted mb-8 max-w-2xl mx-auto text-headline">
               Ofrecemos servicios personalizados adaptados a tus necesidades específicas. Contáctanos para discutir tu proyecto.
             </p>
-            <a
-              href="/contacto"
-              className="inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-14 px-10 text-lg bg-primary text-white pointer-events-auto cursor-pointer shimmer-button"
+            <SupportChatButton
+              size="lg"
+              className="h-14 px-10 text-lg shimmer-button"
+              message="Hola, quiero información sobre un servicio personalizado."
             >
               Contactar para Servicio Personalizado
-            </a>
+            </SupportChatButton>
           </div>
         </div>
       </section>

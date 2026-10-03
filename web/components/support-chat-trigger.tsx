@@ -3,13 +3,19 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Button, type ButtonProps } from '@/components/ui/button'
 
-function openSupportChat() {
-  window.dispatchEvent(new CustomEvent('open-support-chat'))
+function openSupportChat(message?: string) {
+  window.dispatchEvent(new CustomEvent('open-support-chat', {
+    detail: message ? { message } : undefined,
+  }))
 }
 
-export function SupportChatButton({ children, ...props }: ButtonProps) {
+interface SupportChatButtonProps extends ButtonProps {
+  message?: string
+}
+
+export function SupportChatButton({ children, message, ...props }: SupportChatButtonProps) {
   return (
-    <Button type="button" onClick={openSupportChat} {...props}>
+    <Button type="button" onClick={() => openSupportChat(message)} {...props}>
       {children}
     </Button>
   )
@@ -21,7 +27,7 @@ interface SupportChatLinkProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function SupportChatLink({ children, ...props }: SupportChatLinkProps) {
   return (
-    <button type="button" onClick={openSupportChat} {...props}>
+    <button type="button" onClick={() => openSupportChat()} {...props}>
       {children}
     </button>
   )
