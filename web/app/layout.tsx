@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { SITE_URL, socialMetadata } from "@/lib/seo";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SupportChatWidget from "@/components/support-chat-widget";
@@ -18,9 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: { default: "TheDulcanDesign - Servicios Profesionales de Optimización", template: "%s | TheDulcanDesign" },
-  ...socialMetadata("TheDulcanDesign", "Optimización de OBS, Windows y streaming con atención personalizada.", "/"),
+  title: "TheDulcanDesign - Servicios Profesionales de Optimización",
   description: "Servicios profesionales de optimización y configuración de OBS, streaming, PC/Windows, gaming y soporte técnico.",
   icons: {
     icon: [
