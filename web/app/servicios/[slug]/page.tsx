@@ -1,3 +1,7 @@
+import type { Metadata } from 'next'
+import { cache } from 'react'
+import { notFound } from 'next/navigation'
+import { socialMetadata } from '@/lib/seo'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
@@ -20,33 +24,30 @@ interface Service {
   is_featured: boolean
 }
 
+const getService = cache(async (slug: string): Promise<Service | null> => {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('services').select('*').eq('slug', slug).eq('is_active', true).maybeSingle()
+  if (error) throw new Error('No se pudo cargar el servicio', { cause: error })
+  return data
+})
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const service = await getService(slug)
+  if (!service) notFound()
+  const path = `/servicios/${encodeURIComponent(service.slug)}`
+  return {
+    title: service.name,
+    description: service.description,
+    alternates: { canonical: path },
+    ...socialMetadata(service.name, service.description, path),
+  }
+}
+
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const supabase = await createClient()
-  const { data: service } = await supabase
-    .from('services')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .single()
-
-  if (!service) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-4">Servicio no encontrado</h1>
-            <p className="text-muted mb-8">El servicio que buscas no existe o ha sido eliminado.</p>
-            <Button variant="primary" href="/servicios">
-              Volver a Servicios
-            </Button>
-          </div>
-        </section>
-        <Footer />
-      </div>
-    )
-  }
+  const service = await getService(slug)
+  if (!service) notFound()
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,7 +88,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
         <div className="container mx-auto">
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
             {/* Details */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="min-w-0 space-y-8">
               {service.details && (
                 <Card className="rounded-3xl border-white/10 bg-[#11131b]/85">
                   <CardHeader>
