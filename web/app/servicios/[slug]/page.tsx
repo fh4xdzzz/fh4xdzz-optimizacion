@@ -5,21 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
-interface Service {
-  id: string
-  name: string
-  slug: string
-  description: string
-  category: string
-  benefits: string[]
-  includes: string[]
-  price: number
-  duration_estimate: string
-  details?: string
-  is_active: boolean
-  is_featured: boolean
-}
-
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
@@ -47,6 +32,18 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       </div>
     )
   }
+
+  const processSteps = service.category === 'discord'
+    ? [
+        ['01', 'Planificación', 'Definimos el objetivo, la comunidad, los roles y las funciones necesarias.'],
+        ['02', 'Configuración', 'Creamos canales, permisos, bienvenida, moderación, tickets y bots existentes.'],
+        ['03', 'Entrega', 'Probamos el servidor contigo, transferimos el control y explicamos su administración.'],
+      ]
+    : [
+        ['01', 'Diagnóstico', 'Revisamos tu equipo, objetivos y problemas actuales.'],
+        ['02', 'Optimización', 'Aplicamos la configuración y comprobamos cada cambio.'],
+        ['03', 'Entrega', 'Validamos el resultado contigo y explicamos lo realizado.'],
+      ]
 
   return (
     <div className="min-h-screen bg-background">
@@ -151,7 +148,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                 <CardHeader><p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Proceso</p><CardTitle className="text-3xl">Así trabajaremos</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid gap-5 sm:grid-cols-3">
-                    {[['01', 'Diagnóstico', 'Revisamos tu equipo, objetivos y problemas actuales.'], ['02', 'Optimización', 'Aplicamos la configuración y comprobamos cada cambio.'], ['03', 'Entrega', 'Validamos el resultado contigo y explicamos lo realizado.']].map(([number, title, text]) => (
+                    {processSteps.map(([number, title, text]) => (
                       <div key={number} className="rounded-2xl border border-white/10 bg-black/10 p-5"><span className="text-sm font-bold text-primary">{number}</span><h3 className="mt-4 font-semibold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-muted">{text}</p></div>
                     ))}
                   </div>

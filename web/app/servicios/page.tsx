@@ -24,6 +24,14 @@ interface Service {
   is_featured: boolean
 }
 
+const serviceIcons: Record<string, string> = {
+  obs: '◫',
+  streaming: '⌁',
+  pc_windows: '⌁',
+  discord: '◈',
+  support: '?',
+}
+
 export default function ServicesPage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [services, setServices] = useState<Service[]>([])
@@ -65,6 +73,19 @@ export default function ServicesPage() {
           },
           {
             id: '3',
+            name: 'Creación de Servidor de Discord',
+            slug: 'creacion-servidor-discord',
+            description: 'Servidor de Discord profesional, seguro y organizado para tu comunidad o negocio',
+            category: 'discord',
+            benefits: ['Comunidad organizada', 'Permisos seguros', 'Moderación automatizada', 'Experiencia profesional'],
+            includes: ['Estructura de canales', 'Roles y permisos', 'Sistema de bienvenida y reglas', 'Bots, tickets y AutoMod', 'Capacitación administrativa', '7 días de soporte'],
+            price: 20,
+            duration_estimate: '2-4 días',
+            is_active: true,
+            is_featured: true
+          },
+          {
+            id: '4',
             name: 'Optimización de PC/Windows',
             slug: 'optimizacion-pc-windows',
             description: 'Mejora del rendimiento del sistema para gaming y productividad',
@@ -77,7 +98,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '4',
+            id: '5',
             name: 'Configuración Gaming',
             slug: 'configuracion-gaming',
             description: 'Optimización específica para tus juegos favoritos',
@@ -90,7 +111,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '5',
+            id: '6',
             name: 'Diseño de Overlays y Alertas',
             slug: 'diseno-overlays-alertas',
             description: 'Elementos visuales personalizados para tu stream',
@@ -103,7 +124,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '6',
+            id: '7',
             name: 'Soporte Técnico',
             slug: 'soporte-tecnico',
             description: 'Resolución de problemas técnicos y consultas',
@@ -116,7 +137,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '7',
+            id: '8',
             name: 'Servicios Personalizados',
             slug: 'servicios-personalizados',
             description: 'Soluciones a medida según tus necesidades',
@@ -162,6 +183,7 @@ export default function ServicesPage() {
     { id: 'streaming', name: 'Streaming' },
     { id: 'pc_windows', name: 'PC/Windows' },
     { id: 'gaming', name: 'Gaming' },
+    { id: 'discord', name: 'Discord' },
     { id: 'design', name: 'Diseño' },
     { id: 'support', name: 'Soporte' },
     { id: 'custom', name: 'Personalizado' }
@@ -277,7 +299,7 @@ export default function ServicesPage() {
                   </div>
                 )}
                 <CardHeader>
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-xl text-primary">{service.category === 'streaming' ? '◫' : service.category === 'pc_windows' ? '⌁' : service.category === 'support' ? '?' : '◉'}</div>
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-xl text-primary">{serviceIcons[service.category] || '◉'}</div>
                   <CardTitle className="mb-2 pr-20 text-2xl">{service.name}</CardTitle>
                   <CardDescription className="min-h-12 text-base leading-relaxed">{service.description}</CardDescription>
                 </CardHeader>

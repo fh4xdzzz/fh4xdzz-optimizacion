@@ -77,10 +77,20 @@ const QUESTION_SETS = {
     issuePlaceholder: 'Describe el error, cuándo comenzó y qué intentaste antes.',
     resultPlaceholder: 'Explica qué debería funcionar al finalizar el servicio.',
   },
+  discord: {
+    objectiveLabel: '¿Qué quieres lograr con tu servidor?',
+    objectives: ['Crear una comunidad desde cero', 'Reorganizar un servidor existente', 'Preparar un servidor para negocio o soporte', 'Mejorar seguridad y moderación', 'Configurar una comunidad de gaming'],
+    platformLabel: 'Tipo de servidor',
+    platforms: ['Comunidad', 'Gaming', 'Creador de contenido', 'Negocio o marca', 'Soporte al cliente', 'Educación', 'Otro'],
+    setupPlaceholder: 'Indica si el servidor es nuevo o existente, miembros aproximados y bots actuales.',
+    issuePlaceholder: 'Describe los canales, roles, permisos, bots, tickets o moderación que necesitas.',
+    resultPlaceholder: 'Ej.: un servidor organizado, seguro y listo para recibir a mi comunidad.',
+  },
 } as const
 
 function getQuestionSet(service?: { name: string; slug: string }) {
   const value = `${service?.name || ''} ${service?.slug || ''}`.toLowerCase()
+  if (value.includes('discord') || value.includes('servidor')) return QUESTION_SETS.discord
   if (value.includes('obs') || value.includes('stream')) return QUESTION_SETS.obs
   if (value.includes('pc') || value.includes('windows') || value.includes('gaming') || value.includes('juego')) return QUESTION_SETS.pc
   if (value.includes('dise') || value.includes('overlay') || value.includes('visual')) return QUESTION_SETS.design
@@ -421,12 +431,12 @@ function ContactFormContent() {
                     {errors.platform && <p className="mt-1 text-sm text-red-500">{errors.platform}</p>}
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="currentSetup" className="mb-2 block text-sm font-medium">Equipo o configuración actual *</label>
+                    <label htmlFor="currentSetup" className="mb-2 block text-sm font-medium">{questionSet === QUESTION_SETS.discord ? 'Servidor actual o punto de partida' : 'Equipo o configuración actual'} *</label>
                     <input id="currentSetup" maxLength={80} value={questionnaire.currentSetup} onChange={event => handleQuestionChange('currentSetup', event.target.value)} className={`w-full rounded-lg border bg-background px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 ${errors.currentSetup ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`} placeholder={questionSet.setupPlaceholder} />
                     <div className="mt-1 flex justify-between text-xs"><span className="text-red-500">{errors.currentSetup}</span><span className="text-muted">{questionnaire.currentSetup.length}/80</span></div>
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="mainIssue" className="mb-2 block text-sm font-medium">¿Qué está ocurriendo actualmente? *</label>
+                    <label htmlFor="mainIssue" className="mb-2 block text-sm font-medium">{questionSet === QUESTION_SETS.discord ? '¿Qué estructura y funciones necesitas?' : '¿Qué está ocurriendo actualmente?'} *</label>
                     <textarea id="mainIssue" rows={3} maxLength={120} value={questionnaire.mainIssue} onChange={event => handleQuestionChange('mainIssue', event.target.value)} className={`w-full resize-none rounded-lg border bg-background px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 ${errors.mainIssue ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`} placeholder={questionSet.issuePlaceholder} />
                     <div className="mt-1 flex justify-between text-xs"><span className="text-red-500">{errors.mainIssue}</span><span className="text-muted">{questionnaire.mainIssue.length}/120</span></div>
                   </div>

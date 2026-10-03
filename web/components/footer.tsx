@@ -33,6 +33,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/servicios/creacion-servidor-discord" className="hover:text-foreground transition-colors hover:scale-105 transform inline-block">
+                  Servidor de Discord
+                </Link>
+              </li>
+              <li>
                 <Link href="/servicios/optimizacion-pc-windows" className="hover:text-foreground transition-colors hover:scale-105 transform inline-block">
                   Optimización PC
                 </Link>

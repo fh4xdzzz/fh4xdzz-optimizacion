@@ -30,7 +30,7 @@ Catálogo de servicios ofrecidos.
 - `name` (TEXT) - Nombre del servicio
 - `slug` (TEXT) - URL-friendly identifier
 - `description` (TEXT) - Descripción detallada
-- `category` (TEXT) - Categoría: obs, streaming, pc_windows, gaming, design, support, custom
+- `category` (TEXT) - Categoría: obs, streaming, pc_windows, gaming, discord, design, support, custom
 - `benefits` (TEXT[]) - Lista de beneficios
 - `includes` (TEXT[]) - Lista de qué incluye
 - `price` (DECIMAL) - Precio del servicio
@@ -172,7 +172,9 @@ En el SQL Editor de Supabase, ejecuta los scripts en orden:
 4. `04_tickets.sql` - Tabla de tickets y mensajes
 5. `05_testimonials.sql` - Tabla de testimonios
 6. `06_business_settings.sql` - Configuraciones del negocio
-7. `11_orders_delete_policy.sql` - Política RLS para eliminación de pedidos por owner
+7. `10_add_service_images.sql` - Imágenes y detalles ampliados de los servicios
+8. `11_orders_delete_policy.sql` - Política RLS para eliminación de pedidos por owner
+9. `50_add_discord_service.sql` - Categoría y servicio de creación de servidores de Discord
 
 ### 3. Configurar variables de entorno
 Copia las credenciales de Supabase a tu archivo `.env`:
@@ -207,7 +209,7 @@ tickets (1) ----< (N) ticket_messages
 ## 🧪 Testing
 
 Los scripts incluyen datos de ejemplo para:
-- 7 servicios con diferentes categorías
+- 8 servicios con diferentes categorías
 - 4 testimonios de ejemplo
 - Configuraciones iniciales del negocio
 
