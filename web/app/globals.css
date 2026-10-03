@@ -300,6 +300,27 @@ body {
   }
 }
 
+@keyframes performance-bar-loop {
+  0%, 100% {
+    transform: scaleY(.58);
+    filter: brightness(.78);
+  }
+  42% {
+    transform: scaleY(1);
+    filter: brightness(1.25) drop-shadow(0 0 8px rgba(99, 102, 241, .55));
+  }
+  72% {
+    transform: scaleY(.76);
+    filter: brightness(.95);
+  }
+}
+
+.performance-bar {
+  transform-origin: bottom;
+  animation: performance-bar-loop 2s cubic-bezier(.45, 0, .55, 1) infinite;
+  will-change: transform, filter;
+}
+
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out;
 }

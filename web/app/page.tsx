@@ -51,6 +51,51 @@ const getInitials = (name: string) => name
   .join('')
   .toUpperCase()
 
+type AnimatedMetricProps = {
+  label: string
+  target: number
+  prefix?: string
+  suffix?: string
+  color: string
+}
+
+function AnimatedMetric({ label, target, prefix = '', suffix = '', color }: AnimatedMetricProps) {
+  const [value, setValue] = useState(0)
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let animationFrame = 0
+
+    if (reduceMotion) {
+      animationFrame = window.requestAnimationFrame(() => setValue(target))
+      return () => window.cancelAnimationFrame(animationFrame)
+    }
+
+    const duration = 1400
+    const startedAt = performance.now()
+
+    const countUp = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1)
+      const easedProgress = 1 - Math.pow(1 - progress, 3)
+      setValue(Math.round(target * easedProgress))
+
+      if (progress < 1) animationFrame = window.requestAnimationFrame(countUp)
+    }
+
+    animationFrame = window.requestAnimationFrame(countUp)
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [target])
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[.035] p-4">
+      <p className="mb-2 text-xs text-muted">{label}</p>
+      <p className={`text-2xl font-bold tabular-nums ${color}`} aria-label={`${label}: ${prefix}${target}${suffix}`}>
+        {prefix}{value}{suffix}
+      </p>
+    </div>
+  )
+}
+
 export default function Home() {
   const [featuredServices, setFeaturedServices] = useState<Service[]>([])
   const [testimonials, setTestimonials] = useState<Testimonial[]>(fallbackTestimonials)
@@ -157,18 +202,24 @@ export default function Home() {
                 <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-400">Optimizado</span>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                {[['FPS estable', '+38%', 'text-emerald-400'], ['Latencia', '-27%', 'text-cyan-300'], ['Calidad OBS', '1080p', 'text-primary']].map(([label, value, color]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-white/[.035] p-4">
-                    <p className="mb-2 text-xs text-muted">{label}</p>
-                    <p className={`text-2xl font-bold ${color}`}>{value}</p>
-                  </div>
-                ))}
+                <AnimatedMetric label="FPS estable" target={38} prefix="+" suffix="%" color="text-emerald-400" />
+                <AnimatedMetric label="Latencia" target={27} prefix="-" suffix="%" color="text-cyan-300" />
+                <AnimatedMetric label="Calidad OBS" target={1080} suffix="p" color="text-primary" />
               </div>
               <div className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-primary/[.08] to-transparent p-5">
                 <div className="mb-5 flex items-center justify-between"><span className="text-sm font-semibold">Rendimiento del sistema</span><span className="text-xs text-muted">En tiempo real</span></div>
                 <div className="flex h-32 items-end gap-2" aria-hidden="true">
                   {[42, 55, 48, 70, 62, 79, 68, 88, 76, 94, 84, 100].map((height, index) => (
-                    <div key={index} className="flex-1 rounded-t-md bg-gradient-to-t from-primary/30 to-primary" style={{ height: `${height}%`, opacity: .45 + index * .045 }} />
+                    <div
+                      key={index}
+                      className="performance-bar flex-1 rounded-t-md bg-gradient-to-t from-primary/30 to-primary"
+                      style={{
+                        height: `${height}%`,
+                        opacity: .45 + index * .045,
+                        animationDelay: `${index * -0.16}s`,
+                        animationDuration: `${1.7 + (index % 4) * .18}s`,
+                      }}
+                    />
                   ))}
                 </div>
               </div>
