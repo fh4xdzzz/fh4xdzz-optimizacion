@@ -18,32 +18,88 @@ interface Service {
   is_featured: boolean
 }
 
+interface Testimonial {
+  id: string
+  client_name: string
+  rating: number
+  title: string | null
+  content: string
+}
+
+const fallbackTestimonials: Testimonial[] = [
+  {
+    id: 'carlos-gaming',
+    client_name: 'Carlos Gaming',
+    rating: 5,
+    title: 'Excelente servicio',
+    content: 'La optimización de OBS mejoró mucho mi stream, ahora tengo calidad profesional sin lag. ¡Muy recomendado!',
+  },
+  {
+    id: 'maria-streamer',
+    client_name: 'Maria Streamer',
+    rating: 5,
+    title: 'Perfecto para empezar',
+    content: 'Me ayudaron con todo el setup de streaming desde cero. El soporte fue increíble y muy paciente.',
+  },
+]
+
+const getInitials = (name: string) => name
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0])
+  .join('')
+  .toUpperCase()
+
 export default function Home() {
   const [featuredServices, setFeaturedServices] = useState<Service[]>([])
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(fallbackTestimonials)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadFeaturedServices()
-  }, [])
+    let isActive = true
 
-  const loadFeaturedServices = async () => {
-    try {
+    const loadHomeContent = async () => {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .eq('is_featured', true)
-        .order('sort_order', { ascending: true })
-        .limit(3)
 
-      if (error) throw error
-      setFeaturedServices(data || [])
-    } catch (error) {
-      console.error('Error loading featured services:', error)
-    } finally {
+      const [servicesResult, testimonialsResult] = await Promise.all([
+        supabase
+          .from('services')
+          .select('*')
+          .eq('is_featured', true)
+          .order('sort_order', { ascending: true })
+          .limit(3),
+        supabase
+          .from('testimonials')
+          .select('id, client_name, rating, title, content')
+          .eq('is_displayed', true)
+          .order('created_at', { ascending: false })
+          .limit(6),
+      ])
+
+      if (!isActive) return
+
+      if (servicesResult.error) {
+        console.error('Error loading featured services:', servicesResult.error)
+      } else {
+        setFeaturedServices(servicesResult.data || [])
+      }
+
+      if (testimonialsResult.error) {
+        console.error('Error loading testimonials:', testimonialsResult.error)
+      } else if (testimonialsResult.data?.length) {
+        setTestimonials(testimonialsResult.data)
+      }
+
       setLoading(false)
     }
-  }
+
+    void loadHomeContent()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -244,46 +300,43 @@ export default function Home() {
       <section className="py-24 px-4 md:px-8">
         <div className="container mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 uppercase gradient-text-primary animate-fade-in-up">Lo Que Dicen Nuestros Clientes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center animate-float">
-                    <span className="font-bold text-2xl">CG</span>
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Carlos Gaming</CardTitle>
-                    <CardDescription className="text-base">Streamer</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted mb-4 text-base leading-relaxed">
-                  &ldquo;La optimización de OBS mejoró mucho mi stream, ahora tengo calidad profesional sin lag. ¡Muy recomendado!&rdquo;
-                </p>
-                <div className="flex text-primary text-2xl">★★★★★</div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {testimonials.map((testimonial, index) => {
+              const rating = Math.min(5, Math.max(1, testimonial.rating || 5))
 
-            <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center animate-float" style={{ animationDelay: '0.5s' }}>
-                    <span className="font-bold text-2xl">MS</span>
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Maria Streamer</CardTitle>
-                    <CardDescription className="text-base">Content Creator</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted mb-4 text-base leading-relaxed">
-                  &ldquo;Me ayudaron con todo el setup de streaming desde cero. El soporte fue increíble y muy paciente.&rdquo;
-                </p>
-                <div className="flex text-secondary text-2xl">★★★★★</div>
-              </CardContent>
-            </Card>
+              return (
+                <Card
+                  key={testimonial.id}
+                  className="glass-card animate-fade-in-up"
+                  style={{ animationDelay: `${(index + 1) * 0.1}s` }}
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/20">
+                        <span className="text-2xl font-bold">{getInitials(testimonial.client_name)}</span>
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">{testimonial.client_name}</CardTitle>
+                        {testimonial.title && (
+                          <CardDescription className="text-base">{testimonial.title}</CardDescription>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="mb-4 text-base leading-relaxed text-muted">
+                      &ldquo;{testimonial.content}&rdquo;
+                    </p>
+                    <div
+                      className="flex text-2xl text-primary"
+                      aria-label={`${rating} de 5 estrellas`}
+                    >
+                      <span aria-hidden="true">{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </div>
       </section>
