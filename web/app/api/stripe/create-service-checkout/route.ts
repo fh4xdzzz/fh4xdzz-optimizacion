@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const { data: service, error: serviceError } = await supabase
       .from('services')
-      .select('id, name, price, duration_estimate, billing_type, recurring_price, billing_interval')
+      .select('id, name, slug, price, duration_estimate, billing_type, recurring_price, billing_interval')
       .eq('id', parsed.data.serviceId)
       .eq('is_active', true)
       .maybeSingle()
@@ -94,8 +94,10 @@ export async function POST(request: NextRequest) {
         unit_amount: Math.round(recurringPrice * 100),
         recurring: { interval: 'month' as const },
         product_data: {
-          name: `${service.name} · alojamiento mensual`,
-          description: 'Hosting administrado del bot, con renovación automática mensual hasta cancelar.',
+          name: `${service.name} · plan mensual`,
+          description: service.slug === 'pagina-web-profesional'
+            ? 'Dominio, hosting y mantenimiento técnico básico, con renovación automática mensual hasta cancelar.'
+            : 'Hosting administrado del bot, con renovación automática mensual hasta cancelar.',
         },
       },
     }] : [])]
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
       ...(isSubscription ? {
         custom_text: {
           submit: {
-            message: `El primer cobro incluye la creación ($${setupPrice.toFixed(2)}) y el primer mes de hosting ($${recurringPrice!.toFixed(2)}). Después se cobrarán $${recurringPrice!.toFixed(2)} al mes hasta cancelar.`,
+            message: `El primer cobro incluye la creación ($${setupPrice.toFixed(2)}) y el primer mes de ${service.slug === 'pagina-web-profesional' ? 'dominio y hosting' : 'hosting'} ($${recurringPrice!.toFixed(2)}). Después se cobrarán $${recurringPrice!.toFixed(2)} al mes hasta cancelar.`,
           },
         },
       } : {}),

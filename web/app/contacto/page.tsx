@@ -645,7 +645,7 @@ function ContactFormContent() {
                             {service.name} - ${service.price}
                             {service.billing_type === 'subscription' &&
                             service.recurring_price != null
-                              ? ` + $${service.recurring_price}/mes`
+                              ? ` + $${service.recurring_price}/mes${service.slug === 'pagina-web-profesional' ? ' dominio y hosting' : ''}`
                               : ''}
                           </option>
                         ))}
@@ -917,7 +917,11 @@ function ContactFormContent() {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted">Hosting mensual</span>
+                          <span className="text-muted">
+                            {selectedService.slug === 'pagina-web-profesional'
+                              ? 'Dominio y hosting mensual'
+                              : 'Hosting mensual'}
+                          </span>
                           <span>
                             $
                             {Number(selectedService.recurring_price).toFixed(2)}

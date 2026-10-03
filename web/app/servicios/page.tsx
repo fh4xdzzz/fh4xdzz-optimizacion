@@ -163,9 +163,12 @@ export default function ServicesPage() {
             slug: 'pagina-web-profesional',
             description: 'Página web moderna, adaptable y lista para presentar tu marca, negocio o proyecto',
             category: 'custom',
-            benefits: ['Diseño adaptable', 'Imagen profesional', 'Carga optimizada', 'Lista para publicar'],
+            benefits: ['Diseño adaptable', 'Imagen profesional', 'Carga optimizada', 'Dominio y hosting administrados'],
             includes: ['Diseño de hasta 5 secciones', 'Adaptación para móvil y escritorio', 'Formulario de contacto', 'Enlaces a redes sociales', 'Configuración SEO básica', 'Publicación inicial'],
-            price: 99.99,
+            price: 80.99,
+            billing_type: 'subscription',
+            recurring_price: 5.99,
+            billing_interval: 'month',
             duration_estimate: '5-10 días',
             is_active: true,
             is_featured: false
@@ -353,7 +356,7 @@ export default function ServicesPage() {
                         <p className="text-xs uppercase tracking-wider text-muted">{service.billing_type === 'subscription' ? 'Creación' : 'Desde'}</p>
                         <p className="mt-1 text-3xl font-bold text-foreground">${Number(service.price).toFixed(2)}</p>
                         {service.billing_type === 'subscription' && service.recurring_price != null && (
-                          <p className="mt-1 text-sm font-semibold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de hosting</p>
+                          <p className="mt-1 text-sm font-semibold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de {service.slug === 'pagina-web-profesional' ? 'dominio y hosting' : 'hosting'}</p>
                         )}
                       </div>
                       <div className="text-right"><p className="text-xs uppercase tracking-wider text-muted">Entrega</p><p className="mt-1 text-sm font-medium">{service.duration_estimate}</p></div>
