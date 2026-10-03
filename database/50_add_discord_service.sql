@@ -47,7 +47,7 @@ INSERT INTO public.services (
     sort_order,
     details
 ) VALUES (
-    'Creación de Servidor de Discord',
+    'Servidor de Discord',
     'creacion-servidor-discord',
     'Servidor de Discord profesional, seguro y organizado para tu comunidad o negocio',
     'discord',

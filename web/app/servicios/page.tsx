@@ -73,7 +73,7 @@ export default function ServicesPage() {
           },
           {
             id: '3',
-            name: 'Creación de Servidor de Discord',
+            name: 'Servidor de Discord',
             slug: 'creacion-servidor-discord',
             description: 'Servidor de Discord profesional, seguro y organizado para tu comunidad o negocio',
             category: 'discord',
