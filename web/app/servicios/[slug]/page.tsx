@@ -33,7 +33,13 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
     )
   }
 
-  const processSteps = service.category === 'discord'
+  const processSteps = service.slug === 'bot-de-discord'
+    ? [
+        ['01', 'Definición', 'Acordamos las funciones, comandos, permisos e integraciones que necesita el bot.'],
+        ['02', 'Desarrollo', 'Creamos, configuramos y probamos el bot de forma segura en tu servidor.'],
+        ['03', 'Alojamiento', 'Publicamos el bot en el hosting administrado y verificamos su funcionamiento 24/7.'],
+      ]
+    : service.category === 'discord'
     ? [
         ['01', 'Planificación', 'Definimos el objetivo, la comunidad, los roles y las funciones necesarias.'],
         ['02', 'Configuración', 'Creamos canales, permisos, bienvenida, moderación, tickets y bots existentes.'],
@@ -44,6 +50,8 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
         ['02', 'Optimización', 'Aplicamos la configuración y comprobamos cada cambio.'],
         ['03', 'Entrega', 'Validamos el resultado contigo y explicamos lo realizado.'],
       ]
+
+  const isSubscription = service.billing_type === 'subscription' && service.recurring_price != null
 
   return (
     <div className="min-h-screen bg-background">
@@ -161,10 +169,13 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
               <Card className="overflow-hidden rounded-3xl border-primary/35 bg-[#11131b]/95 shadow-[0_25px_80px_rgba(0,0,0,.4)] backdrop-blur-xl">
                 <div className="h-1 bg-gradient-to-r from-primary via-secondary to-primary" />
                 <CardHeader>
-                  <p className="text-sm text-muted">Inversión desde</p>
+                  <p className="text-sm text-muted">{isSubscription ? 'Creación inicial' : 'Inversión desde'}</p>
                   <CardTitle className="text-4xl">${Number(service.price).toFixed(2)} <span className="text-sm font-normal text-muted">USD</span></CardTitle>
+                  {isSubscription && <p className="text-lg font-bold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de hosting</p>}
                   <CardDescription>
-                    Pago seguro. No aparecerá como pedido confirmado hasta completar el pago.
+                    {isSubscription
+                      ? `Primer pago: $${(Number(service.price) + Number(service.recurring_price)).toFixed(2)}. Después, el hosting se renueva automáticamente por $${Number(service.recurring_price).toFixed(2)} al mes hasta cancelar.`
+                      : 'Pago seguro. No aparecerá como pedido confirmado hasta completar el pago.'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -181,6 +192,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                       <span className="text-muted">Soporte posterior</span>
                       <span className="font-semibold text-emerald-400">Incluido</span>
                     </div>
+                    {isSubscription && <div className="flex justify-between items-center py-2 border-b border-border"><span className="text-muted">Alojamiento</span><span className="font-semibold text-primary">Suscripción mensual</span></div>}
                     <Button variant="primary" size="lg" className="premium-button h-14 w-full" href={`/contacto?service=${service.id}`}>
                       Contratar servicio →
                     </Button>

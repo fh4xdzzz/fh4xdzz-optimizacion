@@ -18,14 +18,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Firma inválida' }, { status: 400 })
   }
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 500 })
+  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
+
   if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
     const checkout = event.data.object as Stripe.Checkout.Session
     if (checkout.payment_status === 'paid' && checkout.metadata?.user_id) {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-      if (!url || !key) return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 500 })
-      const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-
       let orderId = checkout.metadata.order_id
       let shouldNotify = false
       if (checkout.metadata.checkout_flow === 'service_request_v2' && checkout.metadata.service_id) {
@@ -64,6 +64,28 @@ export async function POST(request: NextRequest) {
         shouldNotify = Boolean(updatedOrder)
       }
 
+      const subscriptionId = typeof checkout.subscription === 'string'
+        ? checkout.subscription
+        : checkout.subscription?.id
+      const customerId = typeof checkout.customer === 'string'
+        ? checkout.customer
+        : checkout.customer?.id
+      if (checkout.metadata.billing_type === 'subscription' && subscriptionId && checkout.metadata.service_id) {
+        const { error: subscriptionError } = await supabase.from('service_subscriptions').upsert({
+          user_id: checkout.metadata.user_id,
+          service_id: checkout.metadata.service_id,
+          order_id: orderId || null,
+          stripe_customer_id: customerId || null,
+          stripe_subscription_id: subscriptionId,
+          status: 'active',
+          cancel_at_period_end: false,
+        }, { onConflict: 'stripe_subscription_id' })
+        if (subscriptionError) {
+          console.error('[stripe/webhook] No se pudo registrar la suscripción', subscriptionError)
+          return NextResponse.json({ error: 'No se pudo registrar la suscripción' }, { status: 500 })
+        }
+      }
+
       if (!orderId) return NextResponse.json({ received: true })
 
       const { data: order } = await supabase.from('orders')
@@ -91,6 +113,56 @@ export async function POST(request: NextRequest) {
             status: 'reviewing',
           }),
         ])
+      }
+    }
+  }
+
+  if (
+    event.type === 'customer.subscription.created'
+    || event.type === 'customer.subscription.updated'
+    || event.type === 'customer.subscription.deleted'
+  ) {
+    const subscription = event.data.object as Stripe.Subscription
+    const userId = subscription.metadata.user_id
+    const serviceId = subscription.metadata.service_id
+    const requestCode = subscription.metadata.request_code
+    const customerId = typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer.id
+
+    let orderId: string | null = null
+    if (requestCode) {
+      const { data: order } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('order_number', requestCode)
+        .maybeSingle()
+      orderId = order?.id || null
+    }
+
+    if (userId && serviceId) {
+      const { error: subscriptionError } = await supabase.from('service_subscriptions').upsert({
+        user_id: userId,
+        service_id: serviceId,
+        order_id: orderId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscription.id,
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+      }, { onConflict: 'stripe_subscription_id' })
+      if (subscriptionError) {
+        console.error('[stripe/webhook] No se pudo sincronizar la suscripción', subscriptionError)
+        return NextResponse.json({ error: 'No se pudo sincronizar la suscripción' }, { status: 500 })
+      }
+    } else {
+      const { error: subscriptionError } = await supabase.from('service_subscriptions').update({
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        stripe_customer_id: customerId,
+      }).eq('stripe_subscription_id', subscription.id)
+      if (subscriptionError) {
+        console.error('[stripe/webhook] No se pudo actualizar la suscripción', subscriptionError)
+        return NextResponse.json({ error: 'No se pudo actualizar la suscripción' }, { status: 500 })
       }
     }
   }

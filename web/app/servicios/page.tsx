@@ -19,6 +19,9 @@ interface Service {
   benefits: string[]
   includes: string[]
   price: number
+  billing_type?: 'one_time' | 'subscription'
+  recurring_price?: number | null
+  billing_interval?: 'month' | null
   duration_estimate: string
   featured?: boolean
   is_active: boolean
@@ -87,6 +90,22 @@ export default function ServicesPage() {
           },
           {
             id: '4',
+            name: 'Bot de Discord',
+            slug: 'bot-de-discord',
+            description: 'Bot personalizado para automatizar, moderar y mejorar tu servidor, con alojamiento administrado 24/7',
+            category: 'discord',
+            benefits: ['Funciones personalizadas', 'Automatización 24/7', 'Alojamiento administrado', 'Mantenimiento continuo'],
+            includes: ['Desarrollo inicial', 'Comandos personalizados', 'Integración con tu servidor', 'Hosting administrado'],
+            price: 30.99,
+            billing_type: 'subscription',
+            recurring_price: 9.99,
+            billing_interval: 'month',
+            duration_estimate: '3-7 días',
+            is_active: true,
+            is_featured: false
+          },
+          {
+            id: '5',
             name: 'Optimización de PC/Windows',
             slug: 'optimizacion-pc-windows',
             description: 'Mejora del rendimiento del sistema para gaming y productividad',
@@ -99,7 +118,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '5',
+            id: '6',
             name: 'Configuración Gaming',
             slug: 'configuracion-gaming',
             description: 'Optimización específica para tus juegos favoritos',
@@ -112,7 +131,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '6',
+            id: '7',
             name: 'Diseño de Overlays y Alertas',
             slug: 'diseno-overlays-alertas',
             description: 'Elementos visuales personalizados para tu stream',
@@ -125,7 +144,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '7',
+            id: '8',
             name: 'Soporte Técnico',
             slug: 'soporte-tecnico',
             description: 'Resolución de problemas técnicos y consultas',
@@ -138,7 +157,7 @@ export default function ServicesPage() {
             is_featured: false
           },
           {
-            id: '8',
+            id: '9',
             name: 'Servicios Personalizados',
             slug: 'servicios-personalizados',
             description: 'Soluciones a medida según tus necesidades',
@@ -294,11 +313,15 @@ export default function ServicesPage() {
                 className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-[#11131b]/90 transition duration-300 hover:-translate-y-2 hover:border-primary/40 hover:shadow-[0_24px_70px_rgba(0,0,0,.4)] animate-fade-in-up ${service.is_featured ? 'border-primary/40' : 'border-white/10'}`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                {service.is_featured && (
+                {service.billing_type === 'subscription' ? (
+                  <div className="absolute right-5 top-5 z-10 rounded-full border border-primary/30 bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                    Suscripción
+                  </div>
+                ) : service.is_featured ? (
                   <div className="absolute right-5 top-5 z-10 rounded-full border border-primary/30 bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
                     Recomendado
                   </div>
-                )}
+                ) : null}
                 <CardHeader>
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-xl text-primary">{serviceIcons[service.category] || '◉'}</div>
                   <CardTitle className="mb-2 pr-20 text-2xl">{service.name}</CardTitle>
@@ -312,7 +335,13 @@ export default function ServicesPage() {
                   </ul>
                   <div className="mt-auto border-t border-white/10 pt-6">
                     <div className="mb-5 flex items-end justify-between">
-                      <div><p className="text-xs uppercase tracking-wider text-muted">Desde</p><p className="mt-1 text-3xl font-bold text-foreground">${Number(service.price).toFixed(2)}</p></div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted">{service.billing_type === 'subscription' ? 'Creación' : 'Desde'}</p>
+                        <p className="mt-1 text-3xl font-bold text-foreground">${Number(service.price).toFixed(2)}</p>
+                        {service.billing_type === 'subscription' && service.recurring_price != null && (
+                          <p className="mt-1 text-sm font-semibold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de hosting</p>
+                        )}
+                      </div>
                       <div className="text-right"><p className="text-xs uppercase tracking-wider text-muted">Entrega</p><p className="mt-1 text-sm font-medium">{service.duration_estimate}</p></div>
                     </div>
                     <Button variant="primary" href={`/servicios/${service.slug}`} className="premium-button h-12 w-full">
