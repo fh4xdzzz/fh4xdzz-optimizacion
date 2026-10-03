@@ -244,7 +244,7 @@ export default function ServicesPage() {
     <div className="min-h-screen bg-background">
       <div className="animated-bg"></div>
       <div className="animated-bg-overlay"></div>
-      <div className="relative z-10">
+      <div className="relative z-10 [&_h1]:uppercase [&_h2]:uppercase [&_h3]:uppercase">
         <Navbar />
 
       {/* Header */}
