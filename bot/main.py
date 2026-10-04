@@ -276,7 +276,9 @@ async def on_ready():
     logger.info('EventProcessor inicializado')
 
     # Cargar cogs
-    for cog_type in (SetupServer, Events, RoleSync, Tickets, Admin, Services, Professional):
+    # Tickets no se carga aquí porque main.py ya conserva los comandos heredados
+    # ticket/cerrar. Cargar ambos registraría los mismos nombres dos veces.
+    for cog_type in (SetupServer, Events, RoleSync, Admin, Services, Professional):
         if not bot.get_cog(cog_type.__name__):
             await bot.add_cog(cog_type(bot))
     logger.info('Cogs cargados')
