@@ -74,6 +74,22 @@ export default function OrdersPage() {
   const [error, setError] = useState('')
   const notifyInfo = useNotificationStore(state => state.info)
 
+  const loadSelectedDetails = useCallback(async (orderId: string) => {
+    const [{ data: eventData }, deliverablesResponse] = await Promise.all([
+      supabase
+        .from('order_events')
+        .select('id, event_type, description, new_status, created_at')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false }),
+      fetch(`/api/orders/${orderId}/deliverables`, { cache: 'no-store' }),
+    ])
+
+    setEvents((eventData || []) as OrderEvent[])
+    if (!deliverablesResponse.ok) throw new Error('No se pudieron cargar las entregas')
+    const payload = await deliverablesResponse.json()
+    setDeliverables(payload.deliverables || [])
+  }, [supabase])
+
   const loadOrders = useCallback(async () => {
     const session = await getSession()
     if (!session) {
@@ -131,22 +147,33 @@ export default function OrdersPage() {
       setDeliverables([])
       return
     }
-    const loadEvents = async () => {
-      const { data } = await supabase
-        .from('order_events')
-        .select('id, event_type, description, new_status, created_at')
-        .eq('order_id', selectedId)
-        .order('created_at', { ascending: false })
-      setEvents((data || []) as OrderEvent[])
-    }
-    loadEvents()
     setLoadingDeliverables(true)
-    fetch(`/api/orders/${selectedId}/deliverables`, { cache: 'no-store' })
-      .then(response => response.ok ? response.json() : Promise.reject())
-      .then(payload => setDeliverables(payload.deliverables || []))
-      .catch(() => setDeliverables([]))
+    loadSelectedDetails(selectedId)
+      .catch(() => { setEvents([]); setDeliverables([]) })
       .finally(() => setLoadingDeliverables(false))
-  }, [selectedId, supabase])
+  }, [loadSelectedDetails, selectedId])
+
+  useEffect(() => {
+    if (!selectedId) return
+
+    const refreshDetails = () => {
+      void loadSelectedDetails(selectedId).catch(() => undefined)
+    }
+    const channel = supabase
+      .channel(`client-order-details-${selectedId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events', filter: `order_id=eq.${selectedId}` }, refreshDetails)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_deliverables', filter: `order_id=eq.${selectedId}` }, refreshDetails)
+      .subscribe()
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refreshDetails()
+    }, 10000)
+
+    return () => {
+      window.clearInterval(interval)
+      void supabase.removeChannel(channel)
+    }
+  }, [loadSelectedDetails, selectedId, supabase])
 
   const selectedOrder = orders.find(order => order.id === selectedId) || null
   const progress = selectedOrder ? STATUS_PROGRESS[selectedOrder.status] ?? 1 : 0
@@ -157,14 +184,14 @@ export default function OrdersPage() {
   const openPrivateSupport = () => {
     if (!selectedOrder) return
     window.dispatchEvent(new CustomEvent('open-support-chat', {
-      detail: { message: `Hola, necesito ayuda privada con mi pedido ${selectedOrder.order_number}.` },
+      detail: { asCustomer: true, message: `Hola, necesito ayuda privada con mi pedido ${selectedOrder.order_number}.` },
     }))
   }
 
   const requestRevision = () => {
     if (!selectedOrder) return
     window.dispatchEvent(new CustomEvent('open-support-chat', {
-      detail: { message: `Hola, quiero solicitar una revisión privada de la entrega del pedido ${selectedOrder.order_number}.` },
+      detail: { asCustomer: true, message: `Hola, quiero solicitar una revisión privada de la entrega del pedido ${selectedOrder.order_number}.` },
     }))
   }
 
@@ -224,7 +251,7 @@ export default function OrdersPage() {
                     </div>
 
                     <div className="rounded-xl border border-white/10 bg-black/10 p-5"><p className="text-xs uppercase tracking-wider text-muted">Tu solicitud</p><p className="mt-3 break-words text-sm leading-6 text-foreground/90">{selectedOrder.description}</p></div>
-                    <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold">Canal privado del pedido</h3><p className="mt-1 text-sm text-muted">Escribe al equipo o envía capturas y archivos de hasta 4 MB.</p></div><Button onClick={openPrivateSupport} className="shrink-0"><MessageCircle className="mr-2 h-4 w-4" />Abrir soporte</Button></div>
+                    <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold">Canal privado del pedido</h3><p className="mt-1 text-sm text-muted">Escribe al equipo o envía capturas en el chat. Las entregas finales admiten archivos de hasta 2 GB.</p></div><Button onClick={openPrivateSupport} className="shrink-0"><MessageCircle className="mr-2 h-4 w-4" />Abrir soporte</Button></div>
                   </CardContent>
                 </Card>
 

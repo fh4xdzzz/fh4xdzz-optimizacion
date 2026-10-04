@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/modal'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
 import { useNotificationStore } from '@/lib/notifications-store'
+import * as tus from 'tus-js-client'
 
 interface User {
   id: string
@@ -130,6 +131,7 @@ export default function AdminPage() {
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null)
   const [deliveryNote, setDeliveryNote] = useState('')
   const [uploadingDelivery, setUploadingDelivery] = useState(false)
+  const [deliveryUploadProgress, setDeliveryUploadProgress] = useState(0)
   const [deliveryInputKey, setDeliveryInputKey] = useState(0)
   const [savingOrder, setSavingOrder] = useState(false)
   const [userRole, setUserRole] = useState<'client' | 'admin' | 'staff' | 'owner'>('client')
@@ -448,23 +450,81 @@ export default function AdminPage() {
 
   const uploadOrderDeliverable = async () => {
     if (!selectedOrder || !deliveryFile || uploadingDelivery) return
+    if (deliveryFile.size > 2 * 1024 * 1024 * 1024) {
+      notifyError('El archivo debe pesar 2 GB o menos')
+      return
+    }
     setUploadingDelivery(true)
+    setDeliveryUploadProgress(0)
     try {
-      const form = new FormData()
-      form.append('file', deliveryFile)
-      form.append('note', deliveryNote)
-      const response = await fetch(`/api/admin/orders/${selectedOrder.id}/deliverables`, { method: 'POST', body: form })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || 'No se pudo subir el archivo')
+      const fileInfo = {
+        fileName: deliveryFile.name,
+        fileSize: deliveryFile.size,
+        contentType: deliveryFile.type || 'application/octet-stream',
+      }
+      const prepareResponse = await fetch(`/api/admin/orders/${selectedOrder.id}/deliverables`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'prepare', ...fileInfo }),
+      })
+      const prepared = await prepareResponse.json()
+      if (!prepareResponse.ok) throw new Error(prepared.error || 'No se pudo preparar la subida')
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+      const projectId = new URL(supabaseUrl).hostname.split('.')[0]
+      const endpoint = `https://${projectId}.storage.supabase.co/storage/v1/upload/resumable`
+      await new Promise<void>((resolve, reject) => {
+        const upload = new tus.Upload(deliveryFile, {
+          endpoint,
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          chunkSize: 6 * 1024 * 1024,
+          removeFingerprintOnSuccess: true,
+          uploadDataDuringCreation: true,
+          headers: {
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            'x-signature': prepared.token,
+            'x-upsert': 'false',
+          },
+          metadata: {
+            bucketName: 'order-deliverables',
+            objectName: prepared.path,
+            contentType: fileInfo.contentType,
+            cacheControl: '3600',
+          },
+          onError: reject,
+          onProgress: (uploaded, total) => setDeliveryUploadProgress(Math.round((uploaded / total) * 100)),
+          onSuccess: () => resolve(),
+        })
+        upload.findPreviousUploads()
+          .then(previous => {
+            if (previous.length) upload.resumeFromPreviousUpload(previous[0])
+            upload.start()
+          })
+          .catch(reject)
+      })
+
+      const completeResponse = await fetch(`/api/admin/orders/${selectedOrder.id}/deliverables`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', ...fileInfo, note: deliveryNote, path: prepared.path }),
+      })
+      const completed = await completeResponse.json()
+      if (!completeResponse.ok) throw new Error(completed.error || 'No se pudo registrar la entrega')
       await loadOrderDeliverables(selectedOrder.id)
       setDeliveryFile(null)
       setDeliveryNote('')
       setDeliveryInputKey(value => value + 1)
       notifySuccess('Archivo entregado de forma privada')
     } catch (error) {
-      notifyError(error instanceof Error ? error.message : 'No se pudo subir el archivo')
+      const message = error instanceof Error ? error.message : 'No se pudo subir el archivo'
+      notifyError(
+        /size|large|limit|413|maximum/i.test(message)
+          ? 'El almacenamiento rechazó el tamaño. Para archivos mayores de 50 MB debes activar Supabase Pro.'
+          : message
+      )
     } finally {
       setUploadingDelivery(false)
+      setDeliveryUploadProgress(0)
     }
   }
 
@@ -520,6 +580,26 @@ export default function AdminPage() {
     setSupportSearch(order.client_email)
     setSupportFilter('all')
     setActiveTab('support')
+    const matchingChat = [...chatSessions, ...chatHistory]
+      .filter(chat => chat.client_id === order.user_id || chat.client_email?.toLowerCase() === order.client_email.toLowerCase())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+
+    if (!matchingChat) {
+      notifyInfo('Panel abierto. Este cliente todavía no ha iniciado una conversación')
+      return
+    }
+
+    setSupportFilter(matchingChat.status === 'closed' ? 'closed' : 'all')
+    if (matchingChat.assigned_agent_id === currentUserId && matchingChat.status !== 'closed') {
+      window.dispatchEvent(new CustomEvent('support-chat-claimed', { detail: { sessionId: matchingChat.id } }))
+      notifyInfo('Soporte abierto en la burbuja')
+    } else if (!matchingChat.assigned_agent_id && matchingChat.status !== 'closed') {
+      notifyInfo('Soporte localizado. Reclámalo desde la cola para responder')
+    } else if (matchingChat.status === 'closed') {
+      notifyInfo('La conversación está cerrada y aparece en el historial')
+    } else {
+      notifyInfo('Este soporte está siendo atendido por otro agente')
+    }
   }
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -1843,15 +1923,16 @@ export default function AdminPage() {
 
               <div className="border-t border-border/50 pt-5">
                 <p className="font-medium">Entregas privadas</p>
-                <p className="mt-1 text-sm text-muted">Comparte archivos finales visibles solamente para este cliente. Máximo 4 MB.</p>
+                <p className="mt-1 text-sm text-muted">Comparte archivos finales visibles solamente para este cliente. Máximo 2 GB por archivo.</p>
                 <div className="mt-4 space-y-3">
                   {orderDeliverables.map(file => <div key={file.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{file.file_name}</p><p className="mt-1 text-xs text-muted">{formatFileSize(file.file_size)} · {formatDate(file.created_at)}</p>{file.note && <p className="mt-1 break-words text-xs text-muted">{file.note}</p>}</div><Button variant="destructive" size="sm" onClick={() => deleteOrderDeliverable(file.id)}>Eliminar</Button></div>)}
                   {orderDeliverables.length === 0 && <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-sm text-muted">Todavía no has entregado archivos.</p>}
                 </div>
                 <div className="mt-4 space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <input key={deliveryInputKey} type="file" accept=".pdf,.zip,.png,.jpg,.jpeg,.webp,.txt,.json,.mp4" onChange={event => setDeliveryFile(event.target.files?.[0] || null)} className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-medium file:text-white" />
+                  <input key={deliveryInputKey} type="file" accept=".pdf,.zip,.7z,.rar,.png,.jpg,.jpeg,.webp,.txt,.json,.mp4,.blend,.fbx,.obj,.glb,.gltf,.stl,.dae,.3ds,.max,.ma,.mb" onChange={event => setDeliveryFile(event.target.files?.[0] || null)} className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-medium file:text-white" />
                   <input type="text" maxLength={500} value={deliveryNote} onChange={event => setDeliveryNote(event.target.value)} placeholder="Nota opcional para el cliente" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" />
-                  <Button type="button" onClick={uploadOrderDeliverable} disabled={!deliveryFile || uploadingDelivery} className="w-full">{uploadingDelivery ? 'Subiendo entrega…' : 'Entregar archivo al cliente'}</Button>
+                  <Button type="button" onClick={uploadOrderDeliverable} disabled={!deliveryFile || uploadingDelivery} className="w-full">{uploadingDelivery ? `Subiendo entrega… ${deliveryUploadProgress}%` : 'Entregar archivo al cliente'}</Button>
+                  {uploadingDelivery && <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-primary transition-[width]" style={{ width: `${deliveryUploadProgress}%` }} /></div>}
                 </div>
               </div>
 

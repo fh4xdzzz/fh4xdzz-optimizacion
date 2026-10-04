@@ -114,6 +114,7 @@ export default function SupportChatWidget() {
   const [transferTargetId, setTransferTargetId] = useState('')
   const [pendingSupportAction, setPendingSupportAction] = useState<'transfer' | 'close' | null>(null)
   const [supportActionLoading, setSupportActionLoading] = useState(false)
+  const [customerContext, setCustomerContext] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -131,13 +132,21 @@ export default function SupportChatWidget() {
 
   useEffect(() => {
     const openFromOrder = (event: Event) => {
-      const detail = (event as CustomEvent<{ message?: string }>).detail
+      const detail = (event as CustomEvent<{ message?: string; asCustomer?: boolean }>).detail
+      const openingAsCustomer = detail?.asCustomer === true
+      setCustomerContext(openingAsCustomer)
+      if (openingAsCustomer) {
+        setSession(null)
+        setMessages([])
+        setUnread(0)
+      }
       setOpen(true)
       setTab('chat')
       if (detail?.message) setText(detail.message)
     }
     window.addEventListener('open-support-chat', openFromOrder)
     const openClaimedSupport = () => {
+      setCustomerContext(false)
       setOpen(true)
       setTab('chat')
       setUnread(0)
@@ -242,7 +251,12 @@ export default function SupportChatWidget() {
   // La consulta periódica sirve como respaldo si Realtime todavía no notificó
   // una reclamación o transferencia realizada desde el panel.
   useEffect(() => {
-    if (!isAuthenticated || !currentUser?.id || !SUPPORT_ROLES.includes(currentUser.role || '')) return
+    if (
+      !isAuthenticated
+      || customerContext
+      || !currentUser?.id
+      || !SUPPORT_ROLES.includes(currentUser.role || '')
+    ) return
 
     let cancelled = false
     const syncAssignedSupport = async () => {
@@ -285,7 +299,7 @@ export default function SupportChatWidget() {
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [isAuthenticated, currentUser?.id, currentUser?.role, session?.id, session?.assigned_agent_id])
+  }, [isAuthenticated, customerContext, currentUser?.id, currentUser?.role, session?.id, session?.assigned_agent_id])
 
   // Cargar nombre del agente asignado
   async function loadAssignedAgentName(agentId: string | null) {
@@ -459,7 +473,7 @@ export default function SupportChatWidget() {
   // error temporal, sin duplicar solicitudes mientras se envía un mensaje.
   useEffect(() => {
     if (
-      currentUser?.role !== 'client'
+      (currentUser?.role !== 'client' && !customerContext)
       || !session?.id
       || session.status === 'closed'
       || session.assigned_agent_id
@@ -491,7 +505,7 @@ export default function SupportChatWidget() {
     return () => {
       cancelled = true
     }
-  }, [currentUser?.role, session?.id, session?.status, session?.assigned_agent_id, messages])
+  }, [currentUser?.role, customerContext, session?.id, session?.status, session?.assigned_agent_id, messages])
 
   // Respaldo de Realtime: mantiene el chat sincronizado aunque el websocket
   // sea bloqueado o la tabla no esté todavía en la publicación de Supabase.
@@ -562,7 +576,8 @@ export default function SupportChatWidget() {
         body: JSON.stringify({
           subject: 'Soporte web',
           service_type: 'general',
-          language: 'es'
+          language: 'es',
+          as_customer: customerContext,
         })
       })
 
@@ -697,7 +712,8 @@ export default function SupportChatWidget() {
         body: JSON.stringify({
           session_id: currentSession.id,
           message: messageText.trim(),
-          message_type: 'text'
+          message_type: 'text',
+          as_client: customerContext,
         })
       })
 
@@ -794,7 +810,7 @@ export default function SupportChatWidget() {
 
   // Verificar si hay agentes online
   const isOnline = onlineAgents.length > 0
-  const isSupportUser = SUPPORT_ROLES.includes(currentUser?.role || '')
+  const isSupportUser = SUPPORT_ROLES.includes(currentUser?.role || '') && !customerContext
 
   // Cargar agentes de soporte en línea
   useEffect(() => {

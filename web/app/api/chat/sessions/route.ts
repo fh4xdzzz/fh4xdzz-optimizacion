@@ -8,6 +8,7 @@ const createSessionSchema = z.object({
   subject: z.string().trim().min(2).max(120),
   service_type: z.string().trim().min(2).max(60).optional(),
   language: z.enum(['es', 'en']).optional(),
+  as_customer: z.boolean().optional(),
 })
 
 // GET /api/chat/sessions - Obtener sesiones del usuario actual
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: 'Revisa los datos del soporte.' }, { status: 400 })
     }
-    const { subject, service_type, language } = parsed.data
+    const { subject, service_type, language, as_customer } = parsed.data
 
     const supabase = await createClient()
 
@@ -76,8 +77,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found in database' }, { status: 400 })
     }
 
+    const actingAsCustomer = as_customer === true && ['staff', 'admin', 'owner'].includes(userRecord.role || '')
+    let sessionClient = supabase
+    if (actingAsCustomer) {
+      const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (!serviceUrl || !serviceKey) {
+        return NextResponse.json({ error: 'Support service is not configured' }, { status: 503 })
+      }
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+      sessionClient = createServiceClient(serviceUrl, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      }) as typeof supabase
+    }
+
     // Verificar si ya existe una sesión activa del cliente
-    const { data: existingSession, error: existingError } = await supabase
+    const { data: existingSession, error: existingError } = await sessionClient
       .from('chat_sessions')
       .select('*')
       .eq('client_id', session.user.id)
@@ -97,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Crear nueva sesión manualmente sin conversation_number trigger
     const conversationNumber = 'CHAT-' + Date.now().toString().slice(-6)
 
-    const { data: newSession, error: insertError } = await supabase
+    const { data: newSession, error: insertError } = await sessionClient
       .from('chat_sessions')
       .insert({
         id: crypto.randomUUID(),

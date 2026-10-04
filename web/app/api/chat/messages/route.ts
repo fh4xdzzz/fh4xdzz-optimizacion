@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createClient()
-    const userRole = session.user.role
+    const userRole = session.user.role || 'client'
 
     // Verificar permisos. El cliente solo puede leer su conversación y los
     // mensajes internos quedan reservados a los roles de soporte.
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { session_id, message, message_type, attachment_path, attachment_name } = body
+    const { session_id, message, message_type, attachment_path, attachment_name, as_client } = body
 
     if (!session_id || typeof message !== 'string' || !message.trim()) {
       return NextResponse.json({ error: 'Session ID and message are required' }, { status: 400 })
@@ -156,7 +156,9 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient()
-    const userRole = session.user.role
+    const userRole = session.user.role || 'client'
+    let effectiveSenderRole = userRole
+    let writeClient = supabase
 
     // Verificar permisos
     if (userRole === 'client') {
@@ -190,7 +192,7 @@ export async function POST(request: NextRequest) {
       // Admin/staff también deben verificar que el chat no esté cerrado
       const { data: chatSession, error: sessionError } = await supabase
         .from('chat_sessions')
-        .select('status, assigned_agent_id')
+        .select('status, assigned_agent_id, client_id')
         .eq('id', session_id)
         .maybeSingle()
 
@@ -204,6 +206,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Session not found' }, { status: 404 })
       }
 
+      const actingAsOwnClient = as_client === true && chatSession.client_id === session.user.id
+
+      if (actingAsOwnClient) {
+        effectiveSenderRole = 'client'
+        const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        if (!serviceUrl || !serviceKey) {
+          return NextResponse.json({ error: 'Support service is not configured' }, { status: 503 })
+        }
+        writeClient = createServiceClient(serviceUrl, serviceKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        }) as typeof supabase
+      }
+
       // Un agente solo puede responder la conversación que reclamó.
       if (chatSession.status === 'closed') {
         console.log('Attempt to send message to closed session by admin - blocked')
@@ -213,7 +229,7 @@ export async function POST(request: NextRequest) {
         }, { status: 403 })
       }
 
-      if (chatSession.assigned_agent_id !== session.user.id) {
+      if (!actingAsOwnClient && chatSession.assigned_agent_id !== session.user.id) {
         return NextResponse.json({
           error: 'Debes reclamar esta conversación antes de responder.'
         }, { status: 403 })
@@ -227,7 +243,7 @@ export async function POST(request: NextRequest) {
       id: crypto.randomUUID(),
       session_id,
       sender_id: session.user.id,
-      sender_role: userRole,
+      sender_role: effectiveSenderRole,
       message: message.trim(),
       message_type: message_type || 'text'
     }
@@ -240,7 +256,7 @@ export async function POST(request: NextRequest) {
       insertData.attachment_name = attachment_name
     }
 
-    const { data: newMessage, error: insertError } = await supabase
+    const { data: newMessage, error: insertError } = await writeClient
       .from('chat_messages')
       .insert(insertData)
       .select()
@@ -252,7 +268,7 @@ export async function POST(request: NextRequest) {
 
     // El formulario finaliza el trabajo del bot. Guardamos su contenido como
     // detalle del soporte, sin generar más preguntas automáticas.
-    if (userRole === 'client' && message.trim().startsWith('Descripción del problema:')) {
+    if (effectiveSenderRole === 'client' && message.trim().startsWith('Descripción del problema:')) {
       const summary = message.trim().replace(/^Descripción del problema:\s*/i, '').slice(0, 1200)
       const farewell = 'Gracias, ya recibimos tu solicitud. Un agente te responderá en breve. Normalmente respondemos en menos de 5 minutos.'
       const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
