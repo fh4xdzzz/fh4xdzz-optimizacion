@@ -27,6 +27,7 @@ function DiscordIcon({ className = 'h-5 w-5' }: { className?: string }) {
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const pathname = usePathname()
   const router = useRouter()
@@ -37,6 +38,13 @@ export default function Navbar() {
     loadSession()
     const interval = setInterval(loadSession, 30000)
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const updateNavbar = () => setIsScrolled(window.scrollY > 24)
+    updateNavbar()
+    window.addEventListener('scroll', updateNavbar, { passive: true })
+    return () => window.removeEventListener('scroll', updateNavbar)
   }, [])
 
   useEffect(() => {
@@ -99,11 +107,11 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 px-3 pt-3" aria-label="Navegación principal">
-      <div className="container mx-auto rounded-2xl border border-primary/25 bg-[#0b0c12]/90 px-4 shadow-[0_18px_55px_rgba(0,0,0,.48),inset_0_1px_0_rgba(255,255,255,.04)] backdrop-blur-2xl">
-        <div className="flex h-16 items-center justify-between gap-4">
+    <nav className={`fixed inset-x-0 top-0 z-50 px-3 transition-all duration-300 ${isScrolled ? 'pt-2' : 'pt-3'}`} aria-label="Navegación principal">
+      <div className={`container mx-auto rounded-2xl border px-4 backdrop-blur-2xl transition-all duration-300 ${isScrolled ? 'border-white/10 bg-[#090a10]/95 shadow-[0_14px_45px_rgba(0,0,0,.5)]' : 'border-primary/25 bg-[#0b0c12]/90 shadow-[0_18px_55px_rgba(0,0,0,.48),inset_0_1px_0_rgba(255,255,255,.04)]'}`}>
+        <div className={`flex items-center justify-between gap-4 transition-all duration-300 ${isScrolled ? 'h-14' : 'h-16'}`}>
           <Link href="/" onClick={() => setIsOpen(false)} className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="TheDulcanDesign, ir al inicio">
-            <Image src="/thedulcandesign-icon.png" alt="" width={40} height={40} preload className="h-10 w-10 shrink-0 object-contain" />
+            <Image src="/thedulcandesign-icon.png" alt="" width={40} height={40} preload className="shrink-0 object-contain" />
             <span className="truncate text-lg font-bold gradient-text-primary sm:text-xl">TheDulcanDesign</span>
           </Link>
 
