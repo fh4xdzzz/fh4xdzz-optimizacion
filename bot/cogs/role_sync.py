@@ -17,15 +17,20 @@ DISCORD_TO_SUPABASE_ROLES = (
     (('Owner',), 'owner'),
     (('Administrador', 'Admin', 'Administrator'), 'admin'),
     (('Moderador', 'Staff', 'Soporte'), 'staff'),
-    (('Cliente', 'Miembro'), 'client'),
+    (('Cliente', 'Clientes', 'Miembro'), 'client'),
 )
 
 SUPABASE_TO_DISCORD_ROLES = {
     'owner': ('Owner',),
     'admin': ('Administrador', 'Admin', 'Administrator'),
     'staff': ('Staff', 'Moderador', 'Soporte'),
-    'client': ('Cliente', 'Miembro'),
+    'client': ('Cliente', 'Clientes', 'Miembro'),
 }
+
+
+def normalized_discord_name(value):
+    """Ignorar emojis, separadores y mayúsculas usados para decorar nombres."""
+    return ''.join(character for character in value.casefold() if character.isalnum())
 
 
 def supabase_role_for_discord_roles(role_names):
@@ -57,8 +62,11 @@ class RoleSync(commands.Cog):
     @staticmethod
     def _find_role(guild: discord.Guild, candidate_names):
         """Buscar un rol sin depender de mayúsculas o acentos visuales."""
-        candidates = {name.casefold() for name in candidate_names}
-        return next((role for role in guild.roles if role.name.casefold() in candidates), None)
+        candidates = {normalized_discord_name(name) for name in candidate_names}
+        return next(
+            (role for role in guild.roles if normalized_discord_name(role.name) in candidates),
+            None,
+        )
 
     async def _assign_role_from_record(self, member: discord.Member, user_data: dict) -> bool:
         """Aplicar a un miembro el rol que tiene guardado en la web."""
@@ -66,8 +74,8 @@ class RoleSync(commands.Cog):
         if not candidate_names:
             return False
 
-        current_names = {role.name.casefold() for role in member.roles}
-        if any(name.casefold() in current_names for name in candidate_names):
+        current_names = {normalized_discord_name(role.name) for role in member.roles}
+        if any(normalized_discord_name(name) in current_names for name in candidate_names):
             return False
 
         target_role = self._find_role(member.guild, candidate_names)
@@ -141,8 +149,11 @@ class RoleSync(commands.Cog):
             return
 
         self._prepared_client_areas.add(guild.id)
-        category = next((item for item in guild.categories if item.name.casefold() == 'clientes'), None)
-        client_role = self._find_role(guild, ('Cliente',))
+        category = next(
+            (item for item in guild.categories if normalized_discord_name(item.name) == 'clientes'),
+            None,
+        )
+        client_role = self._find_role(guild, ('Cliente', 'Clientes'))
         bot_member = guild.me
         if not category or not client_role or not bot_member:
             logger.warning(
@@ -174,7 +185,7 @@ class RoleSync(commands.Cog):
             ),
         }
         for role in guild.roles:
-            if role.name.casefold() in team_role_names:
+            if normalized_discord_name(role.name) in team_role_names:
                 overwrites[role] = discord.PermissionOverwrite(
                     view_channel=True,
                     read_message_history=True,
