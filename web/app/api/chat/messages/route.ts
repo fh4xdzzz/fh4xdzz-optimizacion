@@ -98,7 +98,7 @@ export async function PATCH(request: NextRequest) {
     const supabase = await createClient()
     const { data: chatSession, error: sessionError } = await supabase
       .from('chat_sessions')
-      .select('id')
+      .select('id, status, assigned_agent_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -107,6 +107,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (!chatSession) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+    }
+    if (chatSession.status === 'closed' || chatSession.assigned_agent_id !== session.user.id) {
+      return NextResponse.json({ error: 'Solo el agente que atiende este soporte puede marcar mensajes como vistos.' }, { status: 403 })
     }
 
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -246,6 +249,24 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
+    }
+
+    // El formulario finaliza el trabajo del bot. Guardamos su contenido como
+    // detalle del soporte, sin generar más preguntas automáticas.
+    if (userRole === 'client' && message.trim().startsWith('Descripción del problema:')) {
+      const summary = message.trim().replace(/^Descripción del problema:\s*/i, '').slice(0, 1200)
+      const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (serviceUrl && serviceKey) {
+        const serviceSupabase = createServiceClient(serviceUrl, serviceKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+        await serviceSupabase.from('chat_sessions').update({
+          ai_handoff_ready: true,
+          ai_summary: summary,
+          ai_intake: { problem: summary },
+        }).eq('id', session_id).eq('client_id', session.user.id)
+      }
     }
 
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

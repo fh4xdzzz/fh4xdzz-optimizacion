@@ -111,6 +111,9 @@ export default function SupportChatWidget() {
   const [aiTyping, setAiTyping] = useState(false)
   const [intakeProblem, setIntakeProblem] = useState('')
   const [submittingIntake, setSubmittingIntake] = useState(false)
+  const [transferTargetId, setTransferTargetId] = useState('')
+  const [pendingSupportAction, setPendingSupportAction] = useState<'transfer' | 'close' | null>(null)
+  const [supportActionLoading, setSupportActionLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -498,12 +501,15 @@ export default function SupportChatWidget() {
     return () => window.clearInterval(interval)
   }, [session?.id, session?.status, isAuthenticated])
 
-  // La burbuja de un agente también confirma lectura cuando está abierta.
+  // Solo el agente que realmente reclamó el soporte confirma la lectura.
+  // La vista de cola, el bot y otros administradores nunca marcan "Visto".
   useEffect(() => {
     if (
       !open
       || !session?.id
       || !SUPPORT_ROLES.includes(currentUser?.role || '')
+      || session.assigned_agent_id !== currentUser?.id
+      || session.status === 'closed'
       || !messages.some(message => message.sender_role === 'client' && !message.read_at)
     ) return
 
@@ -512,7 +518,7 @@ export default function SupportChatWidget() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: session.id }),
     }).catch(() => {})
-  }, [open, session?.id, currentUser?.role, messages])
+  }, [open, session?.id, session?.status, session?.assigned_agent_id, currentUser?.id, currentUser?.role, messages])
 
   // Crear nueva sesión de chat
   async function createSession(forceNew = false) {
@@ -634,7 +640,7 @@ export default function SupportChatWidget() {
     }
   }
 
-  async function sendSupportMessage(messageText: string, clearComposer = false) {
+  async function sendSupportMessage(messageText: string, clearComposer = false, requestBot = true) {
     if (!messageText.trim() || loading) return false
 
     // Verificar autenticación
@@ -651,7 +657,9 @@ export default function SupportChatWidget() {
     try {
       setLoading(true)
       shouldAutoScrollRef.current = true
-      const shouldRequestAi = !currentSession.assigned_agent_id
+      const shouldRequestAi = requestBot
+        && !currentSession.assigned_agent_id
+        && !messages.some(message => message.sender_role === 'assistant')
       if (shouldRequestAi) aiRequestSessionRef.current = currentSession.id
       const response = await fetch('/api/chat/messages', {
         method: 'POST',
@@ -700,10 +708,44 @@ export default function SupportChatWidget() {
 
     setSubmittingIntake(true)
     try {
-      const sent = await sendSupportMessage(`Descripción del problema:\n${intakeProblem.trim()}`)
+      const sent = await sendSupportMessage(`Descripción del problema:\n${intakeProblem.trim()}`, false, false)
       if (sent) setIntakeProblem('')
     } finally {
       setSubmittingIntake(false)
+    }
+  }
+
+  async function runSupportAction() {
+    if (!session?.id || !pendingSupportAction || supportActionLoading) return
+    if (pendingSupportAction === 'transfer' && !transferTargetId) return
+
+    setSupportActionLoading(true)
+    try {
+      const endpoint = pendingSupportAction === 'close' ? '/api/chat/close' : '/api/chat/transfer'
+      const body = pendingSupportAction === 'close'
+        ? { session_id: session.id }
+        : { session_id: session.id, target_agent_id: transferTargetId }
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        notifyError(data.error || 'No se pudo actualizar el soporte')
+        return
+      }
+
+      notifySuccess(pendingSupportAction === 'close' ? 'Soporte cerrado' : 'Soporte transferido')
+      setPendingSupportAction(null)
+      setTransferTargetId('')
+      setOpen(false)
+      setSession(null)
+      setMessages([])
+    } catch {
+      notifyError('No se pudo actualizar el soporte')
+    } finally {
+      setSupportActionLoading(false)
     }
   }
 
@@ -856,31 +898,67 @@ export default function SupportChatWidget() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <nav className="relative mt-4 grid grid-cols-2 gap-1 rounded-xl bg-black/20 p-1" aria-label="Secciones de soporte">
-          <button
-            onClick={() => setTab('chat')}
-            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-all ${
-              tab === 'chat' ? 'bg-white text-gray-900 shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <MessagesSquare size={16} />
-            Conversación
-          </button>
-          <button
-            onClick={() => setTab('articles')}
-            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-all ${
-              tab === 'articles' ? 'bg-white text-gray-900 shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <BookOpen size={16} />
-            Artículos
-          </button>
-        </nav>
+        {isSupportUser ? (
+          <div className="relative mt-4 space-y-2 rounded-xl bg-black/20 p-2">
+            <select
+              value={transferTargetId}
+              onChange={(event) => setTransferTargetId(event.target.value)}
+              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+              aria-label="Agente de destino"
+            >
+              <option value="">Selecciona un agente para transferir</option>
+              {onlineAgents
+                .filter(agent => agent.id !== currentUser?.id)
+                .map(agent => (
+                  <option key={agent.id} value={agent.id} className="bg-[#17171f]">
+                    {agent.full_name || 'Agente disponible'}
+                  </option>
+                ))}
+            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={!transferTargetId}
+                onClick={() => setPendingSupportAction('transfer')}
+                className="rounded-lg bg-white/15 px-3 py-2 text-sm font-bold text-white transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Transferir
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingSupportAction('close')}
+                className="rounded-lg bg-rose-500/80 px-3 py-2 text-sm font-bold text-white transition hover:bg-rose-500"
+              >
+                Cerrar soporte
+              </button>
+            </div>
+          </div>
+        ) : (
+          <nav className="relative mt-4 grid grid-cols-2 gap-1 rounded-xl bg-black/20 p-1" aria-label="Secciones de soporte">
+            <button
+              onClick={() => setTab('chat')}
+              className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-all ${
+                tab === 'chat' ? 'bg-white text-gray-900 shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <MessagesSquare size={16} />
+              Conversación
+            </button>
+            <button
+              onClick={() => setTab('articles')}
+              className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-bold transition-all ${
+                tab === 'articles' ? 'bg-white text-gray-900 shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <BookOpen size={16} />
+              Artículos
+            </button>
+          </nav>
+        )}
       </header>
 
       {/* Content */}
-      {tab === 'articles' ? (
+      {tab === 'articles' && !isSupportUser ? (
         <div className="flex-1 space-y-3 overflow-auto bg-[#0d0d12] p-5">
           <div className="relative mb-4">
             <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35" />
@@ -1124,7 +1202,7 @@ export default function SupportChatWidget() {
                 <div className="rounded-2xl rounded-bl-md border border-white/10 bg-[#1a1a1f] px-4 py-3 shadow-sm" role="status" aria-live="polite">
                   <span className="sr-only">{aiTyping ? 'Dulcan AI está escribiendo' : 'El agente está escribiendo'}</span>
                   <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-white/55">
-                    {aiTyping && <Bot size={13} />} {aiTyping ? 'Dulcan AI está preparando tu siguiente pregunta' : `${assignedAgent?.full_name || 'Tu agente'} está escribiendo`}
+                    {aiTyping && <Bot size={13} />} {aiTyping ? 'Dulcan AI está preparando la bienvenida' : `${assignedAgent?.full_name || 'Tu agente'} está escribiendo`}
                   </p>
                   <div className="flex items-center gap-1.5" aria-hidden="true">
                     <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-400 [animation-delay:-0.3s]" />
@@ -1207,6 +1285,39 @@ export default function SupportChatWidget() {
             </form>
           </div>
         </>
+      )}
+
+      {pendingSupportAction && (
+        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#191920] p-5 shadow-2xl">
+            <h3 className="text-lg font-black text-white">
+              {pendingSupportAction === 'close' ? '¿Cerrar este soporte?' : '¿Transferir este soporte?'}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-white/60">
+              {pendingSupportAction === 'close'
+                ? 'El cliente verá que la conversación fue cerrada y podrá iniciar un soporte nuevo.'
+                : 'La conversación pasará al agente seleccionado y dejará de aparecer en tu burbuja.'}
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={supportActionLoading}
+                onClick={() => setPendingSupportAction(null)}
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-white/75 hover:bg-white/5"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={supportActionLoading}
+                onClick={runSupportAction}
+                className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 ${pendingSupportAction === 'close' ? 'bg-rose-600' : 'bg-indigo-600'}`}
+              >
+                {supportActionLoading ? 'Procesando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Lightbox para ver imagen en grande */}

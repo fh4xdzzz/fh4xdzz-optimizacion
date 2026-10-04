@@ -239,6 +239,9 @@ export default function AdminPage() {
       client_id: session.client_id,
       client_name: session.users?.full_name || session.users?.email || 'Cliente',
       client_email: session.users?.email || '',
+      ai_handoff_ready: session.ai_handoff_ready,
+      ai_summary: session.ai_summary,
+      ai_intake: session.ai_intake,
     })
 
     const mappedActiveSessions = activeSessions.map(mapChatSession)
@@ -247,10 +250,9 @@ export default function AdminPage() {
     setChatSessions(mappedActiveSessions)
 
     setChatHistory(mappedClosedSessions)
-    setSelectedChat(current => {
-      if (!current) return null
-      return [...mappedActiveSessions, ...mappedClosedSessions].find(chat => chat.id === current.id) || null
-    })
+    // El panel es una cola informativa: nunca abre la conversación.
+    // Al reclamar, la atención continúa únicamente en la burbuja del agente.
+    setSelectedChat(null)
 
     // Cargar últimos mensajes para sesiones activas
     if (activeSessions.length > 0) {
@@ -605,14 +607,8 @@ export default function AdminPage() {
     const messages = data.messages || []
     setChatMessages(messages)
 
-    // Abrir la conversación confirma al cliente que soporte vio sus mensajes.
-    if (messages.some((message: ChatMessage) => message.sender_role === 'client' && !message.read_at)) {
-      await fetch('/api/chat/messages', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId }),
-      })
-    }
+    // Consultar detalles desde el panel nunca marca mensajes como vistos.
+    // Solo la burbuja del agente que reclamó el soporte confirma la lectura.
   }
 
   const loadLastMessages = async (sessions: ChatSession[]) => {
@@ -637,16 +633,14 @@ export default function AdminPage() {
 
   useEffect(() => {
     const chatId = new URLSearchParams(window.location.search).get('supportChat')
-    if (!chatId || selectedChat?.id === chatId) return
+    if (!chatId) return
 
     const linkedChat = [...chatSessions, ...chatHistory].find(chat => chat.id === chatId)
     if (!linkedChat) return
 
     setActiveTab('support')
     setSupportFilter(linkedChat.status === 'closed' ? 'closed' : 'all')
-    setSelectedChat(linkedChat)
-    loadChatMessages(linkedChat.id)
-  }, [chatSessions, chatHistory, selectedChat?.id])
+  }, [chatSessions, chatHistory])
 
   // Respaldo para instalaciones donde Supabase Realtime no esté publicado o
   // el websocket se desconecte. Realtime sigue siendo la vía inmediata.
@@ -1484,12 +1478,8 @@ export default function AdminPage() {
                                   .map((chat, index) => (
                                     <div
                                       key={chat.id}
-                                      className="p-5 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer hover:border-green-500/50"
+                                      className="p-5 border border-border/50 rounded-xl glass-card animate-fade-in-up"
                                       style={{ animationDelay: `${index * 0.05}s` }}
-                                      onClick={() => {
-                                        setSelectedChat(chat)
-                                        loadChatMessages(chat.id)
-                                      }}
                                     >
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
@@ -1526,6 +1516,22 @@ export default function AdminPage() {
                                                 : lastMessages[chat.id].message}
                                             </div>
                                           )}
+                                          <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                                            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                              <span className="text-xs font-semibold uppercase tracking-wide text-white/40">Asunto</span>
+                                              <p className="mt-1 text-white/80">{chat.subject || 'Soporte general'}</p>
+                                            </div>
+                                            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                              <span className="text-xs font-semibold uppercase tracking-wide text-white/40">Prioridad</span>
+                                              <p className="mt-1 capitalize text-white/80">{chat.priority || 'normal'}</p>
+                                            </div>
+                                          </div>
+                                          {chat.ai_summary && (
+                                            <div className="mt-2 rounded-lg border border-violet-500/20 bg-violet-500/[0.08] p-3 text-sm text-violet-100">
+                                              <span className="text-xs font-bold uppercase tracking-wide text-violet-300">Problema indicado</span>
+                                              <p className="mt-1 whitespace-pre-wrap">{chat.ai_summary}</p>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -1547,12 +1553,8 @@ export default function AdminPage() {
                                   .map((chat, index) => (
                                     <div
                                       key={chat.id}
-                                      className="p-5 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer hover:border-yellow-500/50"
+                                      className="p-5 border border-border/50 rounded-xl glass-card animate-fade-in-up"
                                       style={{ animationDelay: `${index * 0.05}s` }}
-                                      onClick={() => {
-                                        setSelectedChat(chat)
-                                        loadChatMessages(chat.id)
-                                      }}
                                     >
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
@@ -1587,6 +1589,22 @@ export default function AdminPage() {
                                               {lastMessages[chat.id].message.length > 50
                                                 ? lastMessages[chat.id].message.substring(0, 50) + '...'
                                                 : lastMessages[chat.id].message}
+                                            </div>
+                                          )}
+                                          <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                                            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                              <span className="text-xs font-semibold uppercase tracking-wide text-white/40">Asunto</span>
+                                              <p className="mt-1 text-white/80">{chat.subject || 'Soporte general'}</p>
+                                            </div>
+                                            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                                              <span className="text-xs font-semibold uppercase tracking-wide text-white/40">Prioridad</span>
+                                              <p className="mt-1 capitalize text-white/80">{chat.priority || 'normal'}</p>
+                                            </div>
+                                          </div>
+                                          {chat.ai_summary && (
+                                            <div className="mt-2 rounded-lg border border-violet-500/20 bg-violet-500/[0.08] p-3 text-sm text-violet-100">
+                                              <span className="text-xs font-bold uppercase tracking-wide text-violet-300">Problema indicado</span>
+                                              <p className="mt-1 whitespace-pre-wrap">{chat.ai_summary}</p>
                                             </div>
                                           )}
                                         </div>
@@ -1619,12 +1637,8 @@ export default function AdminPage() {
                                   .map((chat, index) => (
                                     <div
                                       key={chat.id}
-                                      className="p-5 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up cursor-pointer opacity-70 hover:opacity-100"
+                                      className="p-5 border border-border/50 rounded-xl glass-card animate-fade-in-up opacity-70"
                                       style={{ animationDelay: `${index * 0.05}s` }}
-                                      onClick={() => {
-                                        setSelectedChat(chat)
-                                        loadChatMessages(chat.id)
-                                      }}
                                     >
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
