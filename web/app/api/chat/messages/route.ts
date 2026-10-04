@@ -76,6 +76,64 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// PATCH /api/chat/messages - Marcar como vistos los mensajes enviados por el cliente
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userRole = session.user.role
+    if (!['staff', 'admin', 'owner'].includes(userRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const sessionId = body.session_id
+    if (!sessionId || typeof sessionId !== 'string') {
+      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 })
+    }
+
+    const supabase = await createClient()
+    const { data: chatSession, error: sessionError } = await supabase
+      .from('chat_sessions')
+      .select('id')
+      .eq('id', sessionId)
+      .maybeSingle()
+
+    if (sessionError) {
+      return NextResponse.json({ error: 'Unable to verify the conversation' }, { status: 500 })
+    }
+    if (!chatSession) {
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+    }
+
+    const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const messageClient = serviceUrl && serviceKey
+      ? createServiceClient(serviceUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      : supabase
+
+    const readAt = new Date().toISOString()
+    const { data: updatedMessages, error: updateError } = await messageClient
+      .from('chat_messages')
+      .update({ read_at: readAt })
+      .eq('session_id', sessionId)
+      .eq('sender_role', 'client')
+      .is('read_at', null)
+      .select('id')
+
+    if (updateError) {
+      return NextResponse.json({ error: 'Failed to mark messages as read' }, { status: 500 })
+    }
+
+    return NextResponse.json({ marked_read: updatedMessages?.length || 0, read_at: readAt })
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 // POST /api/chat/messages - Enviar mensaje
 export async function POST(request: NextRequest) {
   try {

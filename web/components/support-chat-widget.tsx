@@ -307,6 +307,15 @@ export default function SupportChatWidget() {
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
+        table: 'chat_messages',
+        filter: `session_id=eq.${session.id}`
+      }, () => {
+        // Actualiza inmediatamente los indicadores de lectura del cliente.
+        loadMessages(session.id)
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
         table: 'chat_sessions',
         filter: `id=eq.${session.id}`
       }, (payload) => {
@@ -874,13 +883,14 @@ export default function SupportChatWidget() {
                         <LinkifiedMessage text={message.message} onInternalNavigate={() => setOpen(false)} />
                       </p>
                     )}
-                    <p
-                      className={`text-xs mt-1 ${
-                        isClient ? 'text-white/80' : 'text-[#6b7280]'
-                      }`}
-                    >
-                      {formatTime(message.created_at)}
-                    </p>
+                    <div className={`mt-1 flex items-center gap-2 text-xs ${isClient ? 'justify-end text-white/80' : 'text-[#6b7280]'}`}>
+                      <span>{formatTime(message.created_at)}</span>
+                      {isClient && message.read_at && (
+                        <span className="font-semibold text-cyan-100" aria-label="Mensaje visto por soporte">
+                          ✓✓ Visto
+                        </span>
+                      )}
+                    </div>
                   </div>
                   </div>
                 </div>

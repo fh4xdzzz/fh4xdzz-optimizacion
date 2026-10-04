@@ -94,6 +94,7 @@ interface ChatMessage {
   message_type: string
   attachment_path?: string | null
   attachment_name?: string | null
+  read_at?: string | null
   created_at: string
   sender?: {
     id: string | null
@@ -601,7 +602,17 @@ export default function AdminPage() {
     const response = await fetch(`/api/chat/messages?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' })
     if (!response.ok) return
     const data = await response.json()
-    setChatMessages(data.messages || [])
+    const messages = data.messages || []
+    setChatMessages(messages)
+
+    // Abrir la conversación confirma al cliente que soporte vio sus mensajes.
+    if (messages.some((message: ChatMessage) => message.sender_role === 'client' && !message.read_at)) {
+      await fetch('/api/chat/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      })
+    }
   }
 
   const loadLastMessages = async (sessions: ChatSession[]) => {
