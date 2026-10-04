@@ -112,6 +112,7 @@ export default function SupportChatWidget() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const shouldAutoScrollRef = useRef(true)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
   useEffect(() => {
@@ -336,12 +337,29 @@ export default function SupportChatWidget() {
     }
   }, [session?.id, open])
 
-  // Scroll al último mensaje siempre
+  const handleMessagesScroll = () => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    shouldAutoScrollRef.current = distanceFromBottom < 80
+  }
+
+  // Al abrir la conversación o volver desde artículos, mostrar el mensaje más reciente.
   useEffect(() => {
-    if (open) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (!open || tab !== 'chat') return
+    shouldAutoScrollRef.current = true
+    window.requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+    })
+  }, [open, tab, session?.id])
+
+  // Mantener el final visible solo si el cliente no subió a leer el historial.
+  useEffect(() => {
+    if (open && tab === 'chat' && shouldAutoScrollRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
-  }, [messages, open, isTyping])
+  }, [messages, open, tab, isTyping, aiTyping])
 
   // Cargar mensajes de una sesión
   async function loadMessages(sessionId: string) {
@@ -446,6 +464,7 @@ export default function SupportChatWidget() {
       const currentSession = session || await createSession()
       if (!currentSession) return
 
+      shouldAutoScrollRef.current = true
       const messageResponse = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -509,6 +528,7 @@ export default function SupportChatWidget() {
 
     try {
       setLoading(true)
+      shouldAutoScrollRef.current = true
       const response = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -753,6 +773,7 @@ export default function SupportChatWidget() {
           {/* Messages */}
           <div 
             ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
             className="relative flex-1 space-y-3 overflow-y-auto overflow-x-hidden bg-[#0a0a0a] p-4"
           >
             {authLoading ? (
