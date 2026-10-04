@@ -49,6 +49,7 @@ const QUICK_ACTIONS = [
 
 const MESSAGE_URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi
 const INTERNAL_HOSTS = new Set(['thedulcandesign.com', 'www.thedulcandesign.com'])
+const INTAKE_PROMPT_PREFIX = '[DULCAN_INTAKE] '
 
 function LinkifiedMessage({ text, onInternalNavigate }: { text: string; onInternalNavigate: () => void }) {
   return (
@@ -116,6 +117,8 @@ export default function SupportChatWidget() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const shouldAutoScrollRef = useRef(true)
+  const aiRequestSessionRef = useRef<string | null>(null)
+  const aiRecoveryAttemptedRef = useRef(new Set<string>())
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
   useEffect(() => {
@@ -423,6 +426,44 @@ export default function SupportChatWidget() {
     }
   }
 
+  // Recupera automáticamente una bienvenida que no pudo generarse por un
+  // error temporal, sin duplicar solicitudes mientras se envía un mensaje.
+  useEffect(() => {
+    if (
+      currentUser?.role !== 'client'
+      || !session?.id
+      || session.status === 'closed'
+      || session.assigned_agent_id
+      || aiRequestSessionRef.current === session.id
+      || aiRecoveryAttemptedRef.current.has(session.id)
+      || !messages.some(message => message.sender_role === 'client')
+      || messages.some(message => message.sender_role === 'assistant')
+    ) return
+
+    let cancelled = false
+    const recoverAssistant = async () => {
+      aiRecoveryAttemptedRef.current.add(session.id)
+      aiRequestSessionRef.current = session.id
+      setAiTyping(true)
+      try {
+        const response = await fetch('/api/chat/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: session.id }),
+        })
+        if (response.ok && !cancelled) await loadMessages(session.id)
+      } finally {
+        if (aiRequestSessionRef.current === session.id) aiRequestSessionRef.current = null
+        if (!cancelled) setAiTyping(false)
+      }
+    }
+
+    void recoverAssistant()
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser?.role, session?.id, session?.status, session?.assigned_agent_id, messages])
+
   // Respaldo de Realtime: mantiene el chat sincronizado aunque el websocket
   // sea bloqueado o la tabla no esté todavía en la publicación de Supabase.
   useEffect(() => {
@@ -599,6 +640,8 @@ export default function SupportChatWidget() {
     try {
       setLoading(true)
       shouldAutoScrollRef.current = true
+      const shouldRequestAi = !currentSession.assigned_agent_id
+      if (shouldRequestAi) aiRequestSessionRef.current = currentSession.id
       const response = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -611,7 +654,7 @@ export default function SupportChatWidget() {
 
       if (response.ok) {
         if (clearComposer) setText('')
-        if (!currentSession.assigned_agent_id) {
+        if (shouldRequestAi) {
           setAiTyping(true)
           try {
             await fetch('/api/chat/ai', {
@@ -628,6 +671,7 @@ export default function SupportChatWidget() {
       }
     } catch (error) {
     } finally {
+      if (aiRequestSessionRef.current === currentSession.id) aiRequestSessionRef.current = null
       setLoading(false)
     }
     return false
@@ -950,7 +994,10 @@ export default function SupportChatWidget() {
               const isAssistant = message.sender_role === 'assistant'
               const isOwnMessage = message.sender_id === currentUser?.id
               const isAttachment = message.message_type === 'attachment'
-              const isIntakePrompt = message.message_type === 'intake_prompt'
+              const isIntakePrompt = isAssistant && message.message.startsWith(INTAKE_PROMPT_PREFIX)
+              const displayedMessage = isIntakePrompt
+                ? message.message.slice(INTAKE_PROMPT_PREFIX.length)
+                : message.message
               const intakeCompleted = isIntakePrompt && messages
                 .slice(messageIndex + 1)
                 .some(item => item.sender_role === 'client')
@@ -1007,7 +1054,7 @@ export default function SupportChatWidget() {
                     )}
                     {!isAttachment && (
                       <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm">
-                        <LinkifiedMessage text={message.message} onInternalNavigate={() => setOpen(false)} />
+                        <LinkifiedMessage text={displayedMessage} onInternalNavigate={() => setOpen(false)} />
                       </p>
                     )}
                     {isIntakePrompt && !intakeCompleted && !isSupportUser && (

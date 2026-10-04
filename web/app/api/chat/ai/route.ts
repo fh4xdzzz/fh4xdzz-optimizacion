@@ -6,6 +6,7 @@ import { getServerSession } from '@/lib/auth-server'
 import { getDiscordService } from '@/lib/discord-integration'
 
 export const maxDuration = 30
+const INTAKE_PROMPT_PREFIX = '[DULCAN_INTAKE] '
 
 const intakeSchema = z.object({
   reply: z.string().min(1).max(900),
@@ -95,15 +96,15 @@ export async function POST(request: NextRequest) {
     }
 
     const clientMessages = conversation.filter(item => item.sender_role === 'client').map(item => item.message)
+    const hasAssistantResponse = conversation.some(item => item.sender_role === 'assistant')
     let intake: Intake
-    let messageType = 'text'
 
     const client = Array.isArray(chat.users) ? chat.users[0] : chat.users
     const clientName = client?.full_name?.trim().split(/\s+/)[0]
       || client?.email?.split('@')[0]
       || 'Cliente'
 
-    if (clientMessages.length === 1) {
+    if (!hasAssistantResponse) {
       intake = {
         reply: `¡Hola, ${clientName}! 👋 Bienvenido al soporte de TheDulcanDesign. Para ayudarte mejor, completa el siguiente cuadro con los detalles de tu problema.`,
         readyForHuman: false,
@@ -119,7 +120,6 @@ export async function POST(request: NextRequest) {
           urgency: null,
         },
       }
-      messageType = 'intake_prompt'
     } else {
       try {
         const result = await generateText({
@@ -142,8 +142,8 @@ export async function POST(request: NextRequest) {
         session_id: sessionId,
         sender_id: null,
         sender_role: 'assistant',
-        message: intake.reply,
-        message_type: messageType,
+        message: `${!hasAssistantResponse ? INTAKE_PROMPT_PREFIX : ''}${intake.reply}`,
+        message_type: 'text',
       })
       .select()
       .single()
