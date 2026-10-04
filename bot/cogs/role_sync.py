@@ -8,6 +8,38 @@ from typing import Optional
 from database.supabase_client import get_supabase_client
 from utils.logger import logger
 
+
+# Supabase usa cuatro niveles de acceso. Discord puede tener varios roles
+# operativos dentro del mismo nivel (por ejemplo, Moderador y Soporte son
+# miembros del equipo, pero no administradores de la web).
+DISCORD_TO_SUPABASE_ROLES = (
+    (('Owner',), 'owner'),
+    (('Administrador', 'Admin', 'Administrator'), 'admin'),
+    (('Moderador', 'Staff', 'Soporte'), 'staff'),
+    (('Cliente', 'Miembro'), 'client'),
+)
+
+SUPABASE_TO_DISCORD_ROLES = {
+    'owner': ('Owner',),
+    'admin': ('Administrador', 'Admin', 'Administrator'),
+    'staff': ('Staff', 'Moderador', 'Soporte'),
+    'client': ('Cliente', 'Miembro'),
+}
+
+
+def supabase_role_for_discord_roles(role_names):
+    """Devolver el nivel web más alto representado por los roles de Discord."""
+    normalized = {name.casefold() for name in role_names}
+    for aliases, supabase_role in DISCORD_TO_SUPABASE_ROLES:
+        if any(alias.casefold() in normalized for alias in aliases):
+            return supabase_role
+    return None
+
+
+def discord_role_candidates(supabase_role):
+    """Nombres válidos, en orden de preferencia, para un nivel de la web."""
+    return SUPABASE_TO_DISCORD_ROLES.get(supabase_role, ())
+
 class RoleSync(commands.Cog):
     """Sincronización de roles entre Discord y Supabase"""
 
@@ -53,14 +85,6 @@ class RoleSync(commands.Cog):
                 await ctx.send("❌ Supabase no está configurado")
                 return
 
-            # Mapeo de roles Discord a roles Supabase
-            role_mapping = {
-                'Admin': 'admin',
-                'Staff': 'staff',
-                'Cliente': 'client',
-                'Miembro': 'client'
-            }
-
             synced_count = 0
 
             for member in ctx.guild.members:
@@ -70,12 +94,7 @@ class RoleSync(commands.Cog):
                 if user_data:
                     # Determinar rol más alto del usuario
                     member_roles = [role.name for role in member.roles if role.name != '@everyone']
-                    highest_role = None
-
-                    for discord_role, supabase_role in role_mapping.items():
-                        if discord_role in member_roles:
-                            highest_role = supabase_role
-                            break
+                    highest_role = supabase_role_for_discord_roles(member_roles)
 
                     if highest_role and user_data.get('role') != highest_role:
                         # Actualizar rol en Supabase
@@ -100,13 +119,6 @@ class RoleSync(commands.Cog):
                 await ctx.send("❌ Supabase no está configurado")
                 return
 
-            # Mapeo de roles Supabase a roles Discord
-            role_mapping = {
-                'admin': 'Admin',
-                'staff': 'Staff',
-                'client': 'Cliente'
-            }
-
             # Obtener todos los usuarios de Supabase con Discord ID
             all_users = self.supabase._request('GET', 'users')
 
@@ -129,12 +141,30 @@ class RoleSync(commands.Cog):
                     continue
 
                 # Obtener rol Discord correspondiente
-                discord_role_name = role_mapping.get(supabase_role)
-                if not discord_role_name:
+                candidate_names = discord_role_candidates(supabase_role)
+                if not candidate_names:
                     continue
 
-                discord_role = discord.utils.get(ctx.guild.roles, name=discord_role_name)
+                # Si ya posee un rol equivalente (p. ej. Moderador o Soporte
+                # para el nivel staff), no duplicar roles.
+                member_role_names = {role.name.casefold() for role in member.roles}
+                if any(name.casefold() in member_role_names for name in candidate_names):
+                    continue
+
+                discord_role = next(
+                    (
+                        discord.utils.get(ctx.guild.roles, name=name)
+                        for name in candidate_names
+                        if discord.utils.get(ctx.guild.roles, name=name)
+                    ),
+                    None,
+                )
                 if not discord_role:
+                    logger.warning(
+                        "No existe un rol Discord compatible para el nivel %s: %s",
+                        supabase_role,
+                        ', '.join(candidate_names),
+                    )
                     continue
 
                 # Agregar rol si no lo tiene
