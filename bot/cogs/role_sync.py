@@ -3,6 +3,7 @@ Role Sync - Sincronización de roles entre Discord y Supabase
 """
 
 import asyncio
+import unicodedata
 import discord
 from discord.ext import commands, tasks
 from typing import Optional
@@ -30,7 +31,8 @@ SUPABASE_TO_DISCORD_ROLES = {
 
 def normalized_discord_name(value):
     """Ignorar emojis, separadores y mayúsculas usados para decorar nombres."""
-    return ''.join(character for character in value.casefold() if character.isalnum())
+    compatible_text = unicodedata.normalize('NFKD', value).casefold()
+    return ''.join(character for character in compatible_text if character.isalnum())
 
 
 def supabase_role_for_discord_roles(role_names):
