@@ -83,6 +83,18 @@ async def configured_channel(guild, key, fallback_name):
     channel = guild.get_channel(int(channel_id)) if channel_id else None
     return channel or discord.utils.get(guild.text_channels, name=fallback_name)
 
+
+async def sync_application_commands():
+    """Reemplazar comandos antiguos y publicar los actuales en cada servidor."""
+    # Actualiza también el registro global para retirar comandos obsoletos.
+    global_commands = await bot.tree.sync()
+    guild_results = {}
+    for guild in bot.guilds:
+        bot.tree.copy_global_to(guild=guild)
+        synced = await bot.tree.sync(guild=guild)
+        guild_results[guild.id] = len(synced)
+    return len(global_commands), guild_results
+
 # Storage (en produccion usar Supabase)
 tickets = {}
 ticket_counter = 0
@@ -271,14 +283,13 @@ async def on_ready():
 
     if not slash_commands_synced:
         try:
-            if GUILD_ID:
-                guild_object = discord.Object(id=int(GUILD_ID))
-                bot.tree.copy_global_to(guild=guild_object)
-                synced = await bot.tree.sync(guild=guild_object)
-            else:
-                synced = await bot.tree.sync()
+            global_count, guild_counts = await sync_application_commands()
             slash_commands_synced = True
-            logger.info('%s comandos slash sincronizados', len(synced))
+            logger.info(
+                'Comandos slash sincronizados: global=%s servidores=%s',
+                global_count,
+                guild_counts,
+            )
         except discord.HTTPException as error:
             logger.error('No se pudieron sincronizar los comandos slash: %s', error)
 
@@ -292,6 +303,22 @@ async def on_ready():
 
     # La configuración del servidor sólo se ejecuta con el comando !setup.
     # Nunca se crean o eliminan canales automáticamente al reiniciar el bot.
+
+
+@bot.command(name='sincronizar')
+@commands.guild_only()
+@commands.has_permissions(administrator=True)
+async def synchronize_commands(ctx):
+    """Forzar la publicación de comandos slash en el servidor actual."""
+    status = await ctx.send('🔄 Sincronizando comandos...')
+    try:
+        bot.tree.copy_global_to(guild=ctx.guild)
+        synced = await bot.tree.sync(guild=ctx.guild)
+        names = ', '.join(f'/{command.name}' for command in synced)
+        await status.edit(content=f'✅ {len(synced)} comandos sincronizados: {names}')
+    except discord.HTTPException as error:
+        logger.error('Sincronización manual fallida: %s', error)
+        await status.edit(content='❌ Discord rechazó la sincronización. Revisa el permiso `applications.commands`.')
 
 async def setup_professional_server():
     """Setup del servidor profesional"""
