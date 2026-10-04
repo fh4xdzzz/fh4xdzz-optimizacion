@@ -103,7 +103,7 @@ export default function Navbar() {
       <div className="container mx-auto rounded-2xl border border-primary/25 bg-[#0b0c12]/90 px-4 shadow-[0_18px_55px_rgba(0,0,0,.48),inset_0_1px_0_rgba(255,255,255,.04)] backdrop-blur-2xl">
         <div className="flex h-16 items-center justify-between gap-4">
           <Link href="/" onClick={() => setIsOpen(false)} className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="TheDulcanDesign, ir al inicio">
-            <Image src="/icon.png" alt="" width={40} height={40} preload className="h-10 w-10 shrink-0 object-contain" />
+            <Image src="/thedulcandesign-icon.png" alt="" width={40} height={40} preload className="h-10 w-10 shrink-0 object-contain" />
             <span className="truncate text-lg font-bold gradient-text-primary sm:text-xl">TheDulcanDesign</span>
           </Link>
 

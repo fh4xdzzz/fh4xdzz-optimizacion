@@ -16,7 +16,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center space-x-3 mb-6">
               <Image
-                src="/icon.png"
+                src="/thedulcandesign-icon.png"
                 alt="TheDulcanDesign Logo"
                 width={44}
                 height={44}
