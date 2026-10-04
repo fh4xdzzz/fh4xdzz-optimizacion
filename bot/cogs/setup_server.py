@@ -290,7 +290,7 @@ class SetupServer(commands.Cog):
             # Crear categoría
             category = await guild.create_category(
                 name=cat_name,
-                overwrites=None,
+                overwrites={},
                 position=cat_config['position']
             )
             categories[cat_name] = str(category.id)
