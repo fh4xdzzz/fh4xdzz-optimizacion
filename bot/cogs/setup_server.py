@@ -38,8 +38,26 @@ CHANNELS = {
 ROLES = {
     'Owner': {'color': 0x000000, 'permissions': discord.Permissions.all(), 'hoist': True},
     'Administrador': {'color': 0xff0000, 'permissions': discord.Permissions.all(), 'hoist': False},
-    'Moderador': {'color': 0x00ffff, 'permissions': discord.Permissions.all(), 'hoist': False},
-    'Staff': {'color': 0x9b59b6, 'permissions': discord.Permissions.all(), 'hoist': False},
+    'Moderador': {
+        'color': 0x00ffff,
+        'permissions': discord.Permissions(
+            kick_members=True,
+            ban_members=True,
+            manage_messages=True,
+            moderate_members=True,
+            view_audit_log=True,
+        ),
+        'hoist': False,
+    },
+    'Staff': {
+        'color': 0x9b59b6,
+        'permissions': discord.Permissions(
+            manage_messages=True,
+            moderate_members=True,
+            view_audit_log=True,
+        ),
+        'hoist': False,
+    },
     'Soporte': {'color': 0x3498db, 'permissions': discord.Permissions.none(), 'hoist': False},
     'Cliente': {'color': 0x2ecc71, 'permissions': discord.Permissions.none(), 'hoist': False},
     'Miembro': {'color': 0x95a5a6, 'permissions': discord.Permissions.none(), 'hoist': False}
@@ -58,15 +76,14 @@ class SetupServer(commands.Cog):
         try:
             # Verificar permisos del bot
             bot_permissions = ctx.guild.me.guild_permissions
-            required_permissions = [
-                discord.Permissions.manage_channels,
-                discord.Permissions.manage_roles,
-                discord.Permissions.manage_guild
+            required_permissions = ('manage_channels', 'manage_roles', 'manage_guild')
+            missing_permissions = [
+                permission.replace('_', ' ')
+                for permission in required_permissions
+                if not getattr(bot_permissions, permission, False)
             ]
-
-            missing_permissions = [p for p in required_permissions if not bot_permissions.value & p.value]
             if missing_permissions:
-                await ctx.send(f"❌ El bot no tiene permisos suficientes. Faltan: {', '.join([p.name for p in missing_permissions])}")
+                await ctx.send(f"❌ El bot no tiene permisos suficientes. Faltan: {', '.join(missing_permissions)}")
                 return
 
             # Verificar permisos del usuario
@@ -295,7 +312,7 @@ class SetupServer(commands.Cog):
 
             # Obtener categoría
             category_id = categories.get(channel_config['category'])
-            category = discord.get_channel(category_id) if category_id else None
+            category = guild.get_channel(int(category_id)) if category_id else None
 
             # Crear canal
             if channel_config['type'] == 'text':
@@ -351,32 +368,41 @@ class SetupServer(commands.Cog):
             if not channel_id:
                 continue
 
-            channel = guild.get_channel(channel_id)
+            channel = guild.get_channel(int(channel_id))
             if not channel:
                 continue
 
-            # Permisos especiales para logs
-            if channel_name in ['logs', 'notificaciones']:
+            private_channels = {'soporte', 'pedidos', 'staff', 'logs', 'notificaciones'}
+            if channel_name in private_channels:
                 await channel.set_permissions(
                     guild.default_role,
                     view_channel=False,
                     read_messages=False
                 )
 
-            # Permisos para staff
-            if channel_name == 'staff':
-                staff_role = guild.get_role(roles.get('Staff'))
-                if staff_role:
+                allowed_roles = {'Owner', 'Administrador', 'Moderador', 'Staff'}
+                if channel_name == 'soporte':
+                    allowed_roles.add('Soporte')
+
+                for role_name in allowed_roles:
+                    role_id = roles.get(role_name)
+                    role = guild.get_role(int(role_id)) if role_id else None
+                    if role:
+                        await channel.set_permissions(
+                            role,
+                            view_channel=True,
+                            read_messages=True,
+                            send_messages=True,
+                            read_message_history=True,
+                        )
+
+                if guild.me:
                     await channel.set_permissions(
-                        guild.default_role,
-                        view_channel=False,
-                        read_messages=False
-                    )
-                    await channel.set_permissions(
-                        staff_role,
+                        guild.me,
                         view_channel=True,
                         read_messages=True,
-                        send_messages=True
+                        send_messages=True,
+                        read_message_history=True,
                     )
 
         logger.info("Permisos configurados")
@@ -386,7 +412,7 @@ class SetupServer(commands.Cog):
         # Mensaje en #reglas
         rules_channel_id = channels.get('reglas')
         if rules_channel_id:
-            rules_channel = guild.get_channel(rules_channel_id)
+            rules_channel = guild.get_channel(int(rules_channel_id))
             if rules_channel:
                 embed = discord.Embed(
                     title="📋 Reglas del Servidor",
@@ -406,7 +432,7 @@ class SetupServer(commands.Cog):
         # Mensaje en #servicios
         services_channel_id = channels.get('servicios')
         if services_channel_id:
-            services_channel = guild.get_channel(services_channel_id)
+            services_channel = guild.get_channel(int(services_channel_id))
             if services_channel:
                 embed = discord.Embed(
                     title="🛒 Servicios Disponibles",
