@@ -39,6 +39,7 @@ interface ChatSession {
 }
 
 const PROFESSIONAL_EMOJIS = ['😀', '😊', '😂', '😍', '🤔', '😎', '👍', '👎', '👌', '👏', '🙏', '👋', '💪', '🎮', '💻', '🎙️', '🎧', '📸', '✅', '❌', '⚠️', '🔥', '⭐', '💙']
+const SUPPORT_ROLES = ['admin', 'staff', 'owner']
 
 const QUICK_ACTIONS = [
   { label: 'Problema técnico', message: 'Hola, necesito ayuda con un problema técnico.' },
@@ -196,9 +197,11 @@ export default function SupportChatWidget() {
       if (response.ok) {
         const data = await response.json()
         if (data.sessions && data.sessions.length > 0) {
-          const activeSession = data.sessions.find((s: ChatSession) =>
+          const isSupportUser = SUPPORT_ROLES.includes(userSession.user.role || '')
+          const activeSession = data.sessions.find((s: ChatSession) => (
             ['waiting', 'active', 'pending'].includes(s.status)
-          )
+            && (!isSupportUser || s.assigned_agent_id === userSession.user.id)
+          ))
           if (activeSession) {
             setSession(activeSession)
             loadMessages(activeSession.id)
@@ -211,6 +214,51 @@ export default function SupportChatWidget() {
       setAuthLoading(false)
     }
   }
+
+  // Los agentes solo ven la burbuja mientras tienen un soporte activo asignado.
+  // La consulta periódica sirve como respaldo si Realtime todavía no notificó
+  // una reclamación o transferencia realizada desde el panel.
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser?.id || !SUPPORT_ROLES.includes(currentUser.role || '')) return
+
+    let cancelled = false
+    const syncAssignedSupport = async () => {
+      try {
+        const response = await fetch('/api/chat/sessions', { cache: 'no-store' })
+        if (!response.ok || cancelled) return
+
+        const data = await response.json()
+        const assignedSession = data.sessions?.find((item: ChatSession) => (
+          item.assigned_agent_id === currentUser.id
+          && ['waiting', 'active', 'pending'].includes(item.status)
+        )) as ChatSession | undefined
+
+        if (!assignedSession) {
+          if (session?.assigned_agent_id === currentUser.id) {
+            setSession(null)
+            setMessages([])
+            setOpen(false)
+          }
+          return
+        }
+
+        setSession(assignedSession)
+        if (session?.id !== assignedSession.id) {
+          shouldAutoScrollRef.current = true
+          await loadMessages(assignedSession.id)
+        }
+      } catch {
+        // Realtime seguirá actualizando la sesión si una consulta puntual falla.
+      }
+    }
+
+    syncAssignedSupport()
+    const interval = window.setInterval(syncAssignedSupport, 3000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [isAuthenticated, currentUser?.id, currentUser?.role, session?.id, session?.assigned_agent_id])
 
   // Cargar nombre del agente asignado
   async function loadAssignedAgentName(agentId: string | null) {
@@ -297,7 +345,7 @@ export default function SupportChatWidget() {
         if (open) loadMessages(session.id)
 
         // Incrementar contador si el chat está cerrado y el mensaje es del soporte
-        if (newMessage.sender_role !== 'client' && !open) {
+        if (newMessage.sender_id !== currentUser?.id && !open) {
           setUnread(prev => prev + 1)
         }
 
@@ -335,7 +383,7 @@ export default function SupportChatWidget() {
         supabase.removeChannel(channelRef.current)
       }
     }
-  }, [session?.id, open])
+  }, [session?.id, open, currentUser?.id])
 
   const handleMessagesScroll = () => {
     const container = messagesContainerRef.current
@@ -395,6 +443,22 @@ export default function SupportChatWidget() {
     const interval = window.setInterval(syncChat, 3000)
     return () => window.clearInterval(interval)
   }, [session?.id, session?.status, isAuthenticated])
+
+  // La burbuja de un agente también confirma lectura cuando está abierta.
+  useEffect(() => {
+    if (
+      !open
+      || !session?.id
+      || !SUPPORT_ROLES.includes(currentUser?.role || '')
+      || !messages.some(message => message.sender_role === 'client' && !message.read_at)
+    ) return
+
+    fetch('/api/chat/messages', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: session.id }),
+    }).catch(() => {})
+  }, [open, session?.id, currentUser?.role, messages])
 
   // Crear nueva sesión de chat
   async function createSession() {
@@ -576,6 +640,7 @@ export default function SupportChatWidget() {
 
   // Verificar si hay agentes online
   const isOnline = onlineAgents.length > 0
+  const isSupportUser = SUPPORT_ROLES.includes(currentUser?.role || '')
 
   // Cargar agentes de soporte en línea
   useEffect(() => {
@@ -613,8 +678,15 @@ export default function SupportChatWidget() {
     }
   }, [])
 
-  // Los agentes atienden desde /admin; la burbuja es exclusiva para clientes.
-  if (!open && !authLoading && currentUser && ['admin', 'staff', 'owner'].includes(currentUser.role)) {
+  // Evita mostrar brevemente una burbuja incorrecta antes de resolver el rol.
+  if (authLoading) return null
+
+  // Para agentes, la burbuja existe únicamente durante su conversación asignada.
+  if (isSupportUser && (
+    !session
+    || session.assigned_agent_id !== currentUser?.id
+    || !['waiting', 'active', 'pending'].includes(session.status)
+  )) {
     return null
   }
 
@@ -623,7 +695,7 @@ export default function SupportChatWidget() {
       <div className="fixed bottom-5 right-4 z-50 flex items-center gap-3 sm:bottom-6 sm:right-6">
         <div className="hidden rounded-2xl border border-white/10 bg-[#15151c]/95 px-4 py-3 text-right shadow-2xl backdrop-blur-xl sm:block">
           <p className="text-sm font-bold text-white">¿Necesitas ayuda?</p>
-          <p className="mt-0.5 text-xs text-white/60">{isOnline ? 'Estamos en línea' : 'Déjanos un mensaje'}</p>
+          <p className="mt-0.5 text-xs text-white/60">{isSupportUser ? 'Soporte activo' : isOnline ? 'Estamos en línea' : 'Déjanos un mensaje'}</p>
         </div>
         <button
           onClick={() => {
@@ -634,7 +706,7 @@ export default function SupportChatWidget() {
           aria-label="Abrir chat de soporte"
         >
           <MessageCircle size={27} className="transition-transform group-hover:scale-110" />
-          <span className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] border-[#0a0a0a] ${isOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+          <span className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] border-[#0a0a0a] ${isSupportUser || isOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
           {unread > 0 && (
             <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-xs font-bold text-white">
               {unread > 9 ? '9+' : unread}
@@ -677,16 +749,18 @@ export default function SupportChatWidget() {
               <div className="flex items-center gap-1.5 rounded-full bg-black/20 px-2.5 py-1 backdrop-blur">
                 <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-emerald-300' : 'bg-amber-300'}`} />
                 <span className="text-xs font-semibold text-white">
-                  {isOnline ? `${onlineAgents.length} en línea` : 'Fuera de horario'}
+                  {isSupportUser ? session?.conversation_number : isOnline ? `${onlineAgents.length} en línea` : 'Fuera de horario'}
                 </span>
               </div>
             </div>
             <h2 className="text-xl font-black tracking-tight text-white">
-              {assignedAgent ? `Soporte con ${assignedAgent.full_name || assignedAgent.email?.split('@')[0] || 'tu agente'}` : 'Soporte inteligente'}
+              {isSupportUser
+                ? `Atendiendo ${session?.conversation_number || 'soporte'}`
+                : assignedAgent ? `Soporte con ${assignedAgent.full_name || assignedAgent.email?.split('@')[0] || 'tu agente'}` : 'Soporte inteligente'}
             </h2>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-white/85">
               <ShieldCheck size={14} />
-              {['admin', 'staff', 'owner'].includes(currentUser?.role) 
+              {isSupportUser
                 ? 'Puedes responder directamente a este chat' 
                 : isOnline ? 'Normalmente respondemos en menos de 5 minutos' : 'Responderemos en cuanto volvamos'}
             </p>
@@ -847,11 +921,12 @@ export default function SupportChatWidget() {
             {messages.map((message) => {
               const isClient = message.sender_role === 'client'
               const isAssistant = message.sender_role === 'assistant'
+              const isOwnMessage = message.sender_id === currentUser?.id
               const isAttachment = message.message_type === 'attachment'
               const isImage = isAttachment && message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
               const senderName = isAssistant
                 ? 'Dulcan AI'
-                : message.sender?.full_name || message.sender?.email?.split('@')[0] || 'Agente de soporte'
+                : message.sender?.full_name || message.sender?.email?.split('@')[0] || (isClient ? 'Cliente' : 'Agente de soporte')
               const avatar = message.sender?.avatar_url || (message.sender?.discord_avatar && message.sender.id
                 ? `https://cdn.discordapp.com/avatars/${message.sender.id}/${message.sender.discord_avatar}.png`
                 : null)
@@ -859,26 +934,26 @@ export default function SupportChatWidget() {
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
-                  {!isClient && (
+                  {!isOwnMessage && (
                     <div className="mr-2 mt-1 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md">
                       {avatar ? <img src={avatar} alt={senderName} className="h-full w-full object-cover" /> : isAssistant ? <Bot size={17} /> : <span className="text-xs font-black">{senderName.slice(0, 1).toUpperCase()}</span>}
                     </div>
                   )}
                   <div className="min-w-0 max-w-[80%]">
-                    {!isClient && (
+                    {!isOwnMessage && (
                       <div className="mb-1 flex items-center gap-2 px-1">
                         <span className="text-xs font-bold text-white">{senderName}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isAssistant ? 'bg-violet-500/20 text-violet-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
-                          {isAssistant ? 'Asistente virtual' : 'Agente verificado'}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isAssistant ? 'bg-violet-500/20 text-violet-300' : isClient ? 'bg-blue-500/15 text-blue-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
+                          {isAssistant ? 'Asistente virtual' : isClient ? 'Cliente' : 'Agente verificado'}
                         </span>
                         {!isAssistant && message.sender?.online && <span className="h-2 w-2 rounded-full bg-emerald-400" aria-label="En línea" />}
                       </div>
                     )}
                   <div
                     className={`min-w-0 rounded-2xl p-3 ${
-                      isClient
+                      isOwnMessage
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
                         : 'bg-[#1a1a1a] border border-[#333333] text-[#ededed]'
                     }`}
@@ -904,9 +979,9 @@ export default function SupportChatWidget() {
                         <LinkifiedMessage text={message.message} onInternalNavigate={() => setOpen(false)} />
                       </p>
                     )}
-                    <div className={`mt-1 flex items-center gap-2 text-xs ${isClient ? 'justify-end text-white/80' : 'text-[#6b7280]'}`}>
+                    <div className={`mt-1 flex items-center gap-2 text-xs ${isOwnMessage ? 'justify-end text-white/80' : 'text-[#6b7280]'}`}>
                       <span>{formatTime(message.created_at)}</span>
-                      {isClient && message.read_at && (
+                      {isOwnMessage && isClient && message.read_at && (
                         <span className="font-semibold text-cyan-100" aria-label="Mensaje visto por soporte">
                           ✓✓ Visto
                         </span>
