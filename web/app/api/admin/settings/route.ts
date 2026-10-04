@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminRole } from '@/lib/admin-api'
+import { isDiscordInviteUrl, resolveDiscordInviteUrl } from '@/lib/site-config'
+
+const discordInviteSchema = z.string().url().refine(isDiscordInviteUrl, {
+  message: 'Debe ser un enlace de invitación válido de Discord',
+})
 
 const settingsSchema = z.object({
   business_info: z.object({
@@ -8,10 +13,10 @@ const settingsSchema = z.object({
     email: z.email(),
     phone: z.string().max(40),
     address: z.string().max(240),
-    discord: z.union([z.url(), z.literal('')]),
+    discord: discordInviteSchema,
   }),
   social_links: z.object({
-    discord: z.union([z.url(), z.literal('')]),
+    discord: discordInviteSchema,
     twitter: z.union([z.url(), z.literal('')]),
     youtube: z.union([z.url(), z.literal('')]),
     instagram: z.union([z.url(), z.literal('')]),
@@ -35,8 +40,18 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const settings = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value])) as Record<string, Record<string, unknown> | undefined>
+  const discord = resolveDiscordInviteUrl(
+    settings.social_links?.discord,
+    settings.business_info?.discord,
+  )
+
   return NextResponse.json({
-    settings: Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value])),
+    settings: {
+      ...settings,
+      business_info: { ...settings.business_info, discord },
+      social_links: { ...settings.social_links, discord },
+    },
   })
 }
 
@@ -45,9 +60,24 @@ export async function PUT(request: NextRequest) {
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const parsed = settingsSchema.safeParse(await request.json())
-  if (!parsed.success) return NextResponse.json({ error: 'Configuración inválida' }, { status: 400 })
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || 'Configuración inválida' },
+      { status: 400 },
+    )
+  }
 
-  const rows = Object.entries(parsed.data).map(([setting_key, setting_value]) => ({
+  const discord = resolveDiscordInviteUrl(
+    parsed.data.social_links.discord,
+    parsed.data.business_info.discord,
+  )
+  const normalizedSettings = {
+    ...parsed.data,
+    business_info: { ...parsed.data.business_info, discord },
+    social_links: { ...parsed.data.social_links, discord },
+  }
+
+  const rows = Object.entries(normalizedSettings).map(([setting_key, setting_value]) => ({
     setting_key,
     setting_value,
     updated_at: new Date().toISOString(),

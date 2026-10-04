@@ -131,7 +131,7 @@ Propiedad de TheDulcanDesign. Todos los derechos reservados.
 
 ## 📞 Contacto
 
-- **Discord:** [Unirse al servidor](https://discord.gg/DXkEXrYRvM)
+- **Discord:** [Unirse al servidor](https://discord.gg/XFJ5qTBjUa)
 - **Email:** thedulcandesign@gmail.com
 
 ---

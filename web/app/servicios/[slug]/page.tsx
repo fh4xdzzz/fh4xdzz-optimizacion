@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { DiscordInviteButton } from '@/components/discord-invite-button'
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -215,9 +216,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                   <p className="text-muted text-sm mb-4">
                     Consulta con nuestro equipo antes de contratar. Te ayudamos a elegir sin compromiso.
                   </p>
-                  <Button variant="outline" className="w-full" href="https://discord.gg/DXkEXrYRvM" target="_blank" rel="noopener noreferrer">
-                    Unirse a Discord
-                  </Button>
+                  <DiscordInviteButton className="w-full" />
                 </CardContent>
               </Card>
             </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useNotificationStore } from '@/lib/notifications-store'
+import { DEFAULT_DISCORD_INVITE_URL, resolveDiscordInviteUrl } from '@/lib/site-config'
 
 type Settings = {
   business_info: { name: string; email: string; phone: string; address: string; discord: string }
@@ -13,8 +14,8 @@ type Settings = {
 }
 
 const defaults: Settings = {
-  business_info: { name: 'TheDulcanDesign', email: 'thedulcandesign@gmail.com', phone: '', address: '', discord: 'https://discord.gg/DXkEXrYRvM' },
-  social_links: { discord: 'https://discord.gg/DXkEXrYRvM', twitter: '', youtube: '', instagram: '' },
+  business_info: { name: 'TheDulcanDesign', email: 'thedulcandesign@gmail.com', phone: '', address: '', discord: DEFAULT_DISCORD_INVITE_URL },
+  social_links: { discord: DEFAULT_DISCORD_INVITE_URL, twitter: '', youtube: '', instagram: '' },
   contact_form: { enabled: true, recaptcha_enabled: false },
   payment_settings: { currency: 'USD', paypal_enabled: false, stripe_enabled: false },
 }
@@ -30,11 +31,15 @@ export default function AdminSettings() {
       .then(async (response) => {
         const body = await response.json()
         if (!response.ok) throw new Error(body.error || 'No se pudo cargar la configuración')
+        const discord = resolveDiscordInviteUrl(
+          body.settings?.social_links?.discord,
+          body.settings?.business_info?.discord,
+        )
         setSettings({
           ...defaults,
           ...body.settings,
-          business_info: { ...defaults.business_info, ...body.settings?.business_info },
-          social_links: { ...defaults.social_links, ...body.settings?.social_links },
+          business_info: { ...defaults.business_info, ...body.settings?.business_info, discord },
+          social_links: { ...defaults.social_links, ...body.settings?.social_links, discord },
           contact_form: { ...defaults.contact_form, ...body.settings?.contact_form },
           payment_settings: { ...defaults.payment_settings, ...body.settings?.payment_settings },
         })
@@ -46,13 +51,20 @@ export default function AdminSettings() {
   const save = async () => {
     setSaving(true)
     try {
+      const discord = settings.business_info.discord.trim().replace(/\/$/, '')
+      const normalizedSettings = {
+        ...settings,
+        business_info: { ...settings.business_info, discord },
+        social_links: { ...settings.social_links, discord },
+      }
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(normalizedSettings),
       })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'No se pudo guardar')
+      setSettings(normalizedSettings)
       success('Configuración guardada correctamente')
     } catch (err) {
       notifyError(err instanceof Error ? err.message : 'No se pudo guardar la configuración')
@@ -76,14 +88,14 @@ export default function AdminSettings() {
             <label>Teléfono<input className={inputClass} value={settings.business_info.phone} onChange={(e) => setSettings(s => ({ ...s, business_info: { ...s.business_info, phone: e.target.value } }))} /></label>
             <label>Dirección<input className={inputClass} value={settings.business_info.address} onChange={(e) => setSettings(s => ({ ...s, business_info: { ...s.business_info, address: e.target.value } }))} /></label>
           </div>
-          <label>Enlace de Discord<input type="url" className={inputClass} value={settings.business_info.discord} onChange={(e) => setSettings(s => ({ ...s, business_info: { ...s.business_info, discord: e.target.value } }))} /></label>
+          <label>Enlace de invitación de Discord<input type="url" className={inputClass} value={settings.business_info.discord} onChange={(e) => setSettings(s => ({ ...s, business_info: { ...s.business_info, discord: e.target.value }, social_links: { ...s.social_links, discord: e.target.value } }))} /><span className="mt-1 block text-sm text-muted">Este único enlace se usa en la barra superior, el menú móvil, el pie de página y las páginas de servicios.</span></label>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle>Redes Sociales</CardTitle><CardDescription>Enlaces públicos de la marca</CardDescription></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(['discord', 'twitter', 'youtube', 'instagram'] as const).map((key) => (
+          {(['twitter', 'youtube', 'instagram'] as const).map((key) => (
             <label key={key} className="capitalize">{key}<input type="url" className={inputClass} value={settings.social_links[key]} onChange={(e) => setSettings(s => ({ ...s, social_links: { ...s.social_links, [key]: e.target.value } }))} /></label>
           ))}
         </CardContent>

@@ -5,6 +5,7 @@ import SupportChatWidget from "@/components/support-chat-widget";
 import { Notifications } from "@/components/notifications";
 import PresenceTracker from "@/components/presence-tracker";
 import RecentActivityAlert from "@/components/recent-activity-alert";
+import { PublicSiteSettingsProvider } from "@/components/public-site-settings-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,11 +45,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <div className="animated-bg"></div>
         <div className="animated-bg-overlay"></div>
-        {children}
-        <SupportChatWidget />
-        <Notifications />
-        <RecentActivityAlert />
-        <PresenceTracker />
+        <PublicSiteSettingsProvider>
+          {children}
+          <SupportChatWidget />
+          <Notifications />
+          <RecentActivityAlert />
+          <PresenceTracker />
+        </PublicSiteSettingsProvider>
       </body>
     </html>
   );

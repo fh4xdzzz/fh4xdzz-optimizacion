@@ -1,8 +1,13 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { SupportChatLink } from '@/components/support-chat-trigger'
+import { usePublicSiteSettings } from '@/components/public-site-settings-provider'
 
 export default function Footer() {
+  const { discordInviteUrl } = usePublicSiteSettings()
+
   return (
     <footer className="bg-card/80 backdrop-blur-strong border-t border-border/50 mt-20">
       <div className="container mx-auto px-4 py-16">
@@ -99,7 +104,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://discord.gg/DXkEXrYRvM"
+                  href={discordInviteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-foreground transition-colors hover:scale-105 transform inline-block"

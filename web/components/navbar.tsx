@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { getSession, signOut } from '@/lib/auth-hybrid'
 import { Button } from './ui/button'
+import { usePublicSiteSettings } from '@/components/public-site-settings-provider'
 
 type Session = {
   user: { full_name?: string; email: string; role?: string }
@@ -15,9 +16,6 @@ type NavItem = {
   label: string
   emphasized?: boolean
 }
-
-const DISCORD_INVITE_URL =
-  process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || 'https://discord.gg/DXkEXrYRvM'
 
 function DiscordIcon({ className = 'h-5 w-5' }: { className?: string }) {
   return (
@@ -32,6 +30,7 @@ export default function Navbar() {
   const [session, setSession] = useState<Session | null>(null)
   const pathname = usePathname()
   const router = useRouter()
+  const { discordInviteUrl } = usePublicSiteSettings()
 
   useEffect(() => {
     const loadSession = async () => setSession(await getSession())
@@ -115,7 +114,7 @@ export default function Navbar() {
 
           <div className="hidden shrink-0 items-center gap-2 xl:flex">
             <a
-              href={DISCORD_INVITE_URL}
+              href={discordInviteUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Unirse a nuestro servidor de Discord"
@@ -163,7 +162,7 @@ export default function Navbar() {
               ))}
             </div>
             <div className="mt-3 grid gap-2 border-t border-white/10 pt-3">
-              <Button variant="outline" href={DISCORD_INVITE_URL} target="_blank" rel="noopener noreferrer" className="h-12 w-full gap-2 border-[#7289da]/40 bg-[#5865f2]/10 text-white hover:bg-[#5865f2]/20">
+              <Button variant="outline" href={discordInviteUrl} target="_blank" rel="noopener noreferrer" className="h-12 w-full gap-2 border-[#7289da]/40 bg-[#5865f2]/10 text-white hover:bg-[#5865f2]/20">
                 <DiscordIcon /> Unirme a Discord
               </Button>
               <Button variant="primary" href="/servicios" className="premium-button h-12 w-full">Ver servicios</Button>
