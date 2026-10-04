@@ -461,8 +461,8 @@ export default function SupportChatWidget() {
   }, [open, session?.id, currentUser?.role, messages])
 
   // Crear nueva sesión de chat
-  async function createSession() {
-    if (session) return session
+  async function createSession(forceNew = false) {
+    if (session && !forceNew) return session
 
     try {
       setLoading(true)
@@ -478,6 +478,7 @@ export default function SupportChatWidget() {
 
       if (response.ok) {
         const data = await response.json()
+        setMessages([])
         setSession(data.session)
         loadMessages(data.session.id)
         return data.session
@@ -525,7 +526,9 @@ export default function SupportChatWidget() {
       const data = await response.json()
       
       // Enviar mensaje con el archivo adjunto
-      const currentSession = session || await createSession()
+      const currentSession = session?.status === 'closed'
+        ? await createSession(true)
+        : session || await createSession()
       if (!currentSession) return
 
       shouldAutoScrollRef.current = true
@@ -587,7 +590,9 @@ export default function SupportChatWidget() {
       return
     }
 
-    const currentSession = session || await createSession()
+    const currentSession = session?.status === 'closed'
+      ? await createSession(true)
+      : session || await createSession()
     if (!currentSession) return
 
     try {
@@ -1053,7 +1058,9 @@ export default function SupportChatWidget() {
                 onChange={(e) => setText(e.target.value)}
                 onPaste={handlePaste}
                 placeholder={
-                  ['admin', 'staff', 'owner'].includes(currentUser?.role)
+                  session?.status === 'closed'
+                    ? 'Escribe para iniciar un nuevo soporte...'
+                    : ['admin', 'staff', 'owner'].includes(currentUser?.role)
                     ? 'Responde como agente de soporte...'
                     : 'Escribe tu mensaje...'
                 }
