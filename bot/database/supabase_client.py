@@ -219,6 +219,24 @@ class SupabaseClient:
             logger.error(f"Error obteniendo usuario por Discord ID: {e}")
             return None
 
+    def get_users_with_discord(self) -> List[Dict]:
+        """Obtener únicamente los datos necesarios para sincronizar roles."""
+        try:
+            result = self._request(
+                'GET',
+                'users',
+                query={
+                    'select': 'discord_id,role',
+                    'discord_id': 'not.is.null',
+                },
+            )
+            if isinstance(result, dict) and result.get('error'):
+                return []
+            return result if isinstance(result, list) else []
+        except Exception as e:
+            logger.error(f"Error obteniendo usuarios vinculados a Discord: {e}")
+            return []
+
     def link_discord_account(self, user_id: str, discord_id: str, discord_username: str) -> Optional[Dict]:
         """Vincular cuenta de Discord a usuario"""
         try:

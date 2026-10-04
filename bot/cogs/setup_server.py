@@ -28,6 +28,11 @@ CHANNELS = {
     'servicios': {'category': 'INFORMACIÓN', 'description': 'Información de servicios', 'type': 'text'},
     'abrir-ticket': {'category': 'TICKETS', 'description': 'Canal para abrir tickets', 'type': 'text'},
     'pedidos': {'category': 'PEDIDOS', 'description': 'Registro de pedidos', 'type': 'text'},
+    'zona-clientes': {
+        'category': 'CLIENTES',
+        'description': 'Área privada para clientes verificados de TheDulcanDesign',
+        'type': 'text',
+    },
     'soporte': {'category': 'SOPORTE', 'description': 'Soporte técnico', 'type': 'text'},
     'staff': {'category': 'STAFF', 'description': 'Comunicación del staff', 'type': 'text'},
     'logs': {'category': 'LOGS', 'description': 'Logs del servidor', 'type': 'text'},
@@ -51,7 +56,7 @@ ROLES = {
         'hoist': False,
     },
     'Soporte': {'color': 0x3498db, 'permissions': discord.Permissions.none(), 'hoist': False},
-    'Cliente': {'color': 0x2ecc71, 'permissions': discord.Permissions.none(), 'hoist': False},
+    'Cliente': {'color': 0x2ecc71, 'permissions': discord.Permissions.none(), 'hoist': True},
     'Miembro': {'color': 0x95a5a6, 'permissions': discord.Permissions.none(), 'hoist': False}
 }
 
@@ -318,6 +323,7 @@ class SetupServer(commands.Cog):
 
                 channel = await (category or guild).create_text_channel(
                     name=channel_name,
+                    topic=channel_config.get('description'),
                     overwrites=overwrites
                 )
             else:
@@ -336,6 +342,14 @@ class SetupServer(commands.Cog):
             # Verificar si ya existe
             existing = discord.utils.get(guild.roles, name=role_name)
             if existing:
+                if role_name == 'Cliente' and (
+                    existing.color.value != role_config['color'] or existing.hoist != role_config['hoist']
+                ):
+                    await existing.edit(
+                        color=discord.Color(role_config['color']),
+                        hoist=role_config['hoist'],
+                        reason='Actualizar configuración profesional de TheDulcanDesign',
+                    )
                 roles[role_name] = str(existing.id)
                 logger.info(f"Rol ya existe: {role_name}")
                 continue
@@ -364,7 +378,7 @@ class SetupServer(commands.Cog):
             if not channel:
                 continue
 
-            private_channels = {'soporte', 'pedidos', 'staff', 'logs', 'notificaciones'}
+            private_channels = {'soporte', 'pedidos', 'zona-clientes', 'staff', 'logs', 'notificaciones'}
             if channel_name in private_channels:
                 # Conservar primero el acceso del bot. Si se deniega @everyone antes,
                 # Discord puede bloquear las ediciones de permisos posteriores.
@@ -386,6 +400,8 @@ class SetupServer(commands.Cog):
                 allowed_roles = {'Owner', 'Administrador', 'Moderador', 'Staff'}
                 if channel_name == 'soporte':
                     allowed_roles.add('Soporte')
+                if channel_name == 'zona-clientes':
+                    allowed_roles.update({'Cliente', 'Soporte'})
 
                 for role_name in allowed_roles:
                     role_id = roles.get(role_name)
@@ -439,6 +455,26 @@ class SetupServer(commands.Cog):
                 embed.set_footer(text="TheDulcanDesign - Servicios Profesionales")
 
                 await services_channel.send(embed=embed)
+
+        clients_channel_id = channels.get('zona-clientes')
+        if clients_channel_id:
+            clients_channel = guild.get_channel(int(clients_channel_id))
+            if clients_channel and not clients_channel.last_message_id:
+                embed = discord.Embed(
+                    title="🌟 Área privada de clientes",
+                    description=(
+                        "Bienvenido a tu espacio exclusivo de TheDulcanDesign. "
+                        "Aquí encontrarás novedades, atención y recursos para clientes verificados."
+                    ),
+                    color=0x2ecc71,
+                )
+                embed.add_field(
+                    name="Accesos rápidos",
+                    value="Usa `/mispedidos` para consultar tus compras y `/soporte` cuando necesites ayuda.",
+                    inline=False,
+                )
+                embed.set_footer(text="TheDulcanDesign · Clientes")
+                await clients_channel.send(embed=embed)
 
         logger.info("Mensajes de bienvenida enviados")
 
