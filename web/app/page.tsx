@@ -16,6 +16,8 @@ import {
   CreditCard,
   Gauge,
   Headphones,
+  MonitorCheck,
+  PanelsTopLeft,
   Quote,
   ShieldCheck,
   SlidersHorizontal,
@@ -135,6 +137,27 @@ const benefits: Array<{ title: string; description: string; icon: LucideIcon }> 
   { title: 'Diagnóstico real', description: 'La configuración se adapta a tu equipo, conexión, plataforma y objetivos.', icon: Gauge },
   { title: 'Proceso seguro', description: 'Pago protegido, atención privada y cambios explicados con claridad.', icon: ShieldCheck },
   { title: 'Acompañamiento', description: 'No desaparecemos después de entregar: verificamos que todo quede estable.', icon: Headphones },
+]
+
+const showcaseItems: Array<{ title: string; description: string; detail: string; icon: LucideIcon }> = [
+  {
+    title: 'OBS optimizado',
+    description: 'Escenas, codificador y salida preparados para el hardware y la conexión disponibles.',
+    detail: 'Configuración y comprobación',
+    icon: Gauge,
+  },
+  {
+    title: 'Streaming organizado',
+    description: 'Un flujo visual limpio para transmitir, controlar alertas y cambiar escenas con confianza.',
+    detail: 'Flujo listo para usar',
+    icon: MonitorCheck,
+  },
+  {
+    title: 'Presencia profesional',
+    description: 'Páginas y recursos visuales coherentes con la marca, adaptados a móvil y escritorio.',
+    detail: 'Diseño adaptable',
+    icon: PanelsTopLeft,
+  },
 ]
 
 const faqs = [
@@ -493,6 +516,42 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Work samples */}
+      <section className="border-y border-white/[.07] bg-[#0b0d14]/75 px-4 py-24 md:px-8">
+        <div className="container mx-auto">
+          <div className="mb-12 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-end">
+            <div className="max-w-3xl">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[.24em] text-primary">Muestras de trabajo</p>
+              <h2 className="text-4xl font-black uppercase tracking-[-.035em] gradient-text-primary md:text-5xl">Así se ve una entrega cuidada</h2>
+              <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted md:text-lg">Ejemplos visuales del tipo de organización, claridad y acabado que buscamos en cada servicio.</p>
+            </div>
+            <Button href="/resultados" variant="outline" size="lg" className="shrink-0 border-white/15 bg-white/[.035]">
+              Ver resultados <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {showcaseItems.map(({ title, description, detail, icon: Icon }, index) => (
+              <article key={title} className="group overflow-hidden rounded-3xl border border-white/10 bg-[#11131b] transition duration-300 hover:-translate-y-1 hover:border-primary/35">
+                <div className="relative h-48 overflow-hidden border-b border-white/[.07] bg-gradient-to-br from-primary/[.18] via-[#111522] to-secondary/[.1] p-6">
+                  <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-primary/20 blur-3xl" aria-hidden="true" />
+                  <div className="relative flex h-full flex-col justify-between rounded-2xl border border-white/10 bg-[#0b0d14]/80 p-5 shadow-2xl backdrop-blur-xl">
+                    <div className="flex items-center justify-between"><Icon className="h-6 w-6 text-primary" aria-hidden="true" /><span className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-300">Preparado</span></div>
+                    <div className="space-y-2" aria-hidden="true">
+                      {[72, 88, 60].map((width, barIndex) => <div key={width} className="h-2 rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-primary to-secondary" style={{ width: `${width - index * 4 + barIndex * 2}%` }} /></div>)}
+                    </div>
+                  </div>
+                </div>
+                <div className="p-7">
+                  <p className="text-[10px] font-bold uppercase tracking-[.18em] text-primary">{detail}</p>
+                  <h3 className="mt-3 text-xl font-bold text-foreground">{title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted">{description}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>

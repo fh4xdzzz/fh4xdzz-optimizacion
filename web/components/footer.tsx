@@ -88,6 +88,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/resultados" className="inline-block transition-colors hover:text-foreground">
+                  Resultados
+                </Link>
+              </li>
+              <li>
                 <SupportChatLink className="inline-block transition-colors hover:text-foreground">
                   Contacto
                 </SupportChatLink>
