@@ -83,7 +83,6 @@ export default function Navbar() {
         ]
       : [
           { href: '/pedidos', label: 'Mis pedidos' },
-          { href: '/auth/login', label: 'Iniciar sesión' },
         ]),
   ]
 
@@ -124,7 +123,7 @@ export default function Navbar() {
               <DiscordIcon className="h-[21px] w-[21px] transition-transform group-hover:scale-110" />
             </a>
             {session && <Button variant="outline" onClick={handleLogout} className="border-white/15 bg-white/[.03]">Cerrar sesión</Button>}
-            <Button variant="primary" href="/servicios" className="premium-button">Ver servicios</Button>
+            {!session && <Button variant="primary" href="/auth/login" className="premium-button">Iniciar sesión</Button>}
           </div>
 
           <button
@@ -165,7 +164,7 @@ export default function Navbar() {
               <Button variant="outline" href={discordInviteUrl} target="_blank" rel="noopener noreferrer" className="h-12 w-full gap-2 border-[#7289da]/40 bg-[#5865f2]/10 text-white hover:bg-[#5865f2]/20">
                 <DiscordIcon /> Unirme a Discord
               </Button>
-              <Button variant="primary" href="/servicios" className="premium-button h-12 w-full">Ver servicios</Button>
+              {!session && <Button variant="primary" href="/auth/login" className="premium-button h-12 w-full">Iniciar sesión</Button>}
               {session && <Button variant="outline" className="h-12 w-full border-white/15" onClick={handleLogout}>Cerrar sesión</Button>}
             </div>
           </div>
