@@ -96,18 +96,43 @@ export async function POST(request: NextRequest) {
 
     const clientMessages = conversation.filter(item => item.sender_role === 'client').map(item => item.message)
     let intake: Intake
+    let messageType = 'text'
 
-    try {
-      const result = await generateText({
-        model: 'openai/gpt-6-luna',
-        output: Output.object({ schema: intakeSchema }),
-        system: `Eres Dulcan AI, asistente privado de soporte de TheDulcanDesign. Conversas en español claro y amable. Tu única misión es recopilar contexto para un agente humano. Pregunta una sola cosa por turno y evita repetir datos ya dados. Reúne: objetivo, equipo o hardware, sistema operativo, programa/plataforma, síntoma o error exacto, intentos realizados y urgencia. Cuando haya contexto suficiente, readyForHuman debe ser true y la respuesta debe confirmar que preparaste el resumen y que un agente continuará en este mismo chat. Nunca pidas contraseñas, tokens, claves API, números completos de tarjeta ni datos bancarios. No inventes diagnósticos, precios ni promesas. Usa texto plano, sin Markdown. Marca urgent solo ante riesgo de seguridad, cobro no reconocido o servicio crítico caído.`,
-        prompt: `Conversación:\n${conversation.map(item => `${item.sender_role}: ${item.message}`).join('\n')}\n\nGenera el siguiente turno y el resumen interno.`,
-      })
-      intake = result.output
-    } catch (error) {
-      console.error('AI support intake failed; using safe fallback:', error)
-      intake = fallbackIntake(clientMessages)
+    const client = Array.isArray(chat.users) ? chat.users[0] : chat.users
+    const clientName = client?.full_name?.trim().split(/\s+/)[0]
+      || client?.email?.split('@')[0]
+      || 'Cliente'
+
+    if (clientMessages.length === 1) {
+      intake = {
+        reply: `¡Hola, ${clientName}! 👋 Bienvenido al soporte de TheDulcanDesign. Para ayudarte mejor, completa el siguiente cuadro con los detalles de tu problema.`,
+        readyForHuman: false,
+        summary: '',
+        category: 'other',
+        priority: 'normal',
+        collected: {
+          goal: null,
+          equipment: null,
+          platform: null,
+          symptoms: null,
+          attempts: null,
+          urgency: null,
+        },
+      }
+      messageType = 'intake_prompt'
+    } else {
+      try {
+        const result = await generateText({
+          model: 'openai/gpt-6-luna',
+          output: Output.object({ schema: intakeSchema }),
+          system: `Eres Dulcan AI, asistente privado de soporte de TheDulcanDesign. Conversas en español claro y amable. Tu única misión es recopilar contexto para un agente humano. Pregunta una sola cosa por turno y evita repetir datos ya dados. Reúne: objetivo, equipo o hardware, sistema operativo, programa/plataforma, síntoma o error exacto, intentos realizados y urgencia. Cuando haya contexto suficiente, readyForHuman debe ser true y la respuesta debe confirmar que preparaste el resumen y que un agente continuará en este mismo chat. Nunca pidas contraseñas, tokens, claves API, números completos de tarjeta ni datos bancarios. No inventes diagnósticos, precios ni promesas. Usa texto plano, sin Markdown. Marca urgent solo ante riesgo de seguridad, cobro no reconocido o servicio crítico caído.`,
+          prompt: `Conversación:\n${conversation.map(item => `${item.sender_role}: ${item.message}`).join('\n')}\n\nGenera el siguiente turno y el resumen interno.`,
+        })
+        intake = result.output
+      } catch (error) {
+        console.error('AI support intake failed; using safe fallback:', error)
+        intake = fallbackIntake(clientMessages)
+      }
     }
 
     const { data: assistantMessage, error: insertError } = await supabase
@@ -118,7 +143,7 @@ export async function POST(request: NextRequest) {
         sender_id: null,
         sender_role: 'assistant',
         message: intake.reply,
-        message_type: 'text',
+        message_type: messageType,
       })
       .select()
       .single()
@@ -134,7 +159,6 @@ export async function POST(request: NextRequest) {
     }).eq('id', sessionId)
 
     if (intake.readyForHuman) {
-      const client = Array.isArray(chat.users) ? chat.users[0] : chat.users
       await getDiscordService().notifyTicketMessage({
         ticket_id: chat.conversation_number,
         customer_name: client?.full_name || client?.email || 'Cliente',

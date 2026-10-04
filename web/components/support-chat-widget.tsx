@@ -108,6 +108,8 @@ export default function SupportChatWidget() {
   const [onlineAgents, setOnlineAgents] = useState<any[]>([])
   const [assignedAgent, setAssignedAgent] = useState<Message['sender']>(null)
   const [aiTyping, setAiTyping] = useState(false)
+  const [intakeProblem, setIntakeProblem] = useState('')
+  const [submittingIntake, setSubmittingIntake] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<any>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -479,6 +481,7 @@ export default function SupportChatWidget() {
       if (response.ok) {
         const data = await response.json()
         setMessages([])
+        setIntakeProblem('')
         setSession(data.session)
         loadMessages(data.session.id)
         return data.session
@@ -579,21 +582,19 @@ export default function SupportChatWidget() {
     }
   }
 
-  // Enviar mensaje
-  async function sendMessage(e?: React.FormEvent) {
-    e?.preventDefault()
-    if (!text.trim() || loading) return
+  async function sendSupportMessage(messageText: string, clearComposer = false) {
+    if (!messageText.trim() || loading) return false
 
     // Verificar autenticación
     if (!isAuthenticated || !currentUser) {
       notifyWarning('Debes iniciar sesión para enviar mensajes')
-      return
+      return false
     }
 
     const currentSession = session?.status === 'closed'
       ? await createSession(true)
       : session || await createSession()
-    if (!currentSession) return
+    if (!currentSession) return false
 
     try {
       setLoading(true)
@@ -603,13 +604,13 @@ export default function SupportChatWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: currentSession.id,
-          message: text.trim(),
+          message: messageText.trim(),
           message_type: 'text'
         })
       })
 
       if (response.ok) {
-        setText('')
+        if (clearComposer) setText('')
         if (!currentSession.assigned_agent_id) {
           setAiTyping(true)
           try {
@@ -623,10 +624,31 @@ export default function SupportChatWidget() {
             setAiTyping(false)
           }
         }
+        return true
       }
     } catch (error) {
     } finally {
       setLoading(false)
+    }
+    return false
+  }
+
+  // Enviar mensaje desde el compositor principal
+  async function sendMessage(e?: React.FormEvent) {
+    e?.preventDefault()
+    await sendSupportMessage(text, true)
+  }
+
+  async function submitIntakeProblem(e: React.FormEvent) {
+    e.preventDefault()
+    if (!intakeProblem.trim() || submittingIntake) return
+
+    setSubmittingIntake(true)
+    try {
+      const sent = await sendSupportMessage(`Descripción del problema:\n${intakeProblem.trim()}`)
+      if (sent) setIntakeProblem('')
+    } finally {
+      setSubmittingIntake(false)
     }
   }
 
@@ -923,16 +945,20 @@ export default function SupportChatWidget() {
               </div>
             ) : null}
 
-            {messages.map((message) => {
+            {messages.map((message, messageIndex) => {
               const isClient = message.sender_role === 'client'
               const isAssistant = message.sender_role === 'assistant'
               const isOwnMessage = message.sender_id === currentUser?.id
               const isAttachment = message.message_type === 'attachment'
+              const isIntakePrompt = message.message_type === 'intake_prompt'
+              const intakeCompleted = isIntakePrompt && messages
+                .slice(messageIndex + 1)
+                .some(item => item.sender_role === 'client')
               const isImage = isAttachment && message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
               const senderName = isAssistant
                 ? 'Dulcan AI'
                 : message.sender?.full_name || message.sender?.email?.split('@')[0] || (isClient ? 'Cliente' : 'Agente de soporte')
-              const avatar = message.sender?.avatar_url || (message.sender?.discord_avatar && message.sender.id
+              const avatar = isAssistant ? '/favicon-master-1024.png' : message.sender?.avatar_url || (message.sender?.discord_avatar && message.sender.id
                 ? `https://cdn.discordapp.com/avatars/${message.sender.id}/${message.sender.discord_avatar}.png`
                 : null)
               
@@ -983,6 +1009,43 @@ export default function SupportChatWidget() {
                       <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm">
                         <LinkifiedMessage text={message.message} onInternalNavigate={() => setOpen(false)} />
                       </p>
+                    )}
+                    {isIntakePrompt && !intakeCompleted && !isSupportUser && (
+                      <form onSubmit={submitIntakeProblem} className="mt-4 rounded-2xl border border-indigo-400/30 bg-gradient-to-br from-indigo-500/15 to-violet-500/10 p-3">
+                        <div className="mb-2 flex items-center gap-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-black/30">
+                            <img src="/favicon-master-1024.png" alt="TheDulcanDesign" className="h-full w-full object-cover" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-white">Introduce tu problema</p>
+                            <p className="text-[11px] text-white/50">Incluye errores, equipo y lo que ya intentaste.</p>
+                          </div>
+                        </div>
+                        <textarea
+                          value={intakeProblem}
+                          onChange={(event) => setIntakeProblem(event.target.value)}
+                          placeholder="Describe aquí qué sucede y qué necesitas lograr..."
+                          rows={4}
+                          maxLength={2000}
+                          className="w-full resize-none rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                        <div className="mt-2 flex items-center justify-between gap-3">
+                          <span className="text-[10px] text-white/35">{intakeProblem.length}/2000</span>
+                          <button
+                            type="submit"
+                            disabled={!intakeProblem.trim() || submittingIntake || loading}
+                            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {submittingIntake ? 'Enviando...' : 'Enviar problema'}
+                            {!submittingIntake && <Send size={13} />}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                    {isIntakePrompt && intakeCompleted && (
+                      <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300">
+                        <ShieldCheck size={14} /> Problema recibido por Dulcan AI
+                      </div>
                     )}
                     <div className={`mt-1 flex items-center gap-2 text-xs ${isOwnMessage ? 'justify-end text-white/80' : 'text-[#6b7280]'}`}>
                       <span>{formatTime(message.created_at)}</span>
