@@ -1,18 +1,47 @@
+import { randomBytes, timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
+import {
+  DISCORD_OAUTH_NEXT_COOKIE,
+  DISCORD_OAUTH_STATE_COOKIE,
+  getDiscordRedirectUri,
+  getSafeNextPath,
+} from '@/lib/discord-oauth'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
+function statesMatch(received: string | null, stored: string | undefined) {
+  if (!received || !stored) return false
+  const receivedBuffer = Buffer.from(received)
+  const storedBuffer = Buffer.from(stored)
+  return receivedBuffer.length === storedBuffer.length && timingSafeEqual(receivedBuffer, storedBuffer)
+}
+
+function redirectToLogin(request: NextRequest, error: string) {
+  const response = NextResponse.redirect(new URL(`/auth/login?error=${error}`, request.url))
+  response.cookies.delete(DISCORD_OAUTH_STATE_COOKIE)
+  response.cookies.delete(DISCORD_OAUTH_NEXT_COOKIE)
+  return response
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const code = searchParams.get('code')
-    if (!code) {
-      return NextResponse.redirect(new URL('/auth/login?error=no_code', request.url))
+    const state = searchParams.get('state')
+    const storedState = request.cookies.get(DISCORD_OAUTH_STATE_COOKIE)?.value
+    if (!statesMatch(state, storedState)) {
+      return redirectToLogin(request, 'invalid_state')
     }
+
+    if (!code) {
+      return redirectToLogin(request, 'no_code')
+    }
+
+    const redirectUri = getDiscordRedirectUri(request.url)
 
     // Intercambiar el código por un token de acceso de Discord
     const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
@@ -25,15 +54,15 @@ export async function GET(request: NextRequest) {
         client_secret: process.env.DISCORD_CLIENT_SECRET!,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: 'https://www.thedulcandesign.com/api/auth/discord/callback',
+        redirect_uri: redirectUri,
       }),
     })
 
     const tokenData = await tokenResponse.json()
 
-    if (tokenData.error) {
-      console.error('Discord token error:', tokenData)
-      return NextResponse.redirect(new URL('/auth/login?error=token_error', request.url))
+    if (!tokenResponse.ok || tokenData.error || typeof tokenData.access_token !== 'string') {
+      console.error('Discord token exchange failed:', tokenResponse.status)
+      return redirectToLogin(request, 'token_error')
     }
 
     // Obtener información del usuario de Discord
@@ -44,6 +73,10 @@ export async function GET(request: NextRequest) {
     })
 
     const discordUser = await userResponse.json()
+    if (!userResponse.ok || typeof discordUser.id !== 'string' || typeof discordUser.username !== 'string') {
+      console.error('Discord user request failed:', userResponse.status)
+      return redirectToLogin(request, 'token_error')
+    }
     // Buscar usuario por Discord ID
     const { data: existingUser } = await supabaseAdmin
       .from('users')
@@ -66,7 +99,7 @@ export async function GET(request: NextRequest) {
       // Este método evita problemas de SMTP configuración en Supabase
       console.log('Creating new user from Discord OAuth using generateLink signup')
       // Generar contraseña temporal
-      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!1A'
+      const tempPassword = `${randomBytes(24).toString('base64url')}!1A`
       
       // Usar generateLink con tipo signup para crear usuario y obtener token
       const { data: signupLink, error: signupError } = await supabaseAdmin.auth.admin.generateLink({
@@ -95,14 +128,14 @@ export async function GET(request: NextRequest) {
         
         if (listError) {
           console.error('Error listing users:', listError)
-          return NextResponse.redirect(new URL('/auth/login?error=list_users_error', request.url))
+          return redirectToLogin(request, 'list_users_error')
         }
 
         const existingAuthUser = users.users.find(u => u.email === userEmailToUse)
         
         if (!existingAuthUser) {
           console.error('User not found in Supabase Auth despite email_exists error')
-          return NextResponse.redirect(new URL('/auth/login?error=user_not_found', request.url))
+          return redirectToLogin(request, 'user_not_found')
         }
 
         console.log('Found existing auth user:', existingAuthUser.id)
@@ -155,7 +188,7 @@ export async function GET(request: NextRequest) {
 
           if (dbError) {
             console.error('Error creating user in database:', dbError)
-            return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+            return redirectToLogin(request, 'db_error')
           }
 
           userId = existingAuthUser.id
@@ -168,7 +201,7 @@ export async function GET(request: NextRequest) {
       } else if (signupError || !signupLink?.user?.id) {
         console.error('Error creating Supabase user via signup link:', signupError)
         console.error('Error details:', JSON.stringify(signupError, null, 2))
-        return NextResponse.redirect(new URL('/auth/login?error=create_user_error', request.url))
+        return redirectToLogin(request, 'create_user_error')
       }
 
       // Only execute this block if user was NOT handled in the email_exists block
@@ -194,7 +227,7 @@ export async function GET(request: NextRequest) {
 
         if (dbError) {
           console.error('Error creating or updating user profile:', dbError)
-          return NextResponse.redirect(new URL('/auth/login?error=db_error', request.url))
+          return redirectToLogin(request, 'db_error')
         }
 
         console.log('User profile synchronized successfully')
@@ -202,7 +235,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Crear respuesta de redirección
-    const response = NextResponse.redirect(new URL('/perfil', request.url))
+    const next = getSafeNextPath(request.cookies.get(DISCORD_OAUTH_NEXT_COOKIE)?.value)
+    const response = NextResponse.redirect(new URL(next, request.url))
+    response.cookies.delete(DISCORD_OAUTH_STATE_COOKIE)
+    response.cookies.delete(DISCORD_OAUTH_NEXT_COOKIE)
 
     // Usar createServerClient para establecer la sesión
     const supabaseSSR = createServerClient(
@@ -233,7 +269,7 @@ export async function GET(request: NextRequest) {
     if (linkError || !magicLink?.properties?.hashed_token) {
       console.error('Error generating magic link:', linkError)
       console.error('Link error details:', JSON.stringify(linkError, null, 2))
-      return NextResponse.redirect(new URL('/auth/login?error=magiclink_error', request.url))
+      return redirectToLogin(request, 'magiclink_error')
     }
 
     console.log('Magic link generated, verifying OTP...')
@@ -246,14 +282,14 @@ export async function GET(request: NextRequest) {
     if (sessionError || !sessionData.session) {
       console.error('Error verifying OTP:', sessionError)
       console.error('Session error details:', JSON.stringify(sessionError, null, 2))
-      return NextResponse.redirect(new URL('/auth/login?error=otp_error', request.url))
+      return redirectToLogin(request, 'otp_error')
     }
 
     console.log('Session created successfully via Discord login')
     return response
   } catch (error) {
     console.error('Discord OAuth error:', error)
-    return NextResponse.redirect(new URL('/auth/login?error=oauth_error', request.url))
+    return redirectToLogin(request, 'oauth_error')
   }
 }
 

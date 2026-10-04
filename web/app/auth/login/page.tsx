@@ -1,15 +1,13 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 function LoginForm() {
   const [error, setError] = useState('')
-  const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/dashboard'
   const errorCode = searchParams.get('error')
@@ -19,6 +17,8 @@ function LoginForm() {
     switch (code) {
       case 'no_code':
         return 'No se recibió el código de autorización de Discord'
+      case 'invalid_state':
+        return 'La solicitud de acceso expiró o no es válida. Inténtalo de nuevo.'
       case 'token_error':
         return 'Error al intercambiar el código por un token de acceso'
       case 'create_user_error':
@@ -44,11 +44,8 @@ function LoginForm() {
       return
     }
 
-    const scopes = ['identify', 'email']
-    const redirectUri = 'https://www.thedulcandesign.com/api/auth/discord/callback'
-    const authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join(' ')}`
-
-    window.location.href = authUrl
+    const next = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard'
+    window.location.assign(new URL(`/api/auth/discord/start?next=${encodeURIComponent(next)}`, window.location.origin))
   }
 
   return (

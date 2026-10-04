@@ -150,12 +150,7 @@ export function signInWithDiscord() {
     throw new Error('Discord OAuth no está configurado')
   }
 
-  const scopes = ['identify', 'email']
-  const redirectUri = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || 
-                      'https://www.thedulcandesign.com/api/auth/discord/callback'
-  const authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join(' ')}`
-
-  window.location.href = authUrl
+  window.location.assign(new URL('/api/auth/discord/start', window.location.origin))
 }
 
 // Cerrar sesión (según modo configurado)

@@ -31,6 +31,8 @@ export default function ProfilePage() {
     const errorParam = searchParams.get('error')
 
     if (success === 'discord_linked') {
+      // El mensaje proviene del resultado de una navegación OAuth externa.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuccess('¡Cuenta de Discord vinculada exitosamente!')
       // Limpiar URL
       window.history.replaceState({}, '', '/perfil')
@@ -97,11 +99,7 @@ export default function ProfilePage() {
       return
     }
 
-    const scopes = ['identify', 'email']
-    const redirectUri = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || 'http://localhost:3000/api/auth/discord/callback'
-    const authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join(' ')}`
-    
-    window.location.href = authUrl
+    window.location.assign(new URL('/api/auth/discord/start?next=/perfil', window.location.origin))
   }
 
   const handleUnlinkDiscord = async () => {
@@ -135,7 +133,7 @@ export default function ProfilePage() {
           discord_username: null,
         }
       })
-    } catch (err) {
+    } catch {
       setError('Error al desvincular cuenta de Discord')
     } finally {
       setLoading(false)
@@ -173,6 +171,12 @@ export default function ProfilePage() {
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm mb-6">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 px-4 py-2 rounded-lg text-sm mb-6">
+              {success}
             </div>
           )}
 
