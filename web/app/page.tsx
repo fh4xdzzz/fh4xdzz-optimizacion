@@ -6,6 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { SupportChatButton } from '@/components/support-chat-trigger'
+import { ResultDeliveryPreview } from '@/components/result-delivery-preview'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -536,13 +537,11 @@ export default function Home() {
           <div className="grid gap-6 lg:grid-cols-3">
             {showcaseItems.map(({ title, description, detail, icon: Icon }, index) => (
               <article key={title} className="group overflow-hidden rounded-3xl border border-white/10 bg-[#11131b] transition duration-300 hover:-translate-y-1 hover:border-primary/35">
-                <div className="relative h-48 overflow-hidden border-b border-white/[.07] bg-gradient-to-br from-primary/[.18] via-[#111522] to-secondary/[.1] p-6">
+                <div className="relative h-56 overflow-hidden border-b border-white/[.07] bg-gradient-to-br from-primary/[.18] via-[#111522] to-secondary/[.1] p-5">
                   <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-primary/20 blur-3xl" aria-hidden="true" />
-                  <div className="relative flex h-full flex-col justify-between rounded-2xl border border-white/10 bg-[#0b0d14]/80 p-5 shadow-2xl backdrop-blur-xl">
+                  <div className="relative h-full rounded-2xl border border-white/10 bg-[#0b0d14]/80 p-4 shadow-2xl backdrop-blur-xl">
                     <div className="flex items-center justify-between"><Icon className="h-6 w-6 text-primary" aria-hidden="true" /><span className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-300">Preparado</span></div>
-                    <div className="space-y-2" aria-hidden="true">
-                      {[72, 88, 60].map((width, barIndex) => <div key={width} className="h-2 rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-primary to-secondary" style={{ width: `${width - index * 4 + barIndex * 2}%` }} /></div>)}
-                    </div>
+                    <ResultDeliveryPreview index={index} accent="from-primary to-secondary" compact />
                   </div>
                 </div>
                 <div className="p-7">
