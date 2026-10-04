@@ -21,6 +21,13 @@ interface User {
   online?: boolean
 }
 
+interface SupportAgent {
+  id: string
+  full_name?: string | null
+  email?: string
+  online?: boolean
+}
+
 interface Order {
   id: string
   order_number: string
@@ -101,6 +108,7 @@ interface ChatMessage {
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
+  const [supportAgents, setSupportAgents] = useState<SupportAgent[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
@@ -190,6 +198,18 @@ export default function AdminPage() {
         }
       } catch {
         notifyError('No se pudieron cargar los servicios del panel')
+      }
+    } else {
+      // Staff solo recibe la lista pública y reducida de agentes disponibles,
+      // necesaria para transferir chats. No se carga el directorio de usuarios.
+      try {
+        const queueResponse = await fetch('/api/chat/queue', { cache: 'no-store' })
+        if (queueResponse.ok) {
+          const queuePayload = await queueResponse.json()
+          setSupportAgents(queuePayload.agents || [])
+        }
+      } catch {
+        // La conversación sigue disponible aunque la lista de transferencia falle.
       }
     }
 
@@ -1262,22 +1282,22 @@ export default function AdminPage() {
                           </button>
                           {selectedChat.assigned_agent_id === currentUserId && selectedChat.status !== 'closed' && (
                             <>
-                              {userRole !== 'staff' && <><select
+                              <select
                                 value={transferAgentId}
                                 onChange={(event) => setTransferAgentId(event.target.value)}
                                 className="rounded-lg border border-[#333333] bg-[#0a0a0a] px-3 py-2 text-sm text-[#ededed]"
                                 aria-label="Agente de destino"
                               >
                                 <option value="">Transferir a...</option>
-                                {users
-                                  .filter(user => ['admin', 'staff', 'owner'].includes(user.role) && user.id !== currentUserId)
+                                {(userRole === 'staff' ? supportAgents : users)
+                                  .filter(user => user.id !== currentUserId)
                                   .map(user => {
                                     const isBusy = chatSessions.some(chat => (
                                       chat.assigned_agent_id === user.id && chat.status !== 'closed' && chat.id !== selectedChat.id
                                     ))
                                     return (
                                       <option key={user.id} value={user.id} disabled={isBusy}>
-                                        {user.full_name || user.email}{isBusy ? ' · ocupado' : user.online ? ' · disponible' : ' · offline'}
+                                        {user.full_name || user.email || 'Agente de soporte'}{isBusy ? ' · ocupado' : user.online ? ' · disponible' : ' · offline'}
                                       </option>
                                     )
                                   })}
@@ -1290,7 +1310,6 @@ export default function AdminPage() {
                               >
                                 Transferir
                               </button>
-                              </>}
                               <button
                                 onClick={() => handleCloseChat(selectedChat.id)}
                                 className="px-4 py-2 bg-red-600 text-white rounded-lg transition-colors"
