@@ -36,26 +36,18 @@ CHANNELS = {
 
 # Roles sugeridos
 ROLES = {
-    'Owner': {'color': 0x000000, 'permissions': discord.Permissions.all(), 'hoist': True},
-    'Administrador': {'color': 0xff0000, 'permissions': discord.Permissions.all(), 'hoist': False},
+    # Los permisos sensibles se asignan manualmente por el dueño del servidor.
+    # El asistente solo concede acceso a los canales privados que crea.
+    'Owner': {'color': 0x000000, 'permissions': discord.Permissions.none(), 'hoist': True},
+    'Administrador': {'color': 0xff0000, 'permissions': discord.Permissions.none(), 'hoist': False},
     'Moderador': {
         'color': 0x00ffff,
-        'permissions': discord.Permissions(
-            kick_members=True,
-            ban_members=True,
-            manage_messages=True,
-            moderate_members=True,
-            view_audit_log=True,
-        ),
+        'permissions': discord.Permissions.none(),
         'hoist': False,
     },
     'Staff': {
         'color': 0x9b59b6,
-        'permissions': discord.Permissions(
-            manage_messages=True,
-            moderate_members=True,
-            view_audit_log=True,
-        ),
+        'permissions': discord.Permissions.none(),
         'hoist': False,
     },
     'Soporte': {'color': 0x3498db, 'permissions': discord.Permissions.none(), 'hoist': False},
