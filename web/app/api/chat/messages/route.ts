@@ -255,6 +255,7 @@ export async function POST(request: NextRequest) {
     // detalle del soporte, sin generar más preguntas automáticas.
     if (userRole === 'client' && message.trim().startsWith('Descripción del problema:')) {
       const summary = message.trim().replace(/^Descripción del problema:\s*/i, '').slice(0, 1200)
+      const farewell = 'Gracias, ya recibimos tu solicitud. Un agente te responderá en breve. Normalmente respondemos en menos de 5 minutos.'
       const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
       if (serviceUrl && serviceKey) {
@@ -266,6 +267,26 @@ export async function POST(request: NextRequest) {
           ai_summary: summary,
           ai_intake: { problem: summary },
         }).eq('id', session_id).eq('client_id', session.user.id)
+
+        const { data: existingFarewell } = await serviceSupabase
+          .from('chat_messages')
+          .select('id')
+          .eq('session_id', session_id)
+          .eq('sender_role', 'assistant')
+          .eq('message', farewell)
+          .limit(1)
+          .maybeSingle()
+
+        if (!existingFarewell) {
+          await serviceSupabase.from('chat_messages').insert({
+            id: crypto.randomUUID(),
+            session_id,
+            sender_id: null,
+            sender_role: 'assistant',
+            message: farewell,
+            message_type: 'text',
+          })
+        }
       }
     }
 

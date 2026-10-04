@@ -671,6 +671,7 @@ export default function AdminPage() {
         const data = await response.json()
         await loadAdminData()
         setSelectedChat(current => current?.id === sessionId ? { ...current, ...data.session } : current)
+        window.dispatchEvent(new CustomEvent('support-chat-claimed', { detail: { sessionId } }))
         notifySuccess('Chat reclamado exitosamente')
       } else {
         const data = await response.json()

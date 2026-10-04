@@ -121,6 +121,7 @@ export default function SupportChatWidget() {
   const shouldAutoScrollRef = useRef(true)
   const aiRequestSessionRef = useRef<string | null>(null)
   const aiRecoveryAttemptedRef = useRef(new Set<string>())
+  const markingReadRef = useRef(false)
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
 
   const openRef = useRef(open)
@@ -136,7 +137,17 @@ export default function SupportChatWidget() {
       if (detail?.message) setText(detail.message)
     }
     window.addEventListener('open-support-chat', openFromOrder)
-    return () => window.removeEventListener('open-support-chat', openFromOrder)
+    const openClaimedSupport = () => {
+      setOpen(true)
+      setTab('chat')
+      setUnread(0)
+      void loadUserSession()
+    }
+    window.addEventListener('support-chat-claimed', openClaimedSupport)
+    return () => {
+      window.removeEventListener('open-support-chat', openFromOrder)
+      window.removeEventListener('support-chat-claimed', openClaimedSupport)
+    }
   }, [])
 
   // Estado para emoji picker y subida de archivos
@@ -254,10 +265,14 @@ export default function SupportChatWidget() {
           return
         }
 
+        const isNewAssignment = session?.id !== assignedSession.id
         setSession(assignedSession)
-        if (session?.id !== assignedSession.id) {
+        if (isNewAssignment) {
           shouldAutoScrollRef.current = true
           await loadMessages(assignedSession.id)
+          setTab('chat')
+          setUnread(0)
+          setOpen(true)
         }
       } catch {
         // Realtime seguirá actualizando la sesión si una consulta puntual falla.
@@ -513,11 +528,26 @@ export default function SupportChatWidget() {
       || !messages.some(message => message.sender_role === 'client' && !message.read_at)
     ) return
 
+    if (markingReadRef.current) return
+    markingReadRef.current = true
     fetch('/api/chat/messages', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: session.id }),
-    }).catch(() => {})
+    })
+      .then(async response => {
+        if (!response.ok) return
+        const result = await response.json()
+        if (!result.read_at) return
+        setMessages(current => current.map(message => (
+          message.sender_role === 'client' && !message.read_at
+            ? { ...message, read_at: result.read_at }
+            : message
+        )))
+      })
+      .finally(() => {
+        markingReadRef.current = false
+      })
   }, [open, session?.id, session?.status, session?.assigned_agent_id, currentUser?.id, currentUser?.role, messages])
 
   // Crear nueva sesión de chat
