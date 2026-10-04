@@ -12,6 +12,7 @@ import json
 import asyncio
 import random
 from collections import defaultdict
+from utils.guilds import get_configured_guild, is_configured_guild
 
 # Import Supabase client
 from database.supabase_client import get_supabase_client
@@ -58,6 +59,12 @@ bot = commands.Bot(
     description="TheDulcanDesign - Sistema Profesional de Servicios e Integración Web"
 )
 
+
+@bot.check
+async def official_guild_only(ctx):
+    """Impedir que los comandos heredados operen en servidores antiguos."""
+    return ctx.guild is None or is_configured_guild(ctx.guild)
+
 # Import event processor
 from event_processor import EventProcessor
 event_processor = None
@@ -85,15 +92,20 @@ async def configured_channel(guild, key, fallback_name):
 
 
 async def sync_application_commands():
-    """Reemplazar comandos antiguos y publicar los actuales en cada servidor."""
-    # Actualiza también el registro global para retirar comandos obsoletos.
-    global_commands = await bot.tree.sync()
+    """Publicar comandos exclusivamente en el servidor oficial."""
     guild_results = {}
-    for guild in bot.guilds:
+    guild = get_configured_guild(bot)
+    if guild:
         bot.tree.copy_global_to(guild=guild)
         synced = await bot.tree.sync(guild=guild)
         guild_results[guild.id] = len(synced)
-    return len(global_commands), guild_results
+        # Retirar el registro global evita que los comandos aparezcan en el
+        # servidor anterior. La copia del servidor oficial permanece activa.
+        bot.tree.clear_commands(guild=None)
+        await bot.tree.sync()
+    else:
+        logger.error('El servidor configurado no está disponible; no se sincronizaron comandos locales')
+    return 0, guild_results
 
 # Storage (en produccion usar Supabase)
 tickets = {}
@@ -268,6 +280,11 @@ async def notify_order_status_update(order_data):
 async def on_ready():
     logger.info(f'Bot logged in as {bot.user.name} (ID: {bot.user.id})')
     logger.info(f'Connected to {len(bot.guilds)} guilds')
+    configured = get_configured_guild(bot)
+    if configured:
+        logger.info('Servidor oficial activo: %s (%s)', configured.name, configured.id)
+    else:
+        logger.error('El servidor oficial configurado no está conectado')
     logger.info('------')
 
     # Inicializar EventProcessor
@@ -312,6 +329,9 @@ async def on_ready():
 @commands.has_permissions(administrator=True)
 async def synchronize_commands(ctx):
     """Forzar la publicación de comandos slash en el servidor actual."""
+    if not is_configured_guild(ctx.guild):
+        await ctx.send('❌ Este bot sólo funciona en el servidor oficial de TheDulcanDesign.')
+        return
     status = await ctx.send('🔄 Sincronizando comandos...')
     try:
         bot.tree.copy_global_to(guild=ctx.guild)

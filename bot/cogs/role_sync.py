@@ -9,6 +9,7 @@ from discord.ext import commands, tasks
 from typing import Optional
 from database.supabase_client import get_supabase_client
 from utils.logger import logger
+from utils.guilds import get_configured_guild, is_configured_guild
 
 
 # Supabase usa cuatro niveles de acceso. Discord puede tener varios roles
@@ -237,6 +238,8 @@ class RoleSync(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         """Dar el rol al entrar si la cuenta de Discord ya está vinculada."""
+        if not is_configured_guild(member.guild):
+            return
         try:
             await self.sync_member_from_web(member)
         except Exception as error:
@@ -248,7 +251,8 @@ class RoleSync(commands.Cog):
         if self._sync_lock.locked():
             return
         async with self._sync_lock:
-            for guild in self.bot.guilds:
+            guild = get_configured_guild(self.bot)
+            for guild in [guild] if guild else []:
                 try:
                     await self.ensure_client_area(guild)
                     if not self.supabase.enabled:

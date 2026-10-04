@@ -12,6 +12,7 @@ from typing import Dict, Any
 from urllib.parse import urlencode
 from utils.logger import logger
 from database.supabase_client import get_supabase_client
+from utils.guilds import get_configured_guild
 
 class EventProcessor:
     """Procesador de eventos para Discord"""
@@ -327,7 +328,8 @@ class EventProcessor:
             'logs': 'logs_channel_id',
         }
         delivered = False
-        for guild in self.bot.guilds:
+        guild = get_configured_guild(self.bot)
+        for guild in [guild] if guild else []:
             settings = await self.get_guild_config(guild.id)
             channel_id = settings.get(config_keys[destination])
             channel = guild.get_channel(int(channel_id)) if channel_id else None
@@ -362,22 +364,24 @@ class EventProcessor:
     async def send_to_channel(self, channel_name: str, embed: discord.Embed):
         """Enviar embed a un canal específico"""
         try:
-            # Buscar el canal en todos los servidores del bot
-            for guild in self.bot.guilds:
+            # Buscar el canal sólo en el servidor oficial configurado.
+            guild = get_configured_guild(self.bot)
+            for guild in [guild] if guild else []:
                 channel = discord.utils.get(guild.text_channels, name=channel_name)
                 if channel:
                     await channel.send(embed=embed)
                     logger.info(f"Embed enviado a #{channel_name} en {guild.name}")
                     return
 
-            logger.warning(f"Canal #{channel_name} no encontrado en ningún servidor")
+            logger.warning(f"Canal #{channel_name} no encontrado en el servidor oficial")
         except Exception as e:
             logger.error(f"Error enviando a canal #{channel_name}: {e}")
 
     async def notify_support_team(self, embed: discord.Embed):
         """Enviar por DM sólo a staff, admin y owner."""
         try:
-            for guild in self.bot.guilds:
+            guild = get_configured_guild(self.bot)
+            for guild in [guild] if guild else []:
                 allowed_names = {'staff', 'admin', 'owner', 'soporte'}
                 members_to_notify = {
                     member for member in guild.members
