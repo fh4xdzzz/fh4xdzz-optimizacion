@@ -366,6 +366,17 @@ class SetupServer(commands.Cog):
 
             private_channels = {'soporte', 'pedidos', 'staff', 'logs', 'notificaciones'}
             if channel_name in private_channels:
+                # Conservar primero el acceso del bot. Si se deniega @everyone antes,
+                # Discord puede bloquear las ediciones de permisos posteriores.
+                if guild.me:
+                    await channel.set_permissions(
+                        guild.me,
+                        view_channel=True,
+                        read_messages=True,
+                        send_messages=True,
+                        read_message_history=True,
+                    )
+
                 await channel.set_permissions(
                     guild.default_role,
                     view_channel=False,
@@ -387,15 +398,6 @@ class SetupServer(commands.Cog):
                             send_messages=True,
                             read_message_history=True,
                         )
-
-                if guild.me:
-                    await channel.set_permissions(
-                        guild.me,
-                        view_channel=True,
-                        read_messages=True,
-                        send_messages=True,
-                        read_message_history=True,
-                    )
 
         logger.info("Permisos configurados")
 
