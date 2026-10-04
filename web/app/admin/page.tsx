@@ -131,7 +131,7 @@ export default function AdminPage() {
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
   const typingChannelRef = useRef<RealtimeChannel | null>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  
+
   // Support tab filters and search
   const [supportFilter, setSupportFilter] = useState<'all' | 'active' | 'waiting' | 'closed'>('all')
   const [supportSearch, setSupportSearch] = useState('')
@@ -142,53 +142,55 @@ export default function AdminPage() {
   const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
   const supabase = createClient()
 
-  const loadAdminData = async () => {
+  const loadAdminData = async (supportOnly = userRole === 'staff') => {
     const supabase = createClient()
 
-    // Cargar usuarios
-    const { data: usersData } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (usersData) setUsers(usersData)
+    if (!supportOnly) {
+      // Estos datos son exclusivos del panel administrativo. Staff no los
+      // solicita ni los recibe en el navegador.
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (usersData) setUsers(usersData)
 
-    // Cargar pedidos
-    const { data: ordersData } = await supabase
-      .from('orders')
-      .select('*, services(name)')
-      .neq('status', 'pending')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-    if (ordersData) {
-      setOrders(ordersData.map((order: any) => ({
-        id: order.id,
-        order_number: order.order_number,
-        user_id: order.user_id,
-        service_name: order.services?.name || 'Servicio desconocido',
-        status: order.status,
-        created_at: order.created_at,
-        client_name: order.client_name,
-        client_email: order.client_email,
-        description: order.description,
-        notes: order.notes,
-        assigned_to: order.assigned_to,
-        estimated_completion: order.estimated_completion,
-        updated_at: order.updated_at,
-      })))
-    }
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('*, services(name)')
+        .neq('status', 'pending')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      if (ordersData) {
+        setOrders(ordersData.map((order: any) => ({
+          id: order.id,
+          order_number: order.order_number,
+          user_id: order.user_id,
+          service_name: order.services?.name || 'Servicio desconocido',
+          status: order.status,
+          created_at: order.created_at,
+          client_name: order.client_name,
+          client_email: order.client_email,
+          description: order.description,
+          notes: order.notes,
+          assigned_to: order.assigned_to,
+          estimated_completion: order.estimated_completion,
+          updated_at: order.updated_at,
+        })))
+      }
 
-    // Cargar todos los servicios desde el servidor. La consulta pública de
-    // Supabase oculta los inactivos, pero el panel debe poder reactivarlos.
-    try {
-      const servicesResponse = await fetch('/api/admin/services', { cache: 'no-store' })
-      if (servicesResponse.ok) {
-        const servicesPayload = await servicesResponse.json()
-        setServices(servicesPayload.services || [])
-      } else {
+      // La consulta pública de Supabase oculta los servicios inactivos, pero
+      // el panel administrativo debe poder reactivarlos.
+      try {
+        const servicesResponse = await fetch('/api/admin/services', { cache: 'no-store' })
+        if (servicesResponse.ok) {
+          const servicesPayload = await servicesResponse.json()
+          setServices(servicesPayload.services || [])
+        } else {
+          notifyError('No se pudieron cargar los servicios del panel')
+        }
+      } catch {
         notifyError('No se pudieron cargar los servicios del panel')
       }
-    } catch {
-      notifyError('No se pudieron cargar los servicios del panel')
     }
 
     // Cargar sesiones de chat (todas, filtrar en código)
@@ -246,19 +248,20 @@ export default function AdminPage() {
         return
       }
 
-      // Verificar si es admin o owner
+      // Los administradores ven todo el panel. Staff entra únicamente a soporte.
       const role = session.user.role as string || 'client'
       setUserRole(role as 'client' | 'admin' | 'staff' | 'owner')
       setCurrentUserId(session.user.id)
 
-      if (role !== 'admin' && role !== 'owner') {
+      if (!['staff', 'admin', 'owner'].includes(role)) {
         router.push('/dashboard')
         return
       }
 
-      // Cargar datos de administración
+      if (role === 'staff') setActiveTab('support')
+
       if (!isDemo) {
-        await loadAdminData()
+        await loadAdminData(role === 'staff')
       }
 
       setLoading(false)
@@ -269,7 +272,7 @@ export default function AdminPage() {
 
   // Suscribirse a cambios en tiempo real para chat sessions
   useEffect(() => {
-    if (isDemo) return
+    if (isDemo || !['staff', 'admin', 'owner'].includes(userRole)) return
 
     const channel = supabase
       .channel('admin-chat-sessions')
@@ -286,11 +289,11 @@ export default function AdminPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isDemo])
+  }, [isDemo, userRole])
 
   // Suscribirse a cambios en tiempo real para usuarios
   useEffect(() => {
-    if (isDemo) return
+    if (isDemo || (userRole !== 'admin' && userRole !== 'owner')) return
 
     const channel = supabase
       .channel('admin-users')
@@ -307,11 +310,11 @@ export default function AdminPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isDemo])
+  }, [isDemo, userRole])
 
   // Suscribirse a cambios en tiempo real para pedidos
   useEffect(() => {
-    if (isDemo) return
+    if (isDemo || (userRole !== 'admin' && userRole !== 'owner')) return
 
     const channel = supabase
       .channel('admin-orders')
@@ -320,7 +323,7 @@ export default function AdminPage() {
         schema: 'public',
         table: 'orders'
       }, (payload) => {
-        
+
         // Recargar si cambia deleted_at (soft delete)
         if (payload.eventType === 'UPDATE' && payload.new?.deleted_at !== payload.old?.deleted_at) {
           loadAdminData()
@@ -334,11 +337,11 @@ export default function AdminPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isDemo])
+  }, [isDemo, userRole])
 
   // Suscribirse a cambios en tiempo real para servicios
   useEffect(() => {
-    if (isDemo) return
+    if (isDemo || (userRole !== 'admin' && userRole !== 'owner')) return
 
     const channel = supabase
       .channel('admin-services')
@@ -355,7 +358,7 @@ export default function AdminPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isDemo])
+  }, [isDemo, userRole])
 
   // Suscribirse a cambios en tiempo real para chat messages
   useEffect(() => {
@@ -584,7 +587,7 @@ export default function AdminPage() {
   const loadLastMessages = async (sessions: ChatSession[]) => {
     const supabase = createClient()
     const lastMessagesMap: Record<string, ChatMessage> = {}
-    
+
     for (const session of sessions) {
       const { data: lastMessage } = await supabase
         .from('chat_messages')
@@ -592,12 +595,12 @@ export default function AdminPage() {
         .eq('session_id', session.id)
         .order('created_at', { ascending: false })
         .limit(1)
-      
+
       if (lastMessage && lastMessage.length > 0) {
         lastMessagesMap[session.id] = lastMessage[0]
       }
     }
-    
+
     setLastMessages(lastMessagesMap)
   }
 
@@ -666,14 +669,14 @@ export default function AdminPage() {
 
       if (response.ok) {
         const data = await response.json()
-        
+
         // Recargar datos para actualizar las listas
         await loadAdminData()
-        
+
         // Limpiar selección
         setSelectedChat(null)
         setChatMessages([])
-        
+
         notifySuccess('Chat cerrado exitosamente')
       } else {
         const errorData = await response.json()
@@ -807,22 +810,22 @@ export default function AdminPage() {
   // Filtrar, buscar y ordenar sesiones de chat
   const getFilteredAndSortedSessions = () => {
     let filtered = supportFilter === 'closed' ? [...chatHistory] : [...chatSessions]
-    
+
     // Filtrar por estado
     if (supportFilter !== 'all') {
       filtered = filtered.filter(s => s.status === supportFilter)
     }
-    
+
     // Buscar por número de conversación, nombre o email
     if (supportSearch.trim()) {
       const searchLower = supportSearch.toLowerCase()
-      filtered = filtered.filter(s => 
+      filtered = filtered.filter(s =>
         s.conversation_number.toLowerCase().includes(searchLower) ||
         (s.client_name || '').toLowerCase().includes(searchLower) ||
         (s.client_email || '').toLowerCase().includes(searchLower)
       )
     }
-    
+
     // Ordenar
     filtered.sort((a, b) => {
       if (supportSort === 'date') {
@@ -835,21 +838,21 @@ export default function AdminPage() {
       }
       return 0
     })
-    
+
     return filtered
   }
 
   const getTimeSinceLastMessage = (sessionId: string) => {
     const lastMsg = lastMessages[sessionId]
     if (!lastMsg) return null
-    
+
     const now = new Date()
     const lastMsgTime = new Date(lastMsg.created_at)
     const diffMs = now.getTime() - lastMsgTime.getTime()
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMins / 60)
     const diffDays = Math.floor(diffHours / 24)
-    
+
     if (diffMins < 1) return 'Ahora'
     if (diffMins < 60) return `${diffMins}m`
     if (diffHours < 24) return `${diffHours}h`
@@ -895,9 +898,13 @@ export default function AdminPage() {
         <div className="container mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-2 gradient-text-primary animate-fade-in-up">Panel de Administración</h1>
+              <h1 className="text-4xl md:text-5xl font-bold mb-2 gradient-text-primary animate-fade-in-up">
+                {userRole === 'staff' ? 'Panel de Soporte' : 'Panel de Administración'}
+              </h1>
               <p className="text-muted text-lg text-headline">
-                Gestiona usuarios, pedidos, servicios y configuraciones
+                {userRole === 'staff'
+                  ? 'Responde y gestiona conversaciones de soporte'
+                  : 'Gestiona usuarios, pedidos, servicios y configuraciones'}
                 {isDemo && ' (Modo Demo)'}
               </p>
             </div>
@@ -911,7 +918,7 @@ export default function AdminPage() {
 
           {/* Tabs */}
           <div className="flex flex-wrap gap-3 mb-8 border-b border-border/50 pb-6 relative z-30">
-            <button
+            {userRole !== 'staff' && <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'overview'
                   ? 'bg-primary text-white'
@@ -920,8 +927,8 @@ export default function AdminPage() {
               onClick={() => setActiveTab('overview')}
             >
               Resumen
-            </button>
-            <button
+            </button>}
+            {userRole !== 'staff' && <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'orders'
                   ? 'bg-primary text-white'
@@ -930,8 +937,8 @@ export default function AdminPage() {
               onClick={() => setActiveTab('orders')}
             >
               Pedidos ({activeOrders.length})
-            </button>
-            <button
+            </button>}
+            {userRole !== 'staff' && <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'services'
                   ? 'bg-primary text-white'
@@ -940,7 +947,7 @@ export default function AdminPage() {
               onClick={() => setActiveTab('services')}
             >
               Servicios ({services.length})
-            </button>
+            </button>}
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'support'
@@ -951,7 +958,7 @@ export default function AdminPage() {
             >
               Soporte
             </button>
-            <button
+            {userRole !== 'staff' && <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'history'
                   ? 'bg-primary text-white'
@@ -960,11 +967,11 @@ export default function AdminPage() {
               onClick={() => setActiveTab('history')}
             >
               Historial ({orderHistory.length})
-            </button>
+            </button>}
           </div>
 
           {/* Overview Tab */}
-          {activeTab === 'overview' && (
+          {userRole !== 'staff' && activeTab === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <CardHeader>
@@ -1013,7 +1020,7 @@ export default function AdminPage() {
           )}
 
           {/* Orders Tab */}
-          {activeTab === 'orders' && (
+          {userRole !== 'staff' && activeTab === 'orders' && (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5"><p className="text-sm text-blue-300">Por revisar</p><p className="mt-2 text-3xl font-bold">{activeOrders.filter(order => order.status === 'reviewing').length}</p></div>
@@ -1083,7 +1090,7 @@ export default function AdminPage() {
           )}
 
           {/* Services Tab */}
-          {activeTab === 'services' && (
+          {userRole !== 'staff' && activeTab === 'services' && (
             <Card className="glass-card hover-glow animate-fade-in-up">
               <CardHeader>
                 <CardTitle className="text-2xl">Servicios</CardTitle>
@@ -1161,9 +1168,13 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="p-4 bg-purple-500/10 border border-purple-500/50 rounded-xl">
-                      <div className="text-sm text-purple-500 mb-1">Agentes online</div>
+                      <div className="text-sm text-purple-500 mb-1">
+                        {userRole === 'staff' ? 'Mis chats' : 'Agentes online'}
+                      </div>
                       <div className="text-2xl font-bold text-purple-500">
-                        {users.filter(u => (u.role === 'admin' || u.role === 'staff' || u.role === 'owner') && u.online).length}
+                        {userRole === 'staff'
+                          ? chatSessions.filter(chat => chat.assigned_agent_id === currentUserId && chat.status !== 'closed').length
+                          : users.filter(u => (u.role === 'admin' || u.role === 'staff' || u.role === 'owner') && u.online).length}
                       </div>
                     </div>
                   </div>
@@ -1251,7 +1262,7 @@ export default function AdminPage() {
                           </button>
                           {selectedChat.assigned_agent_id === currentUserId && selectedChat.status !== 'closed' && (
                             <>
-                              <select
+                              {userRole !== 'staff' && <><select
                                 value={transferAgentId}
                                 onChange={(event) => setTransferAgentId(event.target.value)}
                                 className="rounded-lg border border-[#333333] bg-[#0a0a0a] px-3 py-2 text-sm text-[#ededed]"
@@ -1279,6 +1290,7 @@ export default function AdminPage() {
                               >
                                 Transferir
                               </button>
+                              </>}
                               <button
                                 onClick={() => handleCloseChat(selectedChat.id)}
                                 className="px-4 py-2 bg-red-600 text-white rounded-lg transition-colors"
@@ -1479,8 +1491,8 @@ export default function AdminPage() {
                                           {lastMessages[chat.id] && (
                                             <div className="mt-3 p-3 bg-[#1a1a1a] rounded-lg text-sm text-[#6b7280] border border-[#333333]">
                                               <span className="text-muted-foreground">Último mensaje: </span>
-                                              {lastMessages[chat.id].message.length > 50 
-                                                ? lastMessages[chat.id].message.substring(0, 50) + '...' 
+                                              {lastMessages[chat.id].message.length > 50
+                                                ? lastMessages[chat.id].message.substring(0, 50) + '...'
                                                 : lastMessages[chat.id].message}
                                             </div>
                                           )}
@@ -1542,8 +1554,8 @@ export default function AdminPage() {
                                           {lastMessages[chat.id] && (
                                             <div className="mt-3 p-3 bg-[#1a1a1a] rounded-lg text-sm text-[#6b7280] border border-[#333333]">
                                               <span className="text-muted-foreground">Último mensaje: </span>
-                                              {lastMessages[chat.id].message.length > 50 
-                                                ? lastMessages[chat.id].message.substring(0, 50) + '...' 
+                                              {lastMessages[chat.id].message.length > 50
+                                                ? lastMessages[chat.id].message.substring(0, 50) + '...'
                                                 : lastMessages[chat.id].message}
                                             </div>
                                           )}
@@ -1603,8 +1615,8 @@ export default function AdminPage() {
                                           {lastMessages[chat.id] && (
                                             <div className="mt-3 p-3 bg-[#1a1a1a] rounded-lg text-sm text-[#6b7280] border border-[#333333]">
                                               <span className="text-muted-foreground">Último mensaje: </span>
-                                              {lastMessages[chat.id].message.length > 50 
-                                                ? lastMessages[chat.id].message.substring(0, 50) + '...' 
+                                              {lastMessages[chat.id].message.length > 50
+                                                ? lastMessages[chat.id].message.substring(0, 50) + '...'
                                                 : lastMessages[chat.id].message}
                                             </div>
                                           )}
@@ -1634,7 +1646,7 @@ export default function AdminPage() {
           )}
 
           {/* History Tab */}
-          {activeTab === 'history' && (
+          {userRole !== 'staff' && activeTab === 'history' && (
             <div className="space-y-6">
               <Card className="glass-card hover-glow animate-fade-in-up">
                 <CardHeader>
@@ -1688,7 +1700,7 @@ export default function AdminPage() {
       </section>
 
       {/* Order Details Modal */}
-      {showOrderModal && selectedOrder && (
+      {userRole !== 'staff' && showOrderModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in-scale">
           <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto glass-card hover-glow glowing-border">
             <CardHeader>

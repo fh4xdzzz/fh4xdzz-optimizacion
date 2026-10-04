@@ -64,8 +64,8 @@ export default function Navbar() {
           { href: '/dashboard', label: 'Dashboard' },
           { href: '/pedidos', label: 'Mis pedidos' },
           { href: '/perfil', label: 'Perfil' },
-          ...(session.user.role === 'admin' || session.user.role === 'owner'
-            ? [{ href: '/admin', label: 'Admin', emphasized: true }]
+          ...(['staff', 'admin', 'owner'].includes(session.user.role || '')
+            ? [{ href: '/admin', label: session.user.role === 'staff' ? 'Soporte' : 'Admin', emphasized: true }]
             : []),
           ...(session.user.role === 'owner'
             ? [{ href: '/owner', label: 'Owner', emphasized: true }]

@@ -74,8 +74,8 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single()
 
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) {
-        // Redirigir a dashboard si no es admin ni owner
+      if (!profile || !['staff', 'admin', 'owner'].includes(profile.role)) {
+        // Solo los roles de soporte pueden entrar al panel.
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }

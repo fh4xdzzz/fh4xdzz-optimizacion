@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const userRole = session.user.role
 
-    // Verificar permisos
+    // Verificar permisos. El cliente solo puede leer su conversación y los
+    // mensajes internos quedan reservados a los roles de soporte.
     if (userRole === 'client') {
       const { data: chatSession, error: sessionError } = await supabase
         .from('chat_sessions')
@@ -37,6 +38,8 @@ export async function GET(request: NextRequest) {
       if (!chatSession || chatSession.client_id !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
+    } else if (!['staff', 'admin', 'owner'].includes(userRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
