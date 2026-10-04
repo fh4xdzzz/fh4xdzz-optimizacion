@@ -112,7 +112,6 @@ export default function SupportChatWidget() {
   const [intakeProblem, setIntakeProblem] = useState('')
   const [submittingIntake, setSubmittingIntake] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const channelRef = useRef<any>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -120,6 +119,11 @@ export default function SupportChatWidget() {
   const aiRequestSessionRef = useRef<string | null>(null)
   const aiRecoveryAttemptedRef = useRef(new Set<string>())
   const { warning: notifyWarning, error: notifyError, success: notifySuccess } = useNotificationStore()
+
+  const openRef = useRef(open)
+  const currentUserIdRef = useRef<string | undefined>(currentUser?.id)
+  openRef.current = open
+  currentUserIdRef.current = currentUser?.id
 
   useEffect(() => {
     const openFromOrder = (event: Event) => {
@@ -327,9 +331,17 @@ export default function SupportChatWidget() {
   useEffect(() => {
     if (!session) return
 
-    const channel = supabase
-      .channel(`messages:${session.id}`)
-      .on('broadcast', { event: 'agent_typing' }, ({ payload }) => {
+    const isClientViewer = currentUser?.role === 'client'
+    let channel = supabase.channel(
+      isClientViewer
+        ? `messages:${session.id}`
+        : `support-widget-messages:${session.id}:${currentUser?.id || 'agent'}`
+    )
+
+    // El canal compartido de escritura solo lo escucha el cliente. En el panel
+    // del agente ya existe un canal emisor con el mismo tema.
+    if (isClientViewer) {
+      channel = channel.on('broadcast', { event: 'agent_typing' }, ({ payload }) => {
         const typing = payload?.typing === true
         setIsTyping(typing)
 
@@ -338,6 +350,9 @@ export default function SupportChatWidget() {
           typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 2500)
         }
       })
+    }
+
+    channel = channel
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -347,10 +362,10 @@ export default function SupportChatWidget() {
         const newMessage = payload.new as Message
         
         // Verificar si el mensaje ya existe para evitar duplicados
-        if (open) loadMessages(session.id)
+        if (openRef.current) loadMessages(session.id)
 
         // Incrementar contador si el chat está cerrado y el mensaje es del soporte
-        if (newMessage.sender_id !== currentUser?.id && !open) {
+        if (newMessage.sender_id !== currentUserIdRef.current && !openRef.current) {
           setUnread(prev => prev + 1)
         }
 
@@ -376,19 +391,15 @@ export default function SupportChatWidget() {
         const updatedSession = payload.new as ChatSession
         setSession(updatedSession)
       })
-      .subscribe((status) => {
-      })
-
-    channelRef.current = channel
+    channel.subscribe((status) => {
+    })
 
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
       setIsTyping(false)
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-      }
+      supabase.removeChannel(channel)
     }
-  }, [session?.id, open, currentUser?.id])
+  }, [session?.id, currentUser?.id, currentUser?.role])
 
   const handleMessagesScroll = () => {
     const container = messagesContainerRef.current
