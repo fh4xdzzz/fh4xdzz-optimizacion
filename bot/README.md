@@ -72,6 +72,10 @@ DISCORD_CLIENT_ID=tu_client_id
 DISCORD_GUILD_ID=tu_guild_id
 DISCORD_STAFF_ROLE_ID=tu_staff_role_id
 DISCORD_ADMIN_ROLE_ID=tu_admin_role_id
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_ANON_KEY=tu_clave_publica
+SUPABASE_SERVICE_ROLE_KEY=tu_clave_privada_solo_del_servidor
+WEB_APP_URL=https://www.thedulcandesign.com
 ```
 
 ### Paso 3: Instalar dependencias
@@ -101,15 +105,28 @@ Usa la URL generada para invitar el bot a tu servidor de Discord.
 
 ## 🎯 Comandos del Bot
 
-### Comandos Generales
+### Comandos slash para clientes
 
-- `!help` - Muestra ayuda del bot
-- `!servicios` - Lista todos los servicios disponibles
-- `!servicio <nombre>` - Muestra información detallada de un servicio
+- `/panel` - Centro personal con accesos rápidos
+- `/tienda` - Catálogo sincronizado con Supabase
+- `/mispedidos` - Pedidos de la cuenta web vinculada a Discord
+- `/soporte` - Acceso al soporte privado de la web
+- `/ayuda` - Guía de comandos disponibles
 
-### Comandos de Tickets
+### Configuración para administradores
 
-- `!ticket` - Crea un ticket de soporte
+- `/configurar canales` - Define bienvenida, soporte, compras, logs y rol de agentes
+- `/configurar ver` - Muestra la configuración activa
+- `/configurar probar` - Comprueba el canal de soporte sin avisar a clientes
+
+La configuración se guarda por servidor en Supabase. El bot alerta únicamente
+soportes nuevos, soportes reclamados y compras confirmadas. Los mensajes de las
+conversaciones de soporte nunca se copian a Discord.
+
+### Comandos heredados
+
+- `!servicios` - Lista servicios
+- `!ticket` - Crea un ticket dentro de Discord
 - `!cerrar` - Cierra el ticket actual
 
 ### Comandos de Administración

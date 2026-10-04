@@ -4,7 +4,7 @@ import { getServerSession } from '@/lib/auth-server'
 import { getDiscordService } from '@/lib/discord-integration'
 
 // GET /api/chat/sessions - Obtener sesiones del usuario actual
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession()
     if (!session) {
@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
     console.log('Created new session successfully:', newSession.id, newSession.conversation_number, newSession.status)
 
     await getDiscordService().notifyNewTicket({
+      session_id: newSession.id,
       ticket_id: newSession.conversation_number,
       customer_name: userRecord.full_name || userRecord.email || 'Cliente',
       category: service_type || 'general',

@@ -69,6 +69,19 @@ from cogs.role_sync import RoleSync
 from cogs.tickets import Tickets
 from cogs.admin import Admin
 from cogs.services import Services
+from cogs.professional import Professional
+
+slash_commands_synced = False
+
+
+async def configured_channel(guild, key, fallback_name):
+    """Resolver un canal persistente y conservar compatibilidad con nombres antiguos."""
+    settings = await asyncio.to_thread(
+        get_supabase_client().get_discord_guild_config, str(guild.id)
+    )
+    channel_id = settings.get(key)
+    channel = guild.get_channel(int(channel_id)) if channel_id else None
+    return channel or discord.utils.get(guild.text_channels, name=fallback_name)
 
 # Storage (en produccion usar Supabase)
 tickets = {}
@@ -246,19 +259,28 @@ async def on_ready():
     logger.info('------')
 
     # Inicializar EventProcessor
-    global event_processor
+    global event_processor, slash_commands_synced
     event_processor = EventProcessor(bot)
     logger.info('EventProcessor inicializado')
 
     # Cargar cogs
-    if not bot.get_cog('SetupServer'):
-        await bot.add_cog(SetupServer(bot))
-        await bot.add_cog(Events(bot))
-        await bot.add_cog(RoleSync(bot))
-        await bot.add_cog(Tickets(bot))
-        await bot.add_cog(Admin(bot))
-        await bot.add_cog(Services(bot))
+    for cog_type in (SetupServer, Events, RoleSync, Tickets, Admin, Services, Professional):
+        if not bot.get_cog(cog_type.__name__):
+            await bot.add_cog(cog_type(bot))
     logger.info('Cogs cargados')
+
+    if not slash_commands_synced:
+        try:
+            if GUILD_ID:
+                guild_object = discord.Object(id=int(GUILD_ID))
+                bot.tree.copy_global_to(guild=guild_object)
+                synced = await bot.tree.sync(guild=guild_object)
+            else:
+                synced = await bot.tree.sync()
+            slash_commands_synced = True
+            logger.info('%s comandos slash sincronizados', len(synced))
+        except discord.HTTPException as error:
+            logger.error('No se pudieron sincronizar los comandos slash: %s', error)
 
     await bot.change_presence(
         activity=discord.Activity(
@@ -422,7 +444,7 @@ async def on_member_join(member):
 
         logs_cat = discord.utils.get(guild.categories, name="Logs")
         if logs_cat:
-            log_channel = discord.utils.get(guild.text_channels, name="logs-entradas")
+            log_channel = await configured_channel(guild, 'logs_channel_id', 'logs-entradas')
             if log_channel:
                 embed = discord.Embed(
                     title="Nuevo Cliente",
@@ -434,9 +456,16 @@ async def on_member_join(member):
                 embed.set_footer(text=f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 await log_channel.send(embed=embed)
 
-        welcome_channel = discord.utils.get(guild.text_channels, name="bienvenida")
+        welcome_channel = await configured_channel(guild, 'welcome_channel_id', 'bienvenida')
         if welcome_channel:
-            await welcome_channel.send(f"Bienvenido {member.mention}! Lee las reglas en #reglas y usa `!tienda` para ver nuestros servicios.")
+            embed = discord.Embed(
+                title=f'¡Bienvenido, {member.display_name}! 👋',
+                description='Explora nuestros servicios profesionales y recibe soporte privado cuando lo necesites.',
+                color=0x5865F2,
+            )
+            embed.add_field(name='Empieza aquí', value='Usa `/panel`, `/tienda` o `/soporte`.', inline=False)
+            embed.set_thumbnail(url=member.display_avatar.url)
+            await welcome_channel.send(content=member.mention, embed=embed)
 
         logger.info(f"{member.name} joined the server")
     except Exception as e:
@@ -452,7 +481,7 @@ async def on_member_remove(member):
 
         logs_cat = discord.utils.get(guild.categories, name="Logs")
         if logs_cat:
-            log_channel = discord.utils.get(guild.text_channels, name="logs-salidas")
+            log_channel = await configured_channel(guild, 'logs_channel_id', 'logs-salidas')
             if log_channel:
                 embed = discord.Embed(
                     title="Cliente Salió",
@@ -491,7 +520,7 @@ async def on_message(message):
         if guild and message.guild == guild:
             logs_cat = discord.utils.get(guild.categories, name="Logs")
             if logs_cat:
-                log_channel = discord.utils.get(guild.text_channels, name="logs-comandos")
+                log_channel = await configured_channel(guild, 'logs_channel_id', 'logs-comandos')
                 if log_channel:
                     embed = discord.Embed(
                         title="Comando Usado",
@@ -530,7 +559,7 @@ async def on_voice_state_update(member, before, after):
 
             logs_cat = discord.utils.get(guild.categories, name="Logs")
             if logs_cat:
-                log_channel = discord.utils.get(guild.text_channels, name="logs-voice")
+                log_channel = await configured_channel(guild, 'logs_channel_id', 'logs-voice')
                 if log_channel:
                     embed = discord.Embed(
                         title="Actividad de Voz",

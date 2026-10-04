@@ -4,7 +4,6 @@ Permite al bot conectarse a Supabase para persistencia de datos
 """
 
 import os
-import json
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 import requests
@@ -26,7 +25,8 @@ class SupabaseClient:
             logger.info("Supabase inicializado")
 
     def _request(self, method: str, table: str, data: Optional[Dict] = None,
-                 filters: Optional[Dict] = None, table_id: Optional[str] = None) -> Dict:
+                 filters: Optional[Dict] = None, table_id: Optional[str] = None,
+                 query: Optional[Dict] = None, prefer: str = 'return=representation') -> Dict:
         """Realizar petición a Supabase"""
         if not self.enabled:
             return {'error': 'Supabase no configurado'}
@@ -35,42 +35,36 @@ class SupabaseClient:
             'apikey': self.service_role_key if self.service_role_key else self.anon_key,
             'Authorization': f'Bearer {self.service_role_key if self.service_role_key else self.anon_key}',
             'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            'Prefer': prefer
         }
 
         url = f"{self.url}/rest/v1/{table}"
-
-        # Agregar filtros
+        params = dict(query or {})
         if filters:
             for key, value in filters.items():
-                if isinstance(value, str):
-                    # Soportar filtros especiales como 'is.null'
-                    if value == 'is.null':
-                        url += f"&{key}=is.null"
-                    else:
-                        url += f"&{key}=eq.{value}"
+                if value == 'is.null':
+                    params[key] = 'is.null'
                 elif isinstance(value, list):
-                    url += f"&{key}=in.({','.join(map(str, value))})"
+                    params[key] = f"in.({','.join(map(str, value))})"
                 else:
-                    url += f"&{key}=eq.{value}"
+                    params[key] = f"eq.{str(value).lower() if isinstance(value, bool) else value}"
 
-        # Agregar ID específico
         if table_id:
-            url += f"/{table_id}"
+            params['id'] = f'eq.{table_id}'
 
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers)
+                response = requests.get(url, headers=headers, params=params, timeout=15)
             elif method == 'POST':
-                response = requests.post(url, headers=headers, json=data)
+                response = requests.post(url, headers=headers, params=params, json=data, timeout=15)
             elif method == 'PATCH':
-                response = requests.patch(url, headers=headers, json=data)
+                response = requests.patch(url, headers=headers, params=params, json=data, timeout=15)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers)
+                response = requests.delete(url, headers=headers, params=params, timeout=15)
             else:
                 return {'error': 'Método no soportado'}
 
-            if response.status_code in [200, 201]:
+            if response.status_code in [200, 201, 204]:
                 return response.json() if response.content else {}
             else:
                 logger.error(f"Error Supabase: {response.status_code} - {response.text}")
@@ -247,7 +241,10 @@ class SupabaseClient:
     def get_all_services(self) -> List[Dict]:
         """Obtener todos los servicios"""
         try:
-            result = self._request('GET', 'services', filters={'is_active': True})
+            result = self._request(
+                'GET', 'services', filters={'is_active': True},
+                query={'order': 'sort_order.asc,name.asc'}
+            )
             if 'error' in result:
                 return []
             return result if result else []
@@ -265,6 +262,50 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Error obteniendo servicio: {e}")
             return None
+
+    # ==================== DISCORD BOT ====================
+
+    def get_discord_guild_config(self, guild_id: str) -> Dict[str, Any]:
+        """Obtener la configuración persistente de un servidor de Discord."""
+        key = f'discord_bot:{guild_id}'
+        result = self._request('GET', 'business_settings', filters={'setting_key': key})
+        if isinstance(result, list) and result:
+            return result[0].get('setting_value') or {}
+        return {}
+
+    def save_discord_guild_config(self, guild_id: str, values: Dict[str, Any]) -> bool:
+        """Guardar configuración usando un upsert atómico por setting_key."""
+        key = f'discord_bot:{guild_id}'
+        current = self.get_discord_guild_config(guild_id)
+        current.update({name: value for name, value in values.items() if value is not None})
+        payload = {
+            'setting_key': key,
+            'setting_value': current,
+            'description': f'Configuración privada del bot para el servidor {guild_id}',
+            'updated_at': datetime.utcnow().isoformat(),
+        }
+        result = self._request(
+            'POST', 'business_settings', data=payload,
+            query={'on_conflict': 'setting_key'},
+            prefer='resolution=merge-duplicates,return=representation'
+        )
+        return not (isinstance(result, dict) and result.get('error'))
+
+    def get_recent_orders_for_discord(self, discord_id: str, limit: int = 5) -> List[Dict]:
+        """Obtener los pedidos recientes de la cuenta web vinculada a Discord."""
+        user = self.get_user_by_discord_id(discord_id)
+        if not user:
+            return []
+        result = self._request(
+            'GET', 'orders',
+            filters={'user_id': user['id'], 'deleted_at': 'is.null'},
+            query={
+                'select': 'order_number,status,price,created_at,services(name)',
+                'order': 'created_at.desc',
+                'limit': str(max(1, min(limit, 10))),
+            }
+        )
+        return result if isinstance(result, list) else []
 
 # Singleton instance
 supabase_client = None

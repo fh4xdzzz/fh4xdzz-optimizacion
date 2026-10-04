@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getServerSession } from '@/lib/auth-server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { getDiscordService } from '@/lib/discord-integration'
 
 // GET /api/chat/messages?session_id=xxx - Obtener mensajes de una sesión
 export async function GET(request: NextRequest) {
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest) {
     }))
 
     return NextResponse.json({ messages: enrichedMessages })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -290,38 +289,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (serviceUrl && serviceKey) {
-      const serviceSupabase = createServiceClient(serviceUrl, serviceKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      })
-      const { data: chat } = await serviceSupabase
-        .from('chat_sessions')
-        .select('conversation_number, client_id, users!chat_sessions_client_id_fkey(full_name, email, discord_id)')
-        .eq('id', session_id)
-        .maybeSingle()
-
-      if (chat) {
-        const client = Array.isArray(chat.users) ? chat.users[0] : chat.users
-        const notificationMessage = message_type === 'attachment'
-          ? `Archivo privado: ${attachment_name || 'adjunto'}`
-          : message.trim().slice(0, 1500)
-        // Mientras Dulcan AI recopila contexto, evitamos alertar al equipo por
-        // cada respuesta. El resumen final sí se envía cuando el triaje termina.
-        if (userRole !== 'client') await getDiscordService().notifyTicketMessage({
-          ticket_id: chat.conversation_number,
-          customer_name: client?.full_name || client?.email || 'Cliente',
-          message: notificationMessage,
-          sender: 'staff',
-          discord_user_id: client?.discord_id || undefined,
-          notification_scope: 'customer_only',
-        })
-      }
-    }
-
     return NextResponse.json({ message: newMessage })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

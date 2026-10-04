@@ -4,18 +4,21 @@ Procesa eventos desde la web y genera embeds profesionales en Discord
 """
 
 import discord
+import asyncio
 import json
 import os
 from datetime import datetime
 from typing import Dict, Any
 from urllib.parse import urlencode
 from utils.logger import logger
+from database.supabase_client import get_supabase_client
 
 class EventProcessor:
     """Procesador de eventos para Discord"""
 
     def __init__(self, bot):
         self.bot = bot
+        self.db = get_supabase_client()
         self.processed_events = set()  # Para prevenir duplicados
 
     async def process_event(self, event: Dict[str, Any]) -> bool:
@@ -47,6 +50,8 @@ class EventProcessor:
                 await self.handle_ticket_created(event)
             elif event_type == 'ticket.message_created':
                 await self.handle_ticket_message(event)
+            elif event_type == 'ticket.claimed':
+                await self.handle_ticket_claimed(event)
             elif event_type == 'ticket.transferred':
                 await self.handle_ticket_transferred(event)
             elif event_type == 'user.created':
@@ -82,10 +87,9 @@ class EventProcessor:
         embed.add_field(name="Descripción", value=payload.get('description', 'Sin descripción'), inline=False)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
-        await self.notify_customer(payload, embed)
+        await self.send_configured('logs', embed)
 
     async def handle_order_paid(self, event: Dict[str, Any]):
         """Manejar evento de pedido pagado"""
@@ -103,10 +107,9 @@ class EventProcessor:
         embed.add_field(name="Estado", value="Pagado", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
-        await self.notify_customer(payload, embed)
+        await self.send_configured('orders', embed, mention_agents=True)
 
     async def handle_order_processing(self, event: Dict[str, Any]):
         """Manejar evento de pedido en proceso"""
@@ -124,9 +127,8 @@ class EventProcessor:
         embed.add_field(name="Estado", value="En Proceso", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
 
     async def handle_order_completed(self, event: Dict[str, Any]):
@@ -145,9 +147,8 @@ class EventProcessor:
         embed.add_field(name="Estado", value="Completado", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
 
     async def handle_order_cancelled(self, event: Dict[str, Any]):
@@ -166,9 +167,8 @@ class EventProcessor:
         embed.add_field(name="Estado", value="Cancelado", inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
         await self.notify_customer(payload, embed)
 
     async def handle_ticket_created(self, event: Dict[str, Any]):
@@ -188,42 +188,31 @@ class EventProcessor:
         embed.add_field(name="Descripción", value=payload.get('description', 'Sin descripción'), inline=False)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
-        await self.notify_customer(payload, embed)
+        base_url = os.getenv('WEB_APP_URL', 'https://www.thedulcandesign.com').rstrip('/')
+        chat_url = f"{base_url}/admin?{urlencode({'tab': 'support', 'supportChat': payload.get('session_id', '')})}"
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label='Ver soporte', emoji='🎫', style=discord.ButtonStyle.link, url=chat_url))
+        await self.send_configured('support', embed, mention_agents=True, view=view)
 
     async def handle_ticket_message(self, event: Dict[str, Any]):
-        """Manejar evento de mensaje en ticket"""
+        """Los mensajes del soporte son privados y nunca se replican en Discord."""
+        logger.info('Mensaje privado de soporte omitido intencionalmente: %s', event.get('event_id'))
+
+    async def handle_ticket_claimed(self, event: Dict[str, Any]):
+        """Avisar a los agentes, y sólo a ellos, que un soporte fue reclamado."""
         payload = event.get('payload', {})
-        notification_scope = payload.get('notification_scope', 'support_team')
-
         embed = discord.Embed(
-            title="💬 Nuevo Mensaje en Ticket",
-            description=f"Ticket: {payload.get('ticket_id', 'N/A')}",
-            color=0x9b59b6  # Púrpura
+            title='🙋 Soporte reclamado',
+            description=f"{payload.get('agent_name', 'Un agente')} atenderá el soporte {payload.get('ticket_id', 'N/A')}.",
+            color=0x10b981,
         )
-
-        embed.add_field(name="ID del Ticket", value=payload.get('ticket_id', 'N/A'), inline=True)
-        embed.add_field(name="Cliente", value=payload.get('customer_name', 'N/A'), inline=True)
-        embed.add_field(name="Remitente", value=payload.get('sender', 'N/A'), inline=True)
-        embed.add_field(name="Mensaje", value=payload.get('message', 'Sin mensaje'), inline=False)
-
-        embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
-
-        # Un mensaje del agente dentro de un chat ya reclamado sólo debe llegar
-        # al cliente. No volvemos a inundar por DM a todo el equipo de soporte.
-        if notification_scope == 'support_team':
-            await self.notify_support_team(embed)
-        elif notification_scope == 'assigned_agent':
-            await self.notify_discord_user(
-                payload.get('assigned_agent_discord_id'),
-                embed,
-                "agente asignado"
-            )
-
-        await self.notify_customer(payload, embed)
+        embed.add_field(name='Cliente', value=payload.get('customer_name', 'N/A'), inline=True)
+        embed.add_field(name='Agente', value=payload.get('agent_name', 'N/A'), inline=True)
+        embed.set_footer(text='Aviso interno para agentes · TheDulcanDesign')
+        embed.timestamp = self.event_timestamp(event)
+        await self.send_configured('support', embed, mention_agents=True)
 
     async def handle_ticket_transferred(self, event: Dict[str, Any]):
         """Notificar una transferencia únicamente al agente receptor."""
@@ -238,10 +227,10 @@ class EventProcessor:
         embed.add_field(name="Transferido por", value=payload.get('from_agent_name', 'N/A'), inline=True)
         embed.add_field(name="Acción", value="Entra al panel de soporte para continuar la conversación.", inline=False)
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
         base_url = os.getenv('WEB_APP_URL', 'https://www.thedulcandesign.com').rstrip('/')
-        chat_url = f"{base_url}/admin?{urlencode({'supportChat': payload.get('session_id', '')})}"
+        chat_url = f"{base_url}/admin?{urlencode({'tab': 'support', 'supportChat': payload.get('session_id', '')})}"
         view = discord.ui.View()
         view.add_item(discord.ui.Button(
             label="Abrir chat",
@@ -272,9 +261,9 @@ class EventProcessor:
         embed.add_field(name="Nombre", value=payload.get('full_name', 'N/A'), inline=True)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
+        await self.send_configured('logs', embed)
 
     async def handle_system_alert(self, event: Dict[str, Any]):
         """Manejar evento de alerta del sistema"""
@@ -297,7 +286,7 @@ class EventProcessor:
 
         embed.add_field(name="Nivel", value=level.upper(), inline=True)
         embed.add_field(name="Origen", value=payload.get('origin', 'N/A'), inline=True)
-        embed.add_field(name="Fecha", value=datetime.fromisoformat(event.get('created_at')).strftime('%Y-%m-%d %H:%M:%S'), inline=False)
+        embed.add_field(name="Fecha", value=self.event_timestamp(event).strftime('%Y-%m-%d %H:%M:%S'), inline=False)
 
         # Información técnica sin secretos
         tech_info = payload.get('technical_info', {})
@@ -308,9 +297,67 @@ class EventProcessor:
                 embed.add_field(name="Información Técnica", value=f"```json\n{json.dumps(safe_info, indent=2)}\n```", inline=False)
 
         embed.set_footer(text=f"ID evento: {event.get('event_id')} | TheDulcanDesign")
-        embed.timestamp = datetime.fromisoformat(event.get('created_at'))
+        embed.timestamp = self.event_timestamp(event)
 
-        await self.notify_support_team(embed)
+        await self.send_configured('logs', embed)
+
+    def event_timestamp(self, event: Dict[str, Any]) -> datetime:
+        raw = event.get('created_at') or datetime.now().isoformat()
+        return datetime.fromisoformat(raw.replace('Z', '+00:00'))
+
+    async def get_guild_config(self, guild_id: int) -> Dict[str, Any]:
+        return await asyncio.to_thread(self.db.get_discord_guild_config, str(guild_id))
+
+    async def send_configured(
+        self,
+        destination: str,
+        embed: discord.Embed,
+        mention_agents: bool = False,
+        view: discord.ui.View | None = None,
+    ):
+        """Enviar una alerta al canal persistente, sin exponerla a clientes."""
+        fallback_names = {
+            'support': ('soporte-web', 'soporte', 'notificaciones'),
+            'orders': ('pedidos', 'compras', 'notificaciones'),
+            'logs': ('logs', 'notificaciones', 'logs-comandos'),
+        }
+        config_keys = {
+            'support': 'support_channel_id',
+            'orders': 'orders_channel_id',
+            'logs': 'logs_channel_id',
+        }
+        delivered = False
+        for guild in self.bot.guilds:
+            settings = await self.get_guild_config(guild.id)
+            channel_id = settings.get(config_keys[destination])
+            channel = guild.get_channel(int(channel_id)) if channel_id else None
+            if not isinstance(channel, discord.TextChannel):
+                channel = next(
+                    (discord.utils.get(guild.text_channels, name=name) for name in fallback_names[destination]
+                     if discord.utils.get(guild.text_channels, name=name)),
+                    None,
+                )
+            if not channel:
+                logger.warning('No hay canal configurado para %s en %s', destination, guild.name)
+                continue
+
+            content = None
+            allowed_mentions = discord.AllowedMentions.none()
+            if mention_agents:
+                role_id = settings.get('staff_role_id')
+                role = guild.get_role(int(role_id)) if role_id else None
+                roles = [role] if role else [
+                    item for item in guild.roles
+                    if item.name.lower() in {'staff', 'admin', 'owner', 'soporte'}
+                ]
+                if roles:
+                    content = ' '.join(item.mention for item in roles)
+                    allowed_mentions = discord.AllowedMentions(roles=True)
+            await channel.send(content=content, embed=embed, view=view, allowed_mentions=allowed_mentions)
+            delivered = True
+
+        if mention_agents and not delivered:
+            await self.notify_support_team(embed)
 
     async def send_to_channel(self, channel_name: str, embed: discord.Embed):
         """Enviar embed a un canal específico"""

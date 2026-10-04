@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getServerSession } from '@/lib/auth-server'
+import { getDiscordService } from '@/lib/discord-integration'
 
 // POST /api/chat/claim - Reclamar una conversación
 export async function POST(request: NextRequest) {
@@ -124,8 +125,22 @@ export async function POST(request: NextRequest) {
         message_type: 'text'
       })
 
+    const { data: clientData } = await supabase
+      .from('users')
+      .select('full_name, email')
+      .eq('id', chatSession.client_id)
+      .maybeSingle()
+
+    // Aviso interno: sólo informa que el caso fue tomado; no replica mensajes.
+    await getDiscordService().notifyTicketClaimed({
+      session_id,
+      ticket_id: chatSession.conversation_number,
+      customer_name: clientData?.full_name || clientData?.email || 'Cliente',
+      agent_name: adminName,
+    })
+
     return NextResponse.json({ session: chatSession })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

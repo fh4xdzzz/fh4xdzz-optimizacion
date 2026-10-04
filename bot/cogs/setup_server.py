@@ -410,11 +410,11 @@ class SetupServer(commands.Cog):
             if services_channel:
                 embed = discord.Embed(
                     title="🛒 Servicios Disponibles",
-                    description="Usa `!tienda` para ver nuestro catálogo de servicios profesionales",
+                    description="Usa `/tienda` para ver nuestro catálogo de servicios profesionales",
                     color=0x00ff00
                 )
 
-                embed.add_field(name="Comandos", value="`!tienda` - Ver catálogo\n`!comprar <id>` - Comprar servicio\n`!mispedidos` - Ver mis pedidos", inline=False)
+                embed.add_field(name="Comandos", value="`/tienda` - Ver catálogo\n`/mispedidos` - Ver pedidos\n`/soporte` - Abrir soporte privado\n`/panel` - Centro de accesos", inline=False)
                 embed.add_field(name="Web", value="Visita https://thedulcandesign.com", inline=False)
                 embed.set_footer(text="TheDulcanDesign - Servicios Profesionales")
 

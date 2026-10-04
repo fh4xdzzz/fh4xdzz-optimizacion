@@ -192,6 +192,7 @@ class DiscordIntegrationService {
    * Notificar nuevo ticket
    */
   async notifyNewTicket(ticketData: {
+    session_id: string
     ticket_id: string
     customer_name: string
     category: string
@@ -205,6 +206,7 @@ class DiscordIntegrationService {
       created_at: new Date().toISOString(),
       organization_id: 'thedulcandesign',
       payload: {
+        session_id: ticketData.session_id,
         ticket_id: ticketData.ticket_id,
         customer_name: ticketData.customer_name,
         category: ticketData.category,
@@ -215,6 +217,25 @@ class DiscordIntegrationService {
     }
 
     return this.sendDiscordEvent(event)
+  }
+
+  /**
+   * Notificar internamente que un agente reclamó el soporte.
+   * Nunca incluye mensajes privados ni se envía al cliente.
+   */
+  async notifyTicketClaimed(ticketData: {
+    session_id: string
+    ticket_id: string
+    customer_name: string
+    agent_name: string
+  }): Promise<boolean> {
+    return this.sendDiscordEvent({
+      event_id: `ticket_claimed_${ticketData.session_id}_${Date.now()}`,
+      event_type: 'ticket.claimed',
+      created_at: new Date().toISOString(),
+      organization_id: 'thedulcandesign',
+      payload: ticketData,
+    })
   }
 
   /**
