@@ -317,7 +317,7 @@ class SetupServer(commands.Cog):
             # Crear canal
             if channel_config['type'] == 'text':
                 # Permisos especiales para logs
-                overwrites = None
+                overwrites = {}
                 if channel_name in ['logs', 'notificaciones']:
                     overwrites = {
                         guild.default_role: discord.PermissionOverwrite(view_channel=False, read_messages=False),
