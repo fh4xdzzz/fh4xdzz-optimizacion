@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getServerSession } from '@/lib/auth-server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { getStripe } from '@/lib/stripe-server'
 import { randomBytes } from 'node:crypto'
 
@@ -70,7 +71,11 @@ export async function POST(request: NextRequest) {
     let couponDiscount = 0
     if (parsed.data.couponCode) {
       if (isSubscription) return NextResponse.json({ error: 'Los cupones aplican únicamente a servicios de pago único.' }, { status: 400 })
-      const { data: couponRecord, error: couponError } = await supabase.from('discount_coupons')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (!supabaseUrl || !serviceRoleKey) return NextResponse.json({ error: 'No pudimos comprobar el cupón. Inténtalo nuevamente.' }, { status: 503 })
+      const couponClient = createAdminClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      const { data: couponRecord, error: couponError } = await couponClient.from('discount_coupons')
         .select('id, code, discount_type, discount_value, minimum_amount, max_redemptions, redemption_count, starts_at, expires_at, is_active')
         .eq('code', parsed.data.couponCode).maybeSingle()
       const now = Date.now()
