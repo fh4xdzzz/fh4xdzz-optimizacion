@@ -4,10 +4,10 @@ import { requireAdminRole } from '@/lib/admin-api'
 
 const couponSchema = z.object({
   action: z.literal('create_coupon'),
-  code: z.string().trim().min(3).max(30).regex(/^[A-Z0-9_-]+$/),
+  code: z.string().trim().min(10).max(30).regex(/^DULCAN-[A-Z0-9]{4,16}$/),
   description: z.string().trim().max(160).optional(),
-  discountType: z.enum(['percent', 'fixed']),
-  discountValue: z.coerce.number().positive().max(10000),
+  discountType: z.literal('percent'),
+  discountValue: z.coerce.number().refine((value) => [5, 10, 15, 20, 25, 30, 40, 50].includes(value)),
   minimumAmount: z.coerce.number().min(0).max(100000).default(0),
   maxRedemptions: z.coerce.number().int().positive().max(100000).nullable().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
   const coupon = couponSchema.safeParse(body)
   if (coupon.success) {
+    if (!coupon.data.code.startsWith('DULCAN-')) return NextResponse.json({ error: 'El cupón debe comenzar por DULCAN-.' }, { status: 400 })
     if (coupon.data.discountType === 'percent' && coupon.data.discountValue > 80) return NextResponse.json({ error: 'El descuento porcentual máximo es 80%.' }, { status: 400 })
     const { data, error } = await auth.supabase.from('discount_coupons').insert({
       code: coupon.data.code.toUpperCase(), description: coupon.data.description || null,
