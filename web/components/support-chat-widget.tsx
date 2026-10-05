@@ -127,13 +127,15 @@ export default function SupportChatWidget() {
 
   const openRef = useRef(open)
   const currentUserIdRef = useRef<string | undefined>(currentUser?.id)
+  const currentUserRoleRef = useRef<string | undefined>(currentUser?.role)
   openRef.current = open
   currentUserIdRef.current = currentUser?.id
+  currentUserRoleRef.current = currentUser?.role
 
   useEffect(() => {
     const openFromOrder = (event: Event) => {
       const detail = (event as CustomEvent<{ message?: string; asCustomer?: boolean }>).detail
-      const openingAsCustomer = detail?.asCustomer === true
+      const openingAsCustomer = detail?.asCustomer === true && SUPPORT_ROLES.includes(currentUserRoleRef.current || '')
       setCustomerContext(openingAsCustomer)
       if (openingAsCustomer) {
         setSession(null)

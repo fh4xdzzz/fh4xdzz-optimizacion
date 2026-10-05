@@ -63,7 +63,7 @@ export default function ResultadosPage() {
                 <Button href="/servicios" variant="primary" size="lg" className="premium-button h-14 px-9">
                   Explorar servicios <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
-                <SupportChatButton variant="outline" size="lg" className="h-14 border-white/15 bg-white/[.035] px-9">Consultar mi proyecto</SupportChatButton>
+                <SupportChatButton message="Hola, quiero consultar cuál servicio es el más adecuado para mi proyecto." variant="outline" size="lg" className="h-14 border-white/15 bg-white/[.035] px-9">Consultar mi proyecto</SupportChatButton>
               </div>
             </div>
           </section>
@@ -111,7 +111,7 @@ export default function ResultadosPage() {
             <div className="container mx-auto max-w-3xl">
               <h2 className="text-4xl font-black uppercase tracking-[-.04em] gradient-text-primary md:text-5xl">Tu proyecto puede ser el próximo</h2>
               <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted">Cuéntanos qué quieres mejorar y te recomendaremos el punto de partida correcto.</p>
-              <SupportChatButton variant="primary" size="lg" className="premium-button mt-8 h-14 px-10">Hablar sobre mi proyecto <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></SupportChatButton>
+              <SupportChatButton message="Hola, quiero hablar sobre mi proyecto y recibir una recomendación." variant="primary" size="lg" className="premium-button mt-8 h-14 px-10">Hablar sobre mi proyecto <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></SupportChatButton>
             </div>
           </section>
         </main>
