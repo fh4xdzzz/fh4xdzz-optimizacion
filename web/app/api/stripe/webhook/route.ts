@@ -124,7 +124,9 @@ export async function POST(request: NextRequest) {
       // Si falla, devolvemos error para que Stripe vuelva a entregar el evento.
       const emailSent = await sendOrderNotificationEmail({
         kind: 'paid',
-        eventId: `order-paid-${order.id}`,
+        // Version the idempotency key when the email template changes so an
+        // existing test purchase can receive the new design exactly once.
+        eventId: `order-paid-v2-${order.id}`,
         orderId: order.id,
         orderNumber: order.order_number,
         customerName: order.client_name,
