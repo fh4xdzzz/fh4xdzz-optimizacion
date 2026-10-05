@@ -88,38 +88,52 @@ export async function POST(request: NextRequest) {
 
       if (!orderId) return NextResponse.json({ received: true })
 
-      const { data: order } = await supabase.from('orders')
-        .select('id, order_number, client_name, client_email, services(name), users(discord_id)')
+      // Keep the order lookup independent from embedded relationships. A missing
+      // or ambiguous PostgREST relationship must never make the webhook return
+      // 200 without attempting the confirmation email.
+      const { data: order, error: orderError } = await supabase.from('orders')
+        .select('id, order_number, user_id, service_id, client_name, client_email')
         .eq('id', orderId).maybeSingle()
-      if (order) {
-        const service = Array.isArray(order.services) ? order.services[0] : order.services
-        const user = Array.isArray(order.users) ? order.users[0] : order.users
-        if (shouldNotify) {
-          await Promise.allSettled([getDiscordService().notifyOrderPaid({
-            order_id: order.id,
-            order_number: order.order_number,
-            service_name: service?.name || 'Servicio',
-            customer_name: order.client_name,
-            discord_user_id: user?.discord_id || undefined,
-          })])
-        }
-
-        // El correo se intenta también en reenvíos del webhook. Resend usa una
-        // clave idempotente por pedido, por lo que un reintento no lo duplica.
-        // Si falla, devolvemos error para que Stripe vuelva a entregar el evento.
-        const emailSent = await sendOrderNotificationEmail({
-          kind: 'paid',
-          eventId: `order-paid-${order.id}`,
-          orderId: order.id,
-          orderNumber: order.order_number,
-          customerName: order.client_name,
-          customerEmail: order.client_email,
-          serviceName: service?.name || 'Servicio',
-          status: 'reviewing',
+      if (orderError || !order) {
+        console.error('[stripe/webhook] No se pudo recuperar el pedido para notificar', {
+          orderId,
+          error: orderError,
         })
-        if (!emailSent) {
-          return NextResponse.json({ error: 'El pedido se creó, pero el correo no pudo enviarse.' }, { status: 502 })
-        }
+        return NextResponse.json({ error: 'No se pudo recuperar el pedido para notificar' }, { status: 500 })
+      }
+
+      const [{ data: service, error: serviceError }, { data: user, error: userError }] = await Promise.all([
+        supabase.from('services').select('name').eq('id', order.service_id).maybeSingle(),
+        supabase.from('users').select('discord_id').eq('id', order.user_id).maybeSingle(),
+      ])
+      if (serviceError) console.warn('[stripe/webhook] No se pudo recuperar el nombre del servicio', serviceError)
+      if (userError) console.warn('[stripe/webhook] No se pudo recuperar Discord del cliente', userError)
+
+      if (shouldNotify) {
+        await Promise.allSettled([getDiscordService().notifyOrderPaid({
+          order_id: order.id,
+          order_number: order.order_number,
+          service_name: service?.name || 'Servicio',
+          customer_name: order.client_name,
+          discord_user_id: user?.discord_id || undefined,
+        })])
+      }
+
+      // El correo se intenta también en reenvíos del webhook. Resend usa una
+      // clave idempotente por pedido, por lo que un reintento no lo duplica.
+      // Si falla, devolvemos error para que Stripe vuelva a entregar el evento.
+      const emailSent = await sendOrderNotificationEmail({
+        kind: 'paid',
+        eventId: `order-paid-${order.id}`,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        customerName: order.client_name,
+        customerEmail: order.client_email,
+        serviceName: service?.name || 'Servicio',
+        status: 'reviewing',
+      })
+      if (!emailSent) {
+        return NextResponse.json({ error: 'El pedido se creó, pero el correo no pudo enviarse.' }, { status: 502 })
       }
     }
   }
