@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { getServerSession } from '@/lib/auth-server'
 
 const schema = z.object({
-  code: z.string().trim().min(10).max(30).regex(/^DULCAN-[A-Z0-9]{4,16}$/),
+  code: z.string().trim().min(3).max(30).regex(/^(DULCAN-[A-Z0-9]{4,16}|[A-Z0-9]{3,20})$/),
   serviceIds: z.array(z.string().uuid()).min(1).max(10),
 })
 
