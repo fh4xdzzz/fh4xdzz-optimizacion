@@ -9,6 +9,7 @@ const checkoutSchema = z.object({
   serviceId: z.string().uuid(),
   name: z.string().trim().min(2).max(100),
   description: z.string().trim().min(10).max(500),
+  couponCode: z.string().trim().toUpperCase().min(3).max(30).regex(/^(DULCAN-[A-Z0-9]{4,16}|[A-Z0-9]{3,20})$/).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -64,6 +65,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const setupPrice = Number(service.price)
+    let coupon: { id: string; code: string; discount_type: string; discount_value: number; minimum_amount: number; max_redemptions: number | null; redemption_count: number; starts_at: string | null; expires_at: string | null } | null = null
+    let couponDiscount = 0
+    if (parsed.data.couponCode) {
+      if (isSubscription) return NextResponse.json({ error: 'Los cupones aplican únicamente a servicios de pago único.' }, { status: 400 })
+      const { data: couponRecord, error: couponError } = await supabase.from('discount_coupons')
+        .select('id, code, discount_type, discount_value, minimum_amount, max_redemptions, redemption_count, starts_at, expires_at')
+        .eq('code', parsed.data.couponCode).eq('is_active', true).maybeSingle()
+      const now = Date.now()
+      const isValid = couponRecord
+        && (!couponRecord.starts_at || new Date(couponRecord.starts_at).getTime() <= now)
+        && (!couponRecord.expires_at || new Date(couponRecord.expires_at).getTime() > now)
+        && (couponRecord.max_redemptions == null || couponRecord.redemption_count < couponRecord.max_redemptions)
+        && setupPrice >= Number(couponRecord.minimum_amount)
+      if (couponError || !isValid) return NextResponse.json({ error: 'Este cupón no existe, venció o alcanzó su límite de usos.' }, { status: 400 })
+      coupon = couponRecord
+      const rawDiscount = coupon.discount_type === 'percent' ? setupPrice * Number(coupon.discount_value) / 100 : Number(coupon.discount_value)
+      couponDiscount = Number(Math.min(rawDiscount, Math.max(0, setupPrice - 0.5)).toFixed(2))
+    }
+    const discountedSetupPrice = Number(Math.max(0.5, setupPrice - couponDiscount).toFixed(2))
+
     const metadata = {
       checkout_flow: 'service_request_v2',
       user_id: session.user.id,
@@ -73,13 +95,15 @@ export async function POST(request: NextRequest) {
       description: parsed.data.description,
       request_code: requestCode,
       billing_type: service.billing_type || 'one_time',
+      coupon_id: coupon?.id || '',
+      coupon_code: coupon?.code || '',
+      coupon_discount: couponDiscount.toFixed(2),
     }
-    const setupPrice = Number(service.price)
     const lineItems = [{
       quantity: 1,
       price_data: {
         currency: 'usd',
-        unit_amount: Math.round(setupPrice * 100),
+        unit_amount: Math.round(discountedSetupPrice * 100),
         product_data: {
           name: isSubscription ? `${service.name} · creación inicial` : service.name,
           description: service.duration_estimate
@@ -132,9 +156,10 @@ export async function POST(request: NextRequest) {
         serviceName: service.name,
         description: parsed.data.description,
         subtotal: setupPrice,
+        discount: couponDiscount,
         recurringAmount: recurringPrice,
         billingType: isSubscription ? 'subscription' : 'one_time',
-        total: setupPrice + (recurringPrice || 0),
+        total: discountedSetupPrice + (recurringPrice || 0),
         currency: 'USD',
       },
     })

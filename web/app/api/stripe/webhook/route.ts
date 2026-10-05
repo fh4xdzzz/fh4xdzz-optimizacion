@@ -95,6 +95,10 @@ export async function POST(request: NextRequest) {
           }
           orderId = createdOrder.id
           shouldNotify = true
+          if (checkout.metadata.coupon_id) {
+            const { data: coupon } = await supabase.from('discount_coupons').select('redemption_count').eq('id', checkout.metadata.coupon_id).maybeSingle()
+            if (coupon) await supabase.from('discount_coupons').update({ redemption_count: Number(coupon.redemption_count) + 1 }).eq('id', checkout.metadata.coupon_id)
+          }
         }
       } else if (checkout.metadata.order_id) {
         const { data: updatedOrder, error } = await supabase.from('orders').update({

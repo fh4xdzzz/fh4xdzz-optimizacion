@@ -24,6 +24,7 @@ interface CheckoutInvoice {
   serviceName: string
   description: string
   subtotal: number
+  discount: number
   recurringAmount: number | null
   billingType: 'one_time' | 'subscription'
   total: number
@@ -288,6 +289,10 @@ function ContactFormContent() {
     url: string
     invoice: CheckoutInvoice
   } | null>(null)
+  const [couponCode, setCouponCode] = useState('')
+  const [couponPreview, setCouponPreview] = useState<{ discount: number; total: number; label: string } | null>(null)
+  const [couponError, setCouponError] = useState('')
+  const [validatingCoupon, setValidatingCoupon] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const cancelled = searchParams.get('cancelled') === '1'
@@ -407,6 +412,7 @@ function ContactFormContent() {
           serviceId: service.id,
           name: formData.name,
           description,
+          couponCode: couponCode.trim().toUpperCase() || undefined,
         }),
       })
       const payload = (await response.json()) as {
@@ -467,6 +473,35 @@ function ContactFormContent() {
   const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     handleChange(e)
     setQuestionnaire(EMPTY_QUESTIONNAIRE)
+    setCouponCode('')
+    setCouponPreview(null)
+    setCouponError('')
+  }
+
+  const validateCoupon = async () => {
+    if (!selectedService || !couponCode.trim()) return
+    if (selectedService.billing_type === 'subscription') {
+      setCouponPreview(null)
+      setCouponError('Los cupones aplican únicamente a servicios de pago único.')
+      return
+    }
+    setValidatingCoupon(true)
+    setCouponError('')
+    try {
+      const response = await fetch('/api/store/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.trim().toUpperCase(), serviceIds: [selectedService.id] }),
+      })
+      const payload = await response.json() as { valid?: boolean; couponDiscount?: number; total?: number; label?: string; error?: string }
+      if (!response.ok || !payload.valid) throw new Error(payload.error || 'Este cupón no es válido.')
+      setCouponPreview({ discount: Number(payload.couponDiscount || 0), total: Number(payload.total || selectedService.price), label: payload.label || 'Descuento aplicado' })
+    } catch (error) {
+      setCouponPreview(null)
+      setCouponError(error instanceof Error ? error.message : 'No pudimos validar el cupón.')
+    } finally {
+      setValidatingCoupon(false)
+    }
   }
 
   return (
@@ -907,6 +942,34 @@ function ContactFormContent() {
                       </p>
                       <p className="mt-1 font-semibold">{formData.service}</p>
                     </div>
+                    <div className="space-y-2 border-t border-white/10 pt-4">
+                      <label htmlFor="summary-coupon" className="text-sm font-semibold">Cupón de descuento <span className="font-normal text-muted">(opcional)</span></label>
+                      <div className="flex gap-2">
+                        <input
+                          id="summary-coupon"
+                          value={couponCode}
+                          onChange={(event) => {
+                            setCouponCode(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))
+                            setCouponPreview(null)
+                            setCouponError('')
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault()
+                              void validateCoupon()
+                            }
+                          }}
+                          placeholder="DULCAN-XXXXXX o CREATOR"
+                          maxLength={30}
+                          disabled={selectedService.billing_type === 'subscription'}
+                          className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-3 font-mono text-sm uppercase outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                        <button type="button" onClick={() => void validateCoupon()} disabled={!couponCode.trim() || validatingCoupon || selectedService.billing_type === 'subscription'} className="h-11 rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50">{validatingCoupon ? 'Validando…' : 'Aplicar'}</button>
+                      </div>
+                      {selectedService.billing_type === 'subscription' && <p className="text-xs text-muted">Los cupones están disponibles para servicios de pago único.</p>}
+                      {couponError && <p className="text-xs text-red-400">{couponError}</p>}
+                      {couponPreview && <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3"><p className="text-sm font-semibold text-emerald-300">✓ {couponPreview.label}</p><p className="mt-1 text-xs text-muted">Ahorras ${couponPreview.discount.toFixed(2)} en esta compra.</p></div>}
+                    </div>
                     {selectedService.billing_type === 'subscription' &&
                     selectedService.recurring_price != null ? (
                       <div className="space-y-3 border-t border-white/10 pt-4 text-sm">
@@ -945,11 +1008,15 @@ function ContactFormContent() {
                         </p>
                       </div>
                     ) : (
-                      <div className="flex items-end justify-between border-t border-white/10 pt-4">
-                        <span className="text-sm text-muted">Total</span>
-                        <span className="text-3xl font-bold text-primary">
-                          ${Number(selectedService.price).toFixed(2)}
-                        </span>
+                      <div className="space-y-3 border-t border-white/10 pt-4">
+                        {couponPreview && <div className="flex justify-between text-sm"><span className="text-muted">Subtotal</span><span>${Number(selectedService.price).toFixed(2)}</span></div>}
+                        {couponPreview && <div className="flex justify-between text-sm text-emerald-300"><span>Descuento</span><span>−${couponPreview.discount.toFixed(2)}</span></div>}
+                        <div className="flex items-end justify-between">
+                          <span className="text-sm text-muted">Total</span>
+                          <span className="text-3xl font-bold text-primary">
+                            ${(couponPreview?.total ?? Number(selectedService.price)).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </>
@@ -1044,6 +1111,12 @@ function ContactFormContent() {
                     </span>
                   </div>
                 )}
+              {checkoutPreview.invoice.discount > 0 && (
+                <div className="flex justify-between text-emerald-300">
+                  <span>Descuento de cupón</span>
+                  <span>−${checkoutPreview.invoice.discount.toFixed(2)} {checkoutPreview.invoice.currency}</span>
+                </div>
+              )}
               <div className="flex items-end justify-between border-t border-white/10 pt-3">
                 <span className="font-semibold">
                   {checkoutPreview.invoice.billingType === 'subscription'
