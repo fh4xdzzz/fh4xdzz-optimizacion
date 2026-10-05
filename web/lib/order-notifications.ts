@@ -116,9 +116,11 @@ export async function sendOrderNotificationEmail(data: OrderEmailData): Promise<
 
   // Use the same origin as Discord OAuth so the browser sends the existing
   // Supabase session cookie when a customer follows an email link.
-  const discordRedirect = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI
-  const authOrigin = discordRedirect ? new URL(discordRedirect).origin : null
-  const siteUrl = (authOrigin || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://thedulcandesign.com').replace(/\/$/, '')
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://www.thedulcandesign.com'
+  const configuredOrigin = new URL(configuredSiteUrl).origin
+  const siteUrl = ['thedulcandesign.com', 'www.thedulcandesign.com'].includes(new URL(configuredOrigin).hostname)
+    ? 'https://www.thedulcandesign.com'
+    : configuredOrigin.replace(/\/$/, '')
   const from = process.env.EMAIL_FROM || 'TheDulcanDesign <soporte@thedulcandesign.com>'
   const logoUrl = `${siteUrl}/thedulcandesign-icon.png`
   const copy = getCopy(data)
