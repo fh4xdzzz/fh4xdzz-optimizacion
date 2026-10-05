@@ -6,6 +6,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { clearCart } from '@/lib/cart'
 
 interface PaymentSummary {
   paymentStatus: string
@@ -16,7 +17,7 @@ interface PaymentSummary {
   order: { id: string; orderNumber: string; status: string } | null
 }
 
-export default function PaymentSuccessClient({ sessionId }: { sessionId?: string }) {
+export default function PaymentSuccessClient({ sessionId, isCart = false }: { sessionId?: string; isCart?: boolean }) {
   const [summary, setSummary] = useState<PaymentSummary | null>(null)
   const [error, setError] = useState(sessionId ? '' : 'No encontramos la referencia de este pago.')
   const [checking, setChecking] = useState(Boolean(sessionId))
@@ -36,6 +37,7 @@ export default function PaymentSuccessClient({ sessionId }: { sessionId?: string
         if (cancelled) return
         setSummary(payload)
         setError('')
+        if (isCart && payload.paymentStatus === 'paid' && payload.order) clearCart()
         if (payload.paymentStatus === 'paid' && !payload.order && attempts < 8) {
           timer = setTimeout(verify, 1500)
           return
@@ -53,7 +55,7 @@ export default function PaymentSuccessClient({ sessionId }: { sessionId?: string
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [sessionId])
+  }, [sessionId, isCart])
 
   const paid = summary?.paymentStatus === 'paid'
   const orderReady = Boolean(summary?.order)
@@ -85,7 +87,7 @@ export default function PaymentSuccessClient({ sessionId }: { sessionId?: string
           <Card className="overflow-hidden border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-2xl shadow-primary/10">
             <CardContent className="p-6 md:p-8">
               <div className="flex items-start justify-between gap-5 border-b border-white/10 pb-6">
-                <div><p className="text-sm text-muted">Servicio contratado</p><h2 className="mt-1 text-2xl font-bold">{summary?.serviceName || 'Preparando detalles…'}</h2></div>
+                <div><p className="text-sm text-muted">{isCart ? 'Compra confirmada' : 'Servicio contratado'}</p><h2 className="mt-1 text-2xl font-bold">{summary?.serviceName || 'Preparando detalles…'}</h2></div>
                 {summary && <p className="shrink-0 text-xl font-bold text-primary">{formattedAmount}</p>}
               </div>
               <div className="space-y-5 py-6">

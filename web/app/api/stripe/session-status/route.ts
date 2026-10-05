@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     const { data: order } = checkout.metadata?.order_id
       ? await orderQuery.eq('id', checkout.metadata.order_id).maybeSingle()
-      : await orderQuery.eq('notes', `Pago Stripe confirmado. Sesión: ${sessionId}`).maybeSingle()
+      : await orderQuery.ilike('notes', `Pago Stripe confirmado. Sesión: ${sessionId}%`).limit(1).maybeSingle()
 
     let serviceName = 'Servicio profesional'
     if (order?.services) {

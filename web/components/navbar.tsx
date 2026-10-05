@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { getSession, signOut } from '@/lib/auth-hybrid'
 import { Button } from './ui/button'
 import { usePublicSiteSettings } from '@/components/public-site-settings-provider'
+import { CartLink } from '@/components/cart-link'
 
 type Session = {
   user: { full_name?: string; email: string; role?: string }
@@ -121,6 +122,7 @@ export default function Navbar() {
           </div>
 
           <div className="hidden shrink-0 items-center gap-2 xl:flex">
+            <CartLink />
             <a
               href={discordInviteUrl}
               target="_blank"
@@ -170,6 +172,7 @@ export default function Navbar() {
               ))}
             </div>
             <div className="mt-3 grid gap-2 border-t border-white/10 pt-3">
+              <CartLink mobile />
               <Button variant="outline" href={discordInviteUrl} target="_blank" rel="noopener noreferrer" className="h-12 w-full gap-2 border-[#7289da]/40 bg-[#5865f2]/10 text-white hover:bg-[#5865f2]/20">
                 <DiscordIcon /> Unirme a Discord
               </Button>

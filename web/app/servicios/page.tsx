@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/lib/supabase/client'
 import { isDemoMode, getSession } from '@/lib/auth-hybrid'
 import { SupportChatButton } from '@/components/support-chat-trigger'
+import { addToCart } from '@/lib/cart'
 
 interface Service {
   id: string
@@ -42,6 +43,7 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [cartMessage, setCartMessage] = useState('')
   const isDemo = isDemoMode()
   const router = useRouter()
 
@@ -241,10 +243,21 @@ export default function ServicesPage() {
     }
   }
 
+  const handleAddToCart = (service: Service) => {
+    if (service.billing_type === 'subscription') {
+      handleRequestService(service.id)
+      return
+    }
+    addToCart({ id: service.id, name: service.name, slug: service.slug, price: Number(service.price) })
+    setCartMessage(`${service.name} se agregó al carrito.`)
+    window.setTimeout(() => setCartMessage(''), 2600)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
+        {cartMessage && <div role="status" className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-2xl border border-primary/35 bg-[#121522]/95 px-5 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl">✓ {cartMessage}</div>}
         <section className="px-4 pb-20 pt-36">
           <div className="container mx-auto">
             <div className="mx-auto mb-12 h-32 max-w-2xl animate-pulse rounded-3xl bg-white/[.04]" />
@@ -364,6 +377,7 @@ export default function ServicesPage() {
                     <Button variant="primary" href={`/servicios/${service.slug}`} className="premium-button h-12 w-full">
                       Ver servicio <span aria-hidden="true" className="ml-2">→</span>
                     </Button>
+                    <button onClick={() => handleAddToCart(service)} className="mt-3 h-11 w-full rounded-xl border border-primary/30 bg-primary/10 text-sm font-semibold text-primary transition hover:bg-primary/20">{service.billing_type === 'subscription' ? 'Configurar suscripción' : '+ Agregar al carrito'}</button>
                     <button onClick={() => handleRequestService(service.id)} className="mt-3 w-full py-2 text-sm font-medium text-muted transition hover:text-foreground">Solicitar directamente</button>
                   </div>
                 </CardContent>

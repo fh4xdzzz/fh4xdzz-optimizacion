@@ -28,7 +28,48 @@ export async function POST(request: NextRequest) {
     if (checkout.payment_status === 'paid' && checkout.metadata?.user_id) {
       let orderId = checkout.metadata.order_id
       let shouldNotify = false
-      if (checkout.metadata.checkout_flow === 'service_request_v2' && checkout.metadata.service_id) {
+      if (checkout.metadata.checkout_flow === 'cart_v1' && checkout.metadata.cart_id) {
+        const { data: cart, error: cartLookupError } = await supabase.from('checkout_carts')
+          .select('*').eq('id', checkout.metadata.cart_id).eq('user_id', checkout.metadata.user_id).maybeSingle()
+        if (cartLookupError || !cart) return NextResponse.json({ error: 'No se encontró el carrito pagado.' }, { status: 500 })
+        const { data: existingCartOrder } = await supabase.from('orders').select('id').ilike('notes', `%Carrito: ${cart.id}%`).limit(1).maybeSingle()
+        if (existingCartOrder) {
+          orderId = existingCartOrder?.id
+          if (cart.status !== 'paid') await supabase.from('checkout_carts').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', cart.id)
+        } else {
+          const items = Array.isArray(cart.items) ? cart.items : []
+          const subtotal = Number(cart.subtotal) || 1
+          const totalCents = Number(checkout.amount_total || 0)
+          let allocatedCents = 0
+          const rows = items.map((item: { id: string; name: string; price: number }, index: number) => {
+            const cents = index === items.length - 1
+              ? totalCents - allocatedCents
+              : Math.round(totalCents * Number(item.price) / subtotal)
+            allocatedCents += cents
+            return {
+              order_number: `CART-${checkout.id}-${index + 1}`,
+              user_id: cart.user_id,
+              service_id: item.id,
+              status: 'reviewing',
+              client_name: cart.customer_name,
+              client_email: cart.customer_email,
+              client_discord: cart.customer_discord,
+              description: cart.description,
+              price: cents / 100,
+              notes: `Pago Stripe confirmado. Sesión: ${checkout.id}. Carrito: ${cart.id}`,
+            }
+          })
+          const { data: createdOrders, error: createCartError } = await supabase.from('orders').insert(rows).select('id')
+          if (createCartError || !createdOrders?.length) return NextResponse.json({ error: 'No se pudieron crear los pedidos del carrito.' }, { status: 500 })
+          orderId = createdOrders[0].id
+          shouldNotify = true
+          await supabase.from('checkout_carts').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', cart.id).eq('status', 'pending')
+          if (cart.coupon_id) {
+            const { data: coupon } = await supabase.from('discount_coupons').select('redemption_count').eq('id', cart.coupon_id).maybeSingle()
+            if (coupon) await supabase.from('discount_coupons').update({ redemption_count: Number(coupon.redemption_count) + 1 }).eq('id', cart.coupon_id)
+          }
+        }
+      } else if (checkout.metadata.checkout_flow === 'service_request_v2' && checkout.metadata.service_id) {
         const paymentNote = `Pago Stripe confirmado. Sesión: ${checkout.id}`
         const { data: existingOrder } = await supabase.from('orders')
           .select('id').eq('notes', paymentNote).maybeSingle()
