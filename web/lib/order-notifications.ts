@@ -108,6 +108,7 @@ export async function sendOrderNotificationEmail(data: OrderEmailData): Promise<
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://www.thedulcandesign.com').replace(/\/$/, '')
   const from = process.env.EMAIL_FROM || 'TheDulcanDesign <soporte@thedulcandesign.com>'
+  const logoUrl = `${siteUrl}/thedulcandesign-icon.png`
   const copy = getCopy(data)
   const estimated = formatDate(data.estimatedCompletion)
   const note = data.note?.trim()
@@ -131,6 +132,14 @@ export async function sendOrderNotificationEmail(data: OrderEmailData): Promise<
   <div style="padding:40px 16px">
     <div style="max-width:600px;margin:0 auto;border:1px solid #29283d;border-radius:20px;overflow:hidden;background:#12121a">
       <div style="padding:30px;background:linear-gradient(135deg,#17172b,#292052)">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px;border-collapse:collapse">
+          <tr>
+            <td style="width:58px;vertical-align:middle">
+              <img src="${logoUrl}" width="52" height="52" alt="TheDulcanDesign" style="display:block;width:52px;height:52px;border:0;border-radius:14px;object-fit:cover" />
+            </td>
+            <td style="padding-left:12px;vertical-align:middle;color:#fff;font-size:18px;font-weight:700;letter-spacing:-0.2px">TheDulcanDesign</td>
+          </tr>
+        </table>
         <div style="color:#9b87f5;font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase">TheDulcanDesign · ${escapeHtml(copy.eyebrow)}</div>
         <h1 style="margin:12px 0 8px;font-size:28px;line-height:1.2;color:#fff">${escapeHtml(copy.title)}</h1>
         <p style="margin:0;color:#c7c5d8;line-height:1.65">Hola ${safeName}, ${escapeHtml(copy.message)}</p>
