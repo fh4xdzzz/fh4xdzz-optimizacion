@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminRole } from '@/lib/admin-api'
+import { sendOrderNotificationEmail } from '@/lib/order-notifications'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024
 
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
   const { data: order } = await auth.supabase
     .from('orders')
-    .select('id, user_id')
+    .select('id, user_id, order_number, client_name, client_email, services(name)')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -103,14 +104,26 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json({ error: 'No se pudo registrar la entrega.' }, { status: 500 })
   }
 
-  await auth.supabase.from('order_events').insert({
+  const { data: orderEvent } = await auth.supabase.from('order_events').insert({
     order_id: order.id,
     event_type: 'note_added',
     description: `Archivo entregado: ${fileName.slice(0, 180)}`,
     created_by: auth.session.user.id,
+  }).select('id').single()
+
+  const service = Array.isArray(order.services) ? order.services[0] : order.services
+  const emailSent = await sendOrderNotificationEmail({
+    kind: 'deliverable_ready',
+    eventId: orderEvent?.id || `${order.id}-${deliverable.id}`,
+    orderId: order.id,
+    orderNumber: order.order_number,
+    customerName: order.client_name,
+    customerEmail: order.client_email,
+    serviceName: service?.name || 'Servicio',
+    note: note || `Archivo disponible: ${fileName}`,
   })
 
-  return NextResponse.json({ deliverable }, { status: 201 })
+  return NextResponse.json({ deliverable, emailSent }, { status: 201 })
 }
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {

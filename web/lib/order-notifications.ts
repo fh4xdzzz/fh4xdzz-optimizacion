@@ -5,6 +5,7 @@ type OrderNotificationKind =
   | 'waiting_client'
   | 'completed'
   | 'cancelled'
+  | 'deliverable_ready'
 
 interface OrderEmailData {
   kind: OrderNotificationKind
@@ -89,6 +90,13 @@ function getCopy(data: OrderEmailData) {
         title: 'Tu pedido fue cancelado',
         message: 'El estado de tu pedido cambió a cancelado. Si tienes alguna pregunta, abre el soporte privado para que podamos ayudarte.',
       }
+    case 'deliverable_ready':
+      return {
+        subject: `Nueva entrega disponible · ${data.orderNumber}`,
+        eyebrow: 'Archivo listo para descargar',
+        title: 'Tienes una nueva entrega privada',
+        message: 'El equipo agregó un archivo a tu pedido. Inicia sesión para descargarlo de forma segura desde tu área privada.',
+      }
     default:
       return {
         subject: `Pedido ${status.toLowerCase()} · ${data.orderNumber}`,
@@ -153,7 +161,7 @@ export async function sendOrderNotificationEmail(data: OrderEmailData): Promise<
           ${estimated ? `<div style="margin-top:10px;color:#c7c5d8">Fecha estimada: ${escapeHtml(estimated)}</div>` : ''}
           ${note ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid #303047;color:#e4e2ed;line-height:1.55">${escapeHtml(note)}</div>` : ''}
         </div>
-        <a href="${siteUrl}/pedidos" style="display:block;margin-top:22px;padding:14px 20px;border-radius:12px;background:#6757f5;color:#fff;text-align:center;text-decoration:none;font-weight:700">Ver seguimiento privado</a>
+        <a href="${siteUrl}/pedidos" style="display:block;margin-top:22px;padding:14px 20px;border-radius:12px;background:#6757f5;color:#fff;text-align:center;text-decoration:none;font-weight:700">${data.kind === 'deliverable_ready' ? 'Ver y descargar entrega' : 'Ver seguimiento privado'}</a>
         <p style="margin:22px 0 0;color:#858298;font-size:12px;line-height:1.5">Este mensaje contiene información privada de tu pedido. No compartas este correo.</p>
       </div>
     </div>

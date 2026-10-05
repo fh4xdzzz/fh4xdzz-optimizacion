@@ -34,6 +34,8 @@ const toggleSchema = z.object({
   isActive: z.boolean(),
 })
 
+const deleteSchema = z.object({ kind: z.enum(['coupon', 'package']), id: z.string().uuid() })
+
 export async function GET() {
   const auth = await requireAdminRole(true)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
@@ -83,5 +85,16 @@ export async function PATCH(request: NextRequest) {
   const table = parsed.data.kind === 'coupon' ? 'discount_coupons' : 'service_packages'
   const { error } = await auth.supabase.from(table).update({ is_active: parsed.data.isActive, updated_at: new Date().toISOString() }).eq('id', parsed.data.id)
   if (error) return NextResponse.json({ error: 'No se pudo actualizar la oferta.' }, { status: 400 })
+  return NextResponse.json({ ok: true })
+}
+
+export async function DELETE(request: NextRequest) {
+  const auth = await requireAdminRole(true)
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  const parsed = deleteSchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  const table = parsed.data.kind === 'coupon' ? 'discount_coupons' : 'service_packages'
+  const { error } = await auth.supabase.from(table).delete().eq('id', parsed.data.id)
+  if (error) return NextResponse.json({ error: 'No se pudo eliminar la oferta.' }, { status: 400 })
   return NextResponse.json({ ok: true })
 }

@@ -8,6 +8,7 @@ import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { DatePicker } from '@/components/ui/date-picker'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
 import { useNotificationStore } from '@/lib/notifications-store'
@@ -514,7 +515,9 @@ export default function AdminPage() {
       setDeliveryFile(null)
       setDeliveryNote('')
       setDeliveryInputKey(value => value + 1)
-      notifySuccess('Archivo entregado de forma privada')
+      notifySuccess(completed.emailSent
+        ? 'Archivo entregado y cliente notificado por correo'
+        : 'Archivo entregado. No se pudo enviar el correo al cliente')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo subir el archivo'
       notifyError(
@@ -1902,7 +1905,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label htmlFor="order-estimated-date" className="mb-3 block text-base font-medium">Entrega estimada</label>
-                  <input id="order-estimated-date" type="datetime-local" value={estimatedCompletion} onChange={(event) => setEstimatedCompletion(event.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <DatePicker id="order-estimated-date" value={estimatedCompletion} onChange={setEstimatedCompletion} min={new Date().toISOString().slice(0, 10)} includeTime placeholder="Elegir fecha y hora" />
                 </div>
               </div>
 
