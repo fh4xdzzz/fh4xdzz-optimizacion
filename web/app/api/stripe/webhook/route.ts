@@ -91,28 +91,35 @@ export async function POST(request: NextRequest) {
       const { data: order } = await supabase.from('orders')
         .select('id, order_number, client_name, client_email, services(name), users(discord_id)')
         .eq('id', orderId).maybeSingle()
-      if (order && shouldNotify) {
+      if (order) {
         const service = Array.isArray(order.services) ? order.services[0] : order.services
         const user = Array.isArray(order.users) ? order.users[0] : order.users
-        await Promise.allSettled([
-          getDiscordService().notifyOrderPaid({
+        if (shouldNotify) {
+          await Promise.allSettled([getDiscordService().notifyOrderPaid({
             order_id: order.id,
             order_number: order.order_number,
             service_name: service?.name || 'Servicio',
             customer_name: order.client_name,
             discord_user_id: user?.discord_id || undefined,
-          }),
-          sendOrderNotificationEmail({
-            kind: 'paid',
-            eventId: `order-paid-${order.id}`,
-            orderId: order.id,
-            orderNumber: order.order_number,
-            customerName: order.client_name,
-            customerEmail: order.client_email,
-            serviceName: service?.name || 'Servicio',
-            status: 'reviewing',
-          }),
-        ])
+          })])
+        }
+
+        // El correo se intenta también en reenvíos del webhook. Resend usa una
+        // clave idempotente por pedido, por lo que un reintento no lo duplica.
+        // Si falla, devolvemos error para que Stripe vuelva a entregar el evento.
+        const emailSent = await sendOrderNotificationEmail({
+          kind: 'paid',
+          eventId: `order-paid-${order.id}`,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          customerName: order.client_name,
+          customerEmail: order.client_email,
+          serviceName: service?.name || 'Servicio',
+          status: 'reviewing',
+        })
+        if (!emailSent) {
+          return NextResponse.json({ error: 'El pedido se creó, pero el correo no pudo enviarse.' }, { status: 502 })
+        }
       }
     }
   }
