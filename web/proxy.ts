@@ -14,6 +14,15 @@ function copySessionCookies(source: NextResponse, target: NextResponse) {
 }
 
 export async function proxy(request: NextRequest) {
+  // Keep authentication on one canonical host. Cookies created on `www` are
+  // not sent to the apex domain, so normalize old email links before checking
+  // the protected route or starting Discord OAuth.
+  if (request.nextUrl.hostname === 'thedulcandesign.com') {
+    const canonicalUrl = request.nextUrl.clone()
+    canonicalUrl.hostname = 'www.thedulcandesign.com'
+    return NextResponse.redirect(canonicalUrl, 308)
+  }
+
   if (isDemoMode() || !isSupabaseMode()) return NextResponse.next()
 
   let supabaseResponse = NextResponse.next({ request })
