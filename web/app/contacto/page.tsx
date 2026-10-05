@@ -389,6 +389,11 @@ function ContactFormContent() {
       return
     }
 
+    if (couponCode.trim() && !couponPreview) {
+      const validCoupon = await validateCoupon()
+      if (!validCoupon) return
+    }
+
     // Verificar autenticación
     const session = await getSession()
     if (!session) {
@@ -479,11 +484,11 @@ function ContactFormContent() {
   }
 
   const validateCoupon = async () => {
-    if (!selectedService || !couponCode.trim()) return
+    if (!selectedService || !couponCode.trim()) return false
     if (selectedService.billing_type === 'subscription') {
       setCouponPreview(null)
       setCouponError('Los cupones aplican únicamente a servicios de pago único.')
-      return
+      return false
     }
     setValidatingCoupon(true)
     setCouponError('')
@@ -496,9 +501,11 @@ function ContactFormContent() {
       const payload = await response.json() as { valid?: boolean; couponDiscount?: number; total?: number; label?: string; error?: string }
       if (!response.ok || !payload.valid) throw new Error(payload.error || 'Este cupón no es válido.')
       setCouponPreview({ discount: Number(payload.couponDiscount || 0), total: Number(payload.total || selectedService.price), label: payload.label || 'Descuento aplicado' })
+      return true
     } catch (error) {
       setCouponPreview(null)
       setCouponError(error instanceof Error ? error.message : 'No pudimos validar el cupón.')
+      return false
     } finally {
       setValidatingCoupon(false)
     }

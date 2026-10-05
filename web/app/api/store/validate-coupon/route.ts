@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   const [{ data: services }, { data: packages }, { data: coupon }] = await Promise.all([
     supabase.from('services').select('id, price, billing_type').in('id', ids).eq('is_active', true),
     supabase.from('service_packages').select('id, discount_percent, service_package_items(service_id)').eq('is_active', true),
-    supabase.from('discount_coupons').select('id, discount_type, discount_value, minimum_amount, max_redemptions, redemption_count, starts_at, expires_at').eq('code', parsed.data.code).eq('is_active', true).maybeSingle(),
+    supabase.from('discount_coupons').select('id, discount_type, discount_value, minimum_amount, max_redemptions, redemption_count, starts_at, expires_at, is_active').eq('code', parsed.data.code).maybeSingle(),
   ])
   if (!services || services.length !== ids.length || services.some(service => service.billing_type === 'subscription')) return NextResponse.json({ valid: false, error: 'El carrito contiene un servicio no válido.' })
 
@@ -35,12 +35,12 @@ export async function POST(request: NextRequest) {
   const packageDiscount = bestPackage ? subtotal * Number(bestPackage.discount_percent) / 100 : 0
   const base = subtotal - packageDiscount
   const now = Date.now()
-  const valid = coupon
-    && (!coupon.starts_at || new Date(coupon.starts_at).getTime() <= now)
-    && (!coupon.expires_at || new Date(coupon.expires_at).getTime() > now)
-    && (coupon.max_redemptions == null || coupon.redemption_count < coupon.max_redemptions)
-    && base >= Number(coupon.minimum_amount)
-  if (!valid) return NextResponse.json({ valid: false, error: 'Este cupón no existe, venció o alcanzó su límite de usos.' })
+  if (!coupon) return NextResponse.json({ valid: false, error: 'Este código de cupón no existe.' })
+  if (!coupon.is_active) return NextResponse.json({ valid: false, error: 'Este cupón está desactivado.' })
+  if (coupon.starts_at && new Date(coupon.starts_at).getTime() > now) return NextResponse.json({ valid: false, error: 'Este cupón todavía no está disponible.' })
+  if (coupon.expires_at && new Date(coupon.expires_at).getTime() <= now) return NextResponse.json({ valid: false, error: 'Este cupón está vencido.' })
+  if (coupon.max_redemptions != null && coupon.redemption_count >= coupon.max_redemptions) return NextResponse.json({ valid: false, error: 'Este cupón alcanzó su límite de usos.' })
+  if (base < Number(coupon.minimum_amount)) return NextResponse.json({ valid: false, error: `Este cupón requiere una compra mínima de $${Number(coupon.minimum_amount).toFixed(2)}.` })
 
   const rawDiscount = coupon.discount_type === 'percent' ? base * Number(coupon.discount_value) / 100 : Number(coupon.discount_value)
   const couponDiscount = Math.min(rawDiscount, Math.max(0, base - 0.5))
