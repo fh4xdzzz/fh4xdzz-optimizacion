@@ -32,6 +32,7 @@ export default function Footer() {
                 alt="TheDulcanDesign Logo"
                 width={44}
                 height={44}
+                loading="eager"
                 className="shrink-0 object-contain"
               />
               <span className="font-bold text-xl gradient-text-primary">TheDulcanDesign</span>

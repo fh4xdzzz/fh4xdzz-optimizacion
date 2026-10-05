@@ -364,7 +364,7 @@ export default function Home() {
               <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.025] px-5 py-4">
                 <div><p className="text-sm font-semibold">Diagnóstico personalizado</p><p className="mt-1 text-xs text-muted">Configuración basada en tu hardware</p></div>
                 <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-primary/25 bg-primary/10 p-1">
-                  <Image src="/thedulcandesign-icon.png" alt="TheDulcanDesign" width={32} height={32} className="object-contain" />
+                  <Image src="/thedulcandesign-icon.png" alt="TheDulcanDesign" width={32} height={32} loading="eager" className="object-contain" />
                 </div>
               </div>
             </div>
