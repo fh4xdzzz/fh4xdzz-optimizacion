@@ -473,7 +473,9 @@ export default function AdminPage() {
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
       const projectId = new URL(supabaseUrl).hostname.split('.')[0]
-      const endpoint = `https://${projectId}.storage.supabase.co/storage/v1/upload/resumable`
+      // Signed TUS uploads use the dedicated /sign endpoint. The regular
+      // resumable endpoint expects a user JWT/RLS authorization instead.
+      const endpoint = `https://${projectId}.storage.supabase.co/storage/v1/upload/resumable/sign`
       await new Promise<void>((resolve, reject) => {
         const upload = new tus.Upload(deliveryFile, {
           endpoint,
