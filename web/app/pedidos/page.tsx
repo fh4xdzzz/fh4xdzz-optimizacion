@@ -118,7 +118,10 @@ export default function OrdersPage() {
       service_name: Array.isArray(order.services) ? order.services[0]?.name : order.services?.name,
     })) as Order[]
     setOrders(mapped)
-    setSelectedId(current => current && mapped.some(order => order.id === current) ? current : mapped[0]?.id || null)
+    const requestedOrder = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('order') : null
+    setSelectedId(current => requestedOrder && mapped.some(order => order.id === requestedOrder)
+      ? requestedOrder
+      : current && mapped.some(order => order.id === current) ? current : mapped[0]?.id || null)
     setError('')
     setLoading(false)
   }, [supabase])
