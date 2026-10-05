@@ -9,14 +9,12 @@ export async function GET() {
   if (!url || !key) return NextResponse.json({ alerts: [] }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } })
 
   const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from('orders')
     .select('client_name, created_at, status, services(name)')
-    .gte('created_at', since)
     .not('status', 'in', '(pending,cancelled)')
     .order('created_at', { ascending: false })
-    .limit(8)
+    .limit(30)
 
   if (error) {
     console.error('[recent-activity] No se pudieron cargar las alertas', error)
