@@ -477,7 +477,8 @@ summary::-webkit-details-marker {
   height: 2px;
   margin: 12px 4px 0;
   border-radius: 999px;
-  background: linear-gradient(90deg, #ef4444, #f97316, transparent);
+  background: linear-gradient(90deg, #22d3ee, #6366f1 48%, #8b5cf6 78%, transparent);
+  box-shadow: 0 0 14px rgba(99, 102, 241, .45);
   animation: recent-alert-progress 9s linear both;
   transform-origin: left;
 }
