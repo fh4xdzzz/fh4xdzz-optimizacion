@@ -19,7 +19,7 @@ export async function GET() {
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { supabase } = auth
-  const [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult] = await Promise.all([
+  const [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult, auditSettingsResult] = await Promise.all([
     supabase.from('users').select('id, email, full_name, role, created_at').order('created_at', { ascending: false }).limit(1000),
     supabase.from('orders').select('id, order_number, status, client_name, client_email, price, user_id, assigned_to, created_at, updated_at, services(name)').is('deleted_at', null).order('updated_at', { ascending: false }).limit(1000),
     supabase.from('services').select('id, name, category, price, is_active, is_featured, created_at').order('is_featured', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
@@ -28,9 +28,10 @@ export async function GET() {
     supabase.from('chat_audit_logs').select('id, action, actor_id, session_id, metadata, created_at, chat_sessions(conversation_number, subject)').order('created_at', { ascending: false }).limit(150),
     supabase.from('chat_messages').select('id, session_id, sender_id, sender_role, message, message_type, created_at, chat_sessions(conversation_number, subject)').order('created_at', { ascending: false }).limit(120),
     supabase.from('checkout_carts').select('id, total, package_discount, coupon_discount, coupon_id, paid_at, created_at, discount_coupons(code)').eq('status', 'paid').order('paid_at', { ascending: false }).limit(1000),
+    supabase.from('business_settings').select('setting_value').eq('setting_key', 'audit_visibility').maybeSingle(),
   ])
 
-  const failed = [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult].find(result => result.error)
+  const failed = [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult, auditSettingsResult].find(result => result.error)
   if (failed?.error) {
     console.error('[owner/activity] Error consultando actividad', failed.error)
     return NextResponse.json({ error: 'No se pudo cargar la actividad del sistema.' }, { status: 500 })
@@ -116,6 +117,14 @@ export async function GET() {
   }
 
   activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  const auditSetting = auditSettingsResult.data?.setting_value
+  const clearedAt = typeof auditSetting === 'object' && auditSetting !== null && 'cleared_at' in auditSetting
+    ? String(auditSetting.cleared_at)
+    : null
+  const clearedAtMs = clearedAt ? new Date(clearedAt).getTime() : Number.NaN
+  const visibleActivities = Number.isNaN(clearedAtMs)
+    ? activities
+    : activities.filter(activity => new Date(activity.createdAt).getTime() > clearedAtMs)
 
   const paidOrders = orders.filter(order => !['pending', 'cancelled'].includes(order.status))
   const totalRevenue = paidOrders
@@ -188,6 +197,26 @@ export async function GET() {
       clientName: session.client_id ? userMap.get(session.client_id)?.full_name || userMap.get(session.client_id)?.email || 'Cliente' : 'Visitante',
       assignedAgent: session.assigned_agent_id ? userMap.get(session.assigned_agent_id)?.full_name || userMap.get(session.assigned_agent_id)?.email || 'Agente' : null,
     })),
-    activities: activities.slice(0, 300),
+    activities: visibleActivities.slice(0, 300),
   })
+}
+
+export async function DELETE() {
+  const auth = await requireAdminRole(true)
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const clearedAt = new Date().toISOString()
+  const { error } = await auth.supabase.from('business_settings').upsert({
+    setting_key: 'audit_visibility',
+    setting_value: { cleared_at: clearedAt },
+    description: 'Punto desde el cual el Owner desea mostrar la auditoría.',
+    updated_at: clearedAt,
+  }, { onConflict: 'setting_key' })
+
+  if (error) {
+    console.error('[owner/activity] Error limpiando auditoría', error)
+    return NextResponse.json({ error: 'No se pudo limpiar la auditoría.' }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, clearedAt })
 }
