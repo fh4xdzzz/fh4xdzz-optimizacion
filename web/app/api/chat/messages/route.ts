@@ -157,8 +157,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
     const userRole = session.user.role || 'client'
-    let effectiveSenderRole = userRole
-    let writeClient = supabase
+    const effectiveSenderRole = userRole
+    const writeClient = supabase
+
+    if (['staff', 'admin', 'owner'].includes(userRole) && as_client === true) {
+      return NextResponse.json({ error: 'Las cuentas del equipo no pueden enviar mensajes como clientes.' }, { status: 403 })
+    }
 
     // Verificar permisos
     if (userRole === 'client') {
@@ -206,20 +210,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Session not found' }, { status: 404 })
       }
 
-      const actingAsOwnClient = as_client === true && chatSession.client_id === session.user.id
-
-      if (actingAsOwnClient) {
-        effectiveSenderRole = 'client'
-        const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-        if (!serviceUrl || !serviceKey) {
-          return NextResponse.json({ error: 'Support service is not configured' }, { status: 503 })
-        }
-        writeClient = createServiceClient(serviceUrl, serviceKey, {
-          auth: { persistSession: false, autoRefreshToken: false },
-        }) as typeof supabase
-      }
-
       // Un agente solo puede responder la conversación que reclamó.
       if (chatSession.status === 'closed') {
         console.log('Attempt to send message to closed session by admin - blocked')
@@ -229,7 +219,7 @@ export async function POST(request: NextRequest) {
         }, { status: 403 })
       }
 
-      if (!actingAsOwnClient && chatSession.assigned_agent_id !== session.user.id) {
+      if (chatSession.assigned_agent_id !== session.user.id) {
         return NextResponse.json({
           error: 'Debes reclamar esta conversación antes de responder.'
         }, { status: 403 })

@@ -135,13 +135,12 @@ export default function SupportChatWidget() {
   useEffect(() => {
     const openFromOrder = (event: Event) => {
       const detail = (event as CustomEvent<{ message?: string; asCustomer?: boolean }>).detail
-      const openingAsCustomer = detail?.asCustomer === true && SUPPORT_ROLES.includes(currentUserRoleRef.current || '')
-      setCustomerContext(openingAsCustomer)
-      if (openingAsCustomer) {
-        setSession(null)
-        setMessages([])
-        setUnread(0)
+      if (SUPPORT_ROLES.includes(currentUserRoleRef.current || '')) {
+        setCustomerContext(false)
+        notifyWarning('Las cuentas Owner, Admin y Staff no pueden abrir solicitudes de soporte.')
+        return
       }
+      setCustomerContext(false)
       setOpen(true)
       setTab('chat')
       if (detail?.message) setText(detail.message)
@@ -579,7 +578,6 @@ export default function SupportChatWidget() {
           subject: 'Soporte web',
           service_type: 'general',
           language: 'es',
-          as_customer: customerContext,
         })
       })
 
@@ -715,7 +713,6 @@ export default function SupportChatWidget() {
           session_id: currentSession.id,
           message: messageText.trim(),
           message_type: 'text',
-          as_client: customerContext,
         })
       })
 

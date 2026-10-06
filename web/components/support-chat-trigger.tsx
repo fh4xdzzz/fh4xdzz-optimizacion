@@ -5,7 +5,7 @@ import { Button, type ButtonProps } from '@/components/ui/button'
 
 function openSupportChat(message?: string) {
   window.dispatchEvent(new CustomEvent('open-support-chat', {
-    detail: { message, asCustomer: true },
+    detail: message ? { message } : undefined,
   }))
 }
 
