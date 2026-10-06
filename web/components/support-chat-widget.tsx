@@ -283,6 +283,7 @@ export default function SupportChatWidget() {
         const isNewAssignment = session?.id !== assignedSession.id
         setSession(assignedSession)
         if (isNewAssignment) {
+          useNotificationStore.getState().info('Se te asignó una nueva conversación de soporte.')
           shouldAutoScrollRef.current = true
           await loadMessages(assignedSession.id)
           setTab('chat')
@@ -400,6 +401,11 @@ export default function SupportChatWidget() {
         // Incrementar contador si el chat está cerrado y el mensaje es del soporte
         if (newMessage.sender_id !== currentUserIdRef.current && !openRef.current) {
           setUnread(prev => prev + 1)
+          useNotificationStore.getState().info(
+            newMessage.sender_role === 'client'
+              ? 'Nuevo mensaje de soporte de un cliente.'
+              : 'Tienes un nuevo mensaje del equipo de soporte.'
+          )
         }
 
         if (newMessage.sender_role !== 'client') {
