@@ -5,6 +5,9 @@ import { requireAdminRole } from '@/lib/admin-api'
 const couponSchema = z.object({
   action: z.literal('create_coupon'),
   couponKind: z.enum(['automatic', 'creator']),
+  creatorName: z.string().trim().min(2).max(80).optional(),
+  creatorEmail: z.string().trim().email().max(255).or(z.literal('')).optional(),
+  commissionRate: z.coerce.number().min(0).max(50).optional(),
   code: z.string().trim().min(3).max(30).regex(/^[A-Z0-9-]+$/),
   description: z.string().trim().max(160).optional(),
   discountType: z.literal('percent'),
@@ -63,6 +66,19 @@ export async function POST(request: NextRequest) {
       expires_at: coupon.data.expiresAt || null,
     }).select().single()
     if (error) return NextResponse.json({ error: error.code === '23505' ? 'Ese código ya existe.' : 'No se pudo crear el cupón.' }, { status: 400 })
+    if (coupon.data.couponKind === 'creator') {
+      const { error: creatorError } = await auth.supabase.from('affiliate_creators').insert({
+        coupon_id: data.id,
+        display_name: coupon.data.creatorName || coupon.data.code,
+        slug: coupon.data.code.toUpperCase(),
+        contact_email: coupon.data.creatorEmail || null,
+        commission_rate: coupon.data.commissionRate ?? 10,
+      })
+      if (creatorError) {
+        await auth.supabase.from('discount_coupons').delete().eq('id', data.id)
+        return NextResponse.json({ error: 'No se pudo crear el perfil de afiliado.' }, { status: 400 })
+      }
+    }
     return NextResponse.json({ coupon: data })
   }
   const offer = packageSchema.safeParse(body)

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { getServerSession } from '@/lib/auth-server'
 import { getStripe } from '@/lib/stripe-server'
 import { calculateBestPackageDiscount, calculateCouponDiscount } from '@/lib/store-pricing'
+import { AFFILIATE_COOKIE, normalizeAffiliateCode } from '@/lib/affiliate-program'
 
 const schema = z.object({
   serviceIds: z.array(z.string().uuid()).min(1).max(10),
@@ -54,6 +55,21 @@ export async function POST(request: NextRequest) {
     couponDiscount = calculateCouponDiscount(base, coupon.discount_type, coupon.discount_value)
   }
 
+  let affiliateCreatorId = ''
+  let affiliateCommissionRate = ''
+  const referralCode = normalizeAffiliateCode(request.cookies.get(AFFILIATE_COOKIE)?.value || '')
+  if (referralCode || couponId) {
+    const { data: couponAffiliate } = couponId
+      ? await supabase.from('affiliate_creators').select('id, commission_rate').eq('status', 'active').eq('coupon_id', couponId).maybeSingle()
+      : { data: null }
+    const { data: referralAffiliate } = !couponAffiliate && referralCode
+      ? await supabase.from('affiliate_creators').select('id, commission_rate').eq('status', 'active').eq('slug', referralCode).maybeSingle()
+      : { data: null }
+    const affiliate = couponAffiliate || referralAffiliate
+    affiliateCreatorId = affiliate?.id || ''
+    affiliateCommissionRate = affiliate ? String(affiliate.commission_rate) : ''
+  }
+
   const total = Math.max(0.5, subtotal - packageDiscount - couponDiscount)
   const items = services.map((service) => ({ id: service.id, name: service.name, slug: service.slug, price: Number(service.price) }))
   const { data: cart, error: cartError } = await supabase.from('checkout_carts').insert({
@@ -68,7 +84,7 @@ export async function POST(request: NextRequest) {
   const checkout = await stripe.checkout.sessions.create({
     mode: 'payment', payment_method_types: ['card'], customer_email: session.user.email,
     client_reference_id: session.user.id,
-    metadata: { checkout_flow: 'cart_v1', cart_id: cart.id, user_id: session.user.id },
+    metadata: { checkout_flow: 'cart_v1', cart_id: cart.id, user_id: session.user.id, affiliate_creator_id: affiliateCreatorId, affiliate_commission_rate: affiliateCommissionRate },
     line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: Math.round(total * 100), product_data: {
       name: services.length > 1 ? `Paquete TheDulcanDesign · ${services.length} servicios` : services[0].name,
       description: services.map((service) => service.name).join(' + ').slice(0, 500),

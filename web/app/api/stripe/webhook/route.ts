@@ -14,15 +14,20 @@ function stripeId(value: string | { id: string } | null | undefined) {
 
 async function recordPayment(supabase: AdminClient, values: Record<string, string | number | boolean | null>) {
   const { data, error } = await supabase.from('payment_transactions').insert(values).select('id').maybeSingle()
-  if (!error) return Boolean(data)
-  if (error.code === '23505') return false
+  if (!error) return data?.id || null
+  if (error.code === '23505') {
+    const eventId = String(values.stripe_event_id || '')
+    const { data: existing, error: lookupError } = await supabase.from('payment_transactions')
+      .select('id').eq('stripe_event_id', eventId).maybeSingle()
+    if (lookupError || !existing) throw new Error('No se pudo recuperar la transacción para completar el reintento.')
+    return existing.id
+  }
   throw new Error(`No se pudo registrar la transacción: ${error.message}`)
 }
 
-async function redeemCoupon(supabase: AdminClient, couponId: string | null) {
-  if (!couponId) return
-  const { error } = await supabase.rpc('increment_coupon_redemption', { p_coupon_id: couponId })
-  if (error) throw new Error(`No se pudo registrar el uso del cupón: ${error.message}`)
+async function finalizePaymentAttribution(supabase: AdminClient, paymentTransactionId: string) {
+  const { error } = await supabase.rpc('finalize_payment_attribution', { p_payment_transaction_id: paymentTransactionId })
+  if (error) throw new Error(`No se pudo completar la atribución del pago: ${error.message}`)
 }
 
 async function processCheckout(supabase: AdminClient, event: Stripe.Event, checkout: Stripe.Checkout.Session) {
@@ -34,6 +39,8 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
   let cartId: string | null = null
   let couponId = metadata.coupon_id || null
   let couponDiscount = Number(metadata.coupon_discount || 0)
+  const affiliateCreatorId = metadata.affiliate_creator_id || null
+  const affiliateCommissionRate = metadata.affiliate_commission_rate ? Number(metadata.affiliate_commission_rate) : null
   let shouldNotify = false
 
   if (metadata.checkout_flow === 'cart_v1' && metadata.cart_id) {
@@ -138,7 +145,8 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
     if (error) throw new Error(`No se pudo registrar la suscripción: ${error.message}`)
   }
 
-  const transactionCreated = await recordPayment(supabase, {
+  const paidAmount = Number(checkout.amount_total || 0) / 100
+  const paymentTransactionId = await recordPayment(supabase, {
     stripe_event_id: event.id,
     stripe_session_id: checkout.id,
     stripe_invoice_id: stripeId(checkout.invoice),
@@ -149,14 +157,16 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
     order_id: orderId,
     checkout_cart_id: cartId,
     coupon_id: couponId,
+    affiliate_creator_id: affiliateCreatorId,
+    affiliate_commission_rate: affiliateCommissionRate,
     payment_kind: metadata.billing_type === 'subscription' ? 'subscription_initial' : 'one_time',
     livemode: event.livemode,
-    amount: Number(checkout.amount_total || 0) / 100,
+    amount: paidAmount,
     discount_amount: couponDiscount,
     currency: checkout.currency || 'usd',
     paid_at: new Date(event.created * 1000).toISOString(),
   })
-  if (transactionCreated) await redeemCoupon(supabase, couponId)
+  if (paymentTransactionId) await finalizePaymentAttribution(supabase, paymentTransactionId)
   if (!orderId) return
 
   const { data: order, error: orderError } = await supabase.from('orders')

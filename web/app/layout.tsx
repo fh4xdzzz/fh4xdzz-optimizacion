@@ -6,6 +6,8 @@ import { Notifications } from "@/components/notifications";
 import PresenceTracker from "@/components/presence-tracker";
 import RecentActivityAlert from "@/components/recent-activity-alert";
 import { PublicSiteSettingsProvider } from "@/components/public-site-settings-provider";
+import ReferralTracker from "@/components/referral-tracker";
+import { Suspense } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -89,6 +91,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Notifications />
           <RecentActivityAlert />
           <PresenceTracker />
+          <Suspense fallback={null}><ReferralTracker /></Suspense>
         </PublicSiteSettingsProvider>
       </body>
     </html>

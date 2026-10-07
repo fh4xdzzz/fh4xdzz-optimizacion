@@ -6,6 +6,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { getStripe } from '@/lib/stripe-server'
 import { randomBytes } from 'node:crypto'
 import { calculateCouponDiscount } from '@/lib/store-pricing'
+import { AFFILIATE_COOKIE, normalizeAffiliateCode } from '@/lib/affiliate-program'
 
 const checkoutSchema = z.object({
   serviceId: z.string().uuid(),
@@ -91,6 +92,25 @@ export async function POST(request: NextRequest) {
       couponDiscount = calculateCouponDiscount(setupPrice, coupon.discount_type as 'percent' | 'fixed', coupon.discount_value)
     }
     const discountedSetupPrice = Number(Math.max(0.5, setupPrice - couponDiscount).toFixed(2))
+    let affiliateCreatorId = ''
+    let affiliateCommissionRate = ''
+    const referralCode = normalizeAffiliateCode(request.cookies.get(AFFILIATE_COOKIE)?.value || '')
+    if (referralCode || coupon?.id) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (supabaseUrl && serviceRoleKey) {
+        const affiliateClient = createAdminClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+        const { data: couponAffiliate } = coupon?.id
+          ? await affiliateClient.from('affiliate_creators').select('id, commission_rate').eq('status', 'active').eq('coupon_id', coupon.id).maybeSingle()
+          : { data: null }
+        const { data: referralAffiliate } = !couponAffiliate && referralCode
+          ? await affiliateClient.from('affiliate_creators').select('id, commission_rate').eq('status', 'active').eq('slug', referralCode).maybeSingle()
+          : { data: null }
+        const affiliate = couponAffiliate || referralAffiliate
+        affiliateCreatorId = affiliate?.id || ''
+        affiliateCommissionRate = affiliate ? String(affiliate.commission_rate) : ''
+      }
+    }
 
     const metadata = {
       checkout_flow: 'service_request_v2',
@@ -104,6 +124,8 @@ export async function POST(request: NextRequest) {
       coupon_id: coupon?.id || '',
       coupon_code: coupon?.code || '',
       coupon_discount: couponDiscount.toFixed(2),
+      affiliate_creator_id: affiliateCreatorId,
+      affiliate_commission_rate: affiliateCommissionRate,
     }
     const lineItems = [{
       quantity: 1,
