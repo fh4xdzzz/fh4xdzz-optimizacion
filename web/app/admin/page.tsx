@@ -61,16 +61,6 @@ interface OrderDeliverable {
   created_at: string
 }
 
-interface Service {
-  id: string
-  name: string
-  slug: string
-  category: string
-  price: number
-  is_active: boolean
-  is_featured: boolean
-}
-
 interface ChatSession {
   id: string
   conversation_number: string
@@ -113,14 +103,13 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [supportAgents, setSupportAgents] = useState<SupportAgent[]>([])
   const [orders, setOrders] = useState<Order[]>([])
-  const [services, setServices] = useState<Service[]>([])
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([])
   const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [selectedChatImage, setSelectedChatImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'services' | 'support' | 'history'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'support' | 'history'>('overview')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -190,19 +179,6 @@ export default function AdminPage() {
         })))
       }
 
-      // La consulta pública de Supabase oculta los servicios inactivos, pero
-      // el panel administrativo debe poder reactivarlos.
-      try {
-        const servicesResponse = await fetch('/api/admin/services', { cache: 'no-store' })
-        if (servicesResponse.ok) {
-          const servicesPayload = await servicesResponse.json()
-          setServices(servicesPayload.services || [])
-        } else {
-          notifyError('No se pudieron cargar los servicios del panel')
-        }
-      } catch {
-        notifyError('No se pudieron cargar los servicios del panel')
-      }
     } else {
       // Staff solo recibe la lista pública y reducida de agentes disponibles,
       // necesaria para transferir chats. No se carga el directorio de usuarios.
@@ -356,27 +332,6 @@ export default function AdminPage() {
         } else {
           loadAdminData()
         }
-      })
-      .subscribe((status) => {
-      })
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [isDemo, userRole])
-
-  // Suscribirse a cambios en tiempo real para servicios
-  useEffect(() => {
-    if (isDemo || (userRole !== 'admin' && userRole !== 'owner')) return
-
-    const channel = supabase
-      .channel('admin-services')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'services'
-      }, () => {
-        loadAdminData()
       })
       .subscribe((status) => {
       })
@@ -641,48 +596,6 @@ export default function AdminPage() {
   const handleDeleteClick = (orderId: string) => {
     setOrderToDelete(orderId)
     setShowDeleteModal(true)
-  }
-
-  const editService = async (service: Service) => {
-    const name = window.prompt('Nombre del servicio', service.name)
-    if (name === null) return
-    const priceText = window.prompt('Precio del servicio', String(service.price))
-    if (priceText === null) return
-    const price = Number(priceText)
-    if (!name.trim() || !Number.isFinite(price) || price < 0) {
-      notifyWarning('Nombre o precio inválido')
-      return
-    }
-
-    try {
-      const response = await fetch('/api/admin/services', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: service.id, name: name.trim(), price, is_active: service.is_active }),
-      })
-      const body = await response.json()
-      if (!response.ok) throw new Error(body.error || 'No se pudo actualizar el servicio')
-      setServices((current) => current.map((item) => item.id === service.id ? { ...item, name: name.trim(), price } : item))
-      notifySuccess('Servicio actualizado correctamente')
-    } catch (error) {
-      notifyError(error instanceof Error ? error.message : 'No se pudo actualizar el servicio')
-    }
-  }
-
-  const toggleServiceActive = async (service: Service) => {
-    try {
-      const response = await fetch('/api/admin/services', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: service.id, name: service.name, price: service.price, is_active: !service.is_active }),
-      })
-      const body = await response.json()
-      if (!response.ok) throw new Error(body.error || 'No se pudo actualizar el servicio')
-      setServices((current) => current.map((item) => item.id === service.id ? { ...item, is_active: !service.is_active } : item))
-      notifySuccess(service.is_active ? 'Servicio desactivado' : 'Servicio activado')
-    } catch (error) {
-      notifyError(error instanceof Error ? error.message : 'No se pudo actualizar el servicio')
-    }
   }
 
   const loadChatMessages = async (sessionId: string) => {
@@ -1015,7 +928,7 @@ export default function AdminPage() {
               <p className="text-muted text-lg text-headline">
                 {userRole === 'staff'
                   ? 'Responde y gestiona conversaciones de soporte'
-                  : 'Gestiona usuarios, pedidos, servicios y configuraciones'}
+                  : 'Gestiona usuarios, pedidos, soporte e historial'}
                 {isDemo && ' (Modo Demo)'}
               </p>
             </div>
@@ -1049,16 +962,6 @@ export default function AdminPage() {
             >
               Pedidos ({activeOrders.length})
             </button>}
-            {userRole !== 'staff' && <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'services'
-                  ? 'bg-primary text-white'
-                  : 'border border-border bg-transparent'
-              }`}
-              onClick={() => setActiveTab('services')}
-            >
-              Servicios ({services.length})
-            </button>}
             <button
               className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
                 activeTab === 'support'
@@ -1083,7 +986,7 @@ export default function AdminPage() {
 
           {/* Overview Tab */}
           {userRole !== 'staff' && activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <CardHeader>
                   <CardTitle className="text-xl mb-2">Total Usuarios</CardTitle>
@@ -1116,17 +1019,6 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.4s' }} onClick={() => setActiveTab('services')}>
-                <CardHeader>
-                  <CardTitle className="text-xl mb-2">Servicios Activos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-green-500">
-                    {services.filter((service) => service.is_active).length}
-                  </div>
-                  <p className="text-sm text-muted mt-2">Disponibles</p>
-                </CardContent>
-              </Card>
             </div>
           )}
 
@@ -1198,55 +1090,6 @@ export default function AdminPage() {
               </CardContent>
             </Card>
             </div>
-          )}
-
-          {/* Services Tab */}
-          {userRole !== 'staff' && activeTab === 'services' && (
-            <Card className="glass-card hover-glow animate-fade-in-up">
-              <CardHeader>
-                <CardTitle className="text-2xl">Servicios</CardTitle>
-                <CardDescription className="text-base">Gestión de servicios del catálogo</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {services.length > 0 ? (
-                  <div className="space-y-4">
-                    {services.map((service, index) => (
-                      <div
-                        key={service.id}
-                        className="flex items-center justify-between p-6 border border-border/50 rounded-xl transition-all glass-card animate-fade-in-up"
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="font-medium text-lg">{service.name}</div>
-                            {!service.is_active && (
-                              <span className="text-xs bg-gray-500 text-white px-3 py-1 rounded-full">Inactivo</span>
-                            )}
-                          </div>
-                          <div className="text-base text-muted">
-                            {service.category} • ${service.price}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {userRole === 'owner' && (
-                            <>
-                              <Button variant="outline" size="sm" onClick={() => editService(service)}>Editar</Button>
-                              <Button variant="outline" size="sm" onClick={() => toggleServiceActive(service)}>
-                                {service.is_active ? 'Desactivar' : 'Activar'}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted text-lg">No hay servicios</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           )}
 
           {/* Support Tab */}
