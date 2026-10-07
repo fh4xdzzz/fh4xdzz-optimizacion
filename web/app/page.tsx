@@ -39,6 +39,28 @@ interface Service {
   recurring_price?: number | null
 }
 
+const websiteStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://www.thedulcandesign.com/#website',
+      url: 'https://www.thedulcandesign.com/',
+      name: 'TheDulcanDesign',
+      alternateName: ['The Dulcan Design', 'thedulcandesign.com'],
+      inLanguage: 'es',
+    },
+    {
+      '@type': 'Organization',
+      '@id': 'https://www.thedulcandesign.com/#organization',
+      name: 'TheDulcanDesign',
+      url: 'https://www.thedulcandesign.com/',
+      logo: 'https://www.thedulcandesign.com/icon-512.png?v=3',
+      email: 'thedulcandesign@gmail.com',
+    },
+  ],
+}
+
 interface Testimonial {
   id: string
   client_name: string
@@ -286,6 +308,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
+      />
       <div className="animated-bg"></div>
       <div className="animated-bg-overlay"></div>
       <div className="relative z-10">

@@ -18,8 +18,47 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.thedulcandesign.com"),
+  applicationName: "TheDulcanDesign",
   title: "TheDulcanDesign - Servicios Profesionales de Optimización",
   description: "Servicios profesionales de optimización y configuración de OBS, streaming, PC/Windows, gaming y soporte técnico.",
+  keywords: [
+    "TheDulcanDesign",
+    "optimización de OBS",
+    "configuración de streaming",
+    "optimización de PC",
+    "servidores de Discord",
+    "soporte técnico",
+  ],
+  authors: [{ name: "TheDulcanDesign", url: "https://www.thedulcandesign.com" }],
+  creator: "TheDulcanDesign",
+  publisher: "TheDulcanDesign",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    url: "https://www.thedulcandesign.com",
+    siteName: "TheDulcanDesign",
+    title: "TheDulcanDesign - Servicios Profesionales de Optimización",
+    description: "Optimización de OBS, streaming, PC/Windows, gaming, Discord y soporte técnico profesional.",
+    images: [{ url: "/icon-512.png?v=3", width: 512, height: 512, alt: "TheDulcanDesign" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "TheDulcanDesign - Servicios Profesionales de Optimización",
+    description: "Optimización de OBS, streaming, PC/Windows, gaming, Discord y soporte técnico profesional.",
+    images: ["/icon-512.png?v=3"],
+  },
   icons: {
     icon: [
       { url: "/favicon-16x16.png?v=3", sizes: "16x16", type: "image/png" },
