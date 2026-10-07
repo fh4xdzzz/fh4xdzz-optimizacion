@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { getStripe } from '@/lib/stripe-server'
 import { randomBytes } from 'node:crypto'
+import { calculateCouponDiscount } from '@/lib/store-pricing'
 
 const checkoutSchema = z.object({
   serviceId: z.string().uuid(),
@@ -87,8 +88,7 @@ export async function POST(request: NextRequest) {
       if (couponRecord.max_redemptions != null && couponRecord.redemption_count >= couponRecord.max_redemptions) return NextResponse.json({ error: 'Este cupón alcanzó su límite de usos.' }, { status: 400 })
       if (setupPrice < Number(couponRecord.minimum_amount)) return NextResponse.json({ error: `Este cupón requiere una compra mínima de $${Number(couponRecord.minimum_amount).toFixed(2)}.` }, { status: 400 })
       coupon = couponRecord
-      const rawDiscount = coupon.discount_type === 'percent' ? setupPrice * Number(coupon.discount_value) / 100 : Number(coupon.discount_value)
-      couponDiscount = Number(Math.min(rawDiscount, Math.max(0, setupPrice - 0.5)).toFixed(2))
+      couponDiscount = calculateCouponDiscount(setupPrice, coupon.discount_type as 'percent' | 'fixed', coupon.discount_value)
     }
     const discountedSetupPrice = Number(Math.max(0.5, setupPrice - couponDiscount).toFixed(2))
 

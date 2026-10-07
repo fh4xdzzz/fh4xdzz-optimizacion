@@ -41,13 +41,15 @@ export default function CartPage() {
   useEffect(() => { fetch('/api/store/offers').then((response) => response.json()).then((body) => setOffers(body.packages || [])).catch(() => undefined) }, [])
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.price), 0), [items])
   const packageDiscount = useMemo(() => {
-    const selected = new Set(items.map((item) => item.id))
+    const prices = new Map(items.map((item) => [item.id, Number(item.price)]))
     const discounts = offers.map((offer) => {
       const serviceIds = offer.service_package_items.flatMap((entry) => Array.isArray(entry.services) ? entry.services : [entry.services]).filter(Boolean).map((service) => service.id)
-      return serviceIds.length > 1 && serviceIds.every((id) => selected.has(id)) ? Number(offer.discount_percent) : 0
+      if (serviceIds.length < 2 || !serviceIds.every((id) => prices.has(id))) return 0
+      const eligibleSubtotal = serviceIds.reduce((sum, id) => sum + (prices.get(id) || 0), 0)
+      return eligibleSubtotal * Number(offer.discount_percent) / 100
     })
-    return subtotal * Math.max(0, ...discounts) / 100
-  }, [items, offers, subtotal])
+    return Math.max(0, ...discounts)
+  }, [items, offers])
   const detailsComplete = items.length > 0 && items.every(item => (serviceDetails[item.id] || '').trim().length >= 5)
   const orderDescription = useMemo(() => items.map(item => `[${item.name}] ${(serviceDetails[item.id] || '').trim()}`).join(' | ').slice(0, 500), [items, serviceDetails])
   const applyCoupon = async () => {

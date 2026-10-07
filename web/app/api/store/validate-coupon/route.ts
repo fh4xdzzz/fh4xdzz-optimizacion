@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { getServerSession } from '@/lib/auth-server'
+import { calculateBestPackageDiscount, calculateCouponDiscount, formatCouponLabel } from '@/lib/store-pricing'
 
 const schema = z.object({
   code: z.string().trim().min(3).max(30).regex(/^(DULCAN-[A-Z0-9]{4,16}|[A-Z0-9]{3,20})$/),
@@ -27,12 +28,7 @@ export async function POST(request: NextRequest) {
   if (!services || services.length !== ids.length || services.some(service => service.billing_type === 'subscription')) return NextResponse.json({ valid: false, error: 'El carrito contiene un servicio no válido.' })
 
   const subtotal = services.reduce((sum, service) => sum + Number(service.price), 0)
-  const selected = new Set(ids)
-  const bestPackage = (packages || []).filter(pack => {
-    const packageIds = (pack.service_package_items || []).map((item: { service_id: string }) => item.service_id)
-    return packageIds.length > 1 && packageIds.every((id: string) => selected.has(id))
-  }).sort((a, b) => Number(b.discount_percent) - Number(a.discount_percent))[0]
-  const packageDiscount = bestPackage ? subtotal * Number(bestPackage.discount_percent) / 100 : 0
+  const { discount: packageDiscount } = calculateBestPackageDiscount(services, packages || [])
   const base = subtotal - packageDiscount
   const now = Date.now()
   if (!coupon) return NextResponse.json({ valid: false, error: 'Este código de cupón no existe.' })
@@ -42,7 +38,12 @@ export async function POST(request: NextRequest) {
   if (coupon.max_redemptions != null && coupon.redemption_count >= coupon.max_redemptions) return NextResponse.json({ valid: false, error: 'Este cupón alcanzó su límite de usos.' })
   if (base < Number(coupon.minimum_amount)) return NextResponse.json({ valid: false, error: `Este cupón requiere una compra mínima de $${Number(coupon.minimum_amount).toFixed(2)}.` })
 
-  const rawDiscount = coupon.discount_type === 'percent' ? base * Number(coupon.discount_value) / 100 : Number(coupon.discount_value)
-  const couponDiscount = Math.min(rawDiscount, Math.max(0, base - 0.5))
-  return NextResponse.json({ valid: true, couponDiscount: Number(couponDiscount.toFixed(2)), packageDiscount: Number(packageDiscount.toFixed(2)), total: Number(Math.max(0.5, base - couponDiscount).toFixed(2)), label: `${Number(coupon.discount_value)}% de descuento aplicado` })
+  const couponDiscount = calculateCouponDiscount(base, coupon.discount_type, coupon.discount_value)
+  return NextResponse.json({
+    valid: true,
+    couponDiscount,
+    packageDiscount,
+    total: Number(Math.max(0.5, base - couponDiscount).toFixed(2)),
+    label: formatCouponLabel(coupon.discount_type, coupon.discount_value),
+  })
 }

@@ -3,6 +3,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { getServerSession } from '@/lib/auth-server'
 import { getStripe } from '@/lib/stripe-server'
+import { calculateBestPackageDiscount, calculateCouponDiscount } from '@/lib/store-pricing'
 
 const schema = z.object({
   serviceIds: z.array(z.string().uuid()).min(1).max(10),
@@ -33,13 +34,8 @@ export async function POST(request: NextRequest) {
   const subtotal = services.reduce((sum, service) => sum + Number(service.price), 0)
   const { data: packages } = await supabase.from('service_packages')
     .select('id, discount_percent, service_package_items(service_id)').eq('is_active', true)
-  const selected = new Set(ids)
-  const matchingPackages = (packages || []).filter((pack) => {
-    const packageIds = (pack.service_package_items || []).map((item: { service_id: string }) => item.service_id)
-    return packageIds.length > 1 && packageIds.every((id: string) => selected.has(id))
-  })
-  const bestPackage = matchingPackages.sort((a, b) => Number(b.discount_percent) - Number(a.discount_percent))[0]
-  const packageDiscount = bestPackage ? subtotal * Number(bestPackage.discount_percent) / 100 : 0
+  const packagePricing = calculateBestPackageDiscount(services, packages || [])
+  const packageDiscount = packagePricing.discount
 
   let couponId: string | null = null
   let couponDiscount = 0
@@ -55,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!valid) return NextResponse.json({ error: 'El cupón no existe, venció o no cumple el mínimo.' }, { status: 400 })
     couponId = coupon.id
     const base = subtotal - packageDiscount
-    couponDiscount = coupon.discount_type === 'percent' ? base * Number(coupon.discount_value) / 100 : Number(coupon.discount_value)
+    couponDiscount = calculateCouponDiscount(base, coupon.discount_type, coupon.discount_value)
   }
 
   const total = Math.max(0.5, subtotal - packageDiscount - couponDiscount)
@@ -64,7 +60,7 @@ export async function POST(request: NextRequest) {
     user_id: session.user.id, customer_name: parsed.data.name, customer_email: session.user.email,
     customer_discord: session.user.discord_username, description: parsed.data.description, items,
     subtotal: subtotal.toFixed(2), package_discount: packageDiscount.toFixed(2), coupon_discount: couponDiscount.toFixed(2),
-    total: total.toFixed(2), package_id: bestPackage?.id || null, coupon_id: couponId,
+    total: total.toFixed(2), package_id: packagePricing.packageId, coupon_id: couponId,
   }).select('id').single()
   if (cartError || !cart) return NextResponse.json({ error: 'No pudimos preparar el carrito.' }, { status: 500 })
 

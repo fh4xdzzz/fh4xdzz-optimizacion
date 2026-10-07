@@ -51,6 +51,12 @@ const MESSAGE_URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi
 const INTERNAL_HOSTS = new Set(['thedulcandesign.com', 'www.thedulcandesign.com'])
 const INTAKE_PROMPT_PREFIX = '[DULCAN_INTAKE] '
 
+function privateAttachmentUrl(path: string, download = false) {
+  const params = new URLSearchParams({ path })
+  if (download) params.set('download', '1')
+  return `/api/chat/attachments/view?${params.toString()}`
+}
+
 function LinkifiedMessage({ text, onInternalNavigate }: { text: string; onInternalNavigate: () => void }) {
   return (
     <>
@@ -623,8 +629,14 @@ export default function SupportChatWidget() {
 
     try {
       setUploadingFile(true)
+      const currentSession = session?.status === 'closed'
+        ? await createSession(true)
+        : session || await createSession()
+      if (!currentSession) return
+
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('session_id', currentSession.id)
 
       const response = await fetch('/api/chat/attachments/sign', {
         method: 'POST',
@@ -632,17 +644,13 @@ export default function SupportChatWidget() {
       })
 
       if (!response.ok) {
-        throw new Error('Error al subir archivo')
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error || 'Error al subir archivo')
       }
 
       const data = await response.json()
       
       // Enviar mensaje con el archivo adjunto
-      const currentSession = session?.status === 'closed'
-        ? await createSession(true)
-        : session || await createSession()
-      if (!currentSession) return
-
       shouldAutoScrollRef.current = true
       const messageResponse = await fetch('/api/chat/messages', {
         method: 'POST',
@@ -661,7 +669,7 @@ export default function SupportChatWidget() {
         // setMessages(prev => [...prev, messageData.message])
       }
     } catch (error) {
-      notifyError('Error al subir el archivo')
+      notifyError(error instanceof Error ? error.message : 'Error al subir el archivo')
     } finally {
       setUploadingFile(false)
       if (fileInputRef.current) {
@@ -1178,19 +1186,20 @@ export default function SupportChatWidget() {
                   >
                     {isImage && message.attachment_path && (
                       <img
-                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-attachments/${message.attachment_path}`}
+                        src={privateAttachmentUrl(message.attachment_path)}
                         alt={message.attachment_name}
                         className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => setSelectedImage(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-attachments/${message.attachment_path}`)}
-                        onError={(e) => {
-                        }}
+                        onClick={() => setSelectedImage(privateAttachmentUrl(message.attachment_path!))}
                       />
                     )}
                     {isAttachment && !isImage && (
-                      <div className="flex items-center gap-2 mb-2">
+                      <a
+                        href={message.attachment_path ? privateAttachmentUrl(message.attachment_path, true) : undefined}
+                        className="mb-2 flex items-center gap-2 rounded-lg border border-white/10 bg-black/15 p-2 transition hover:bg-white/10"
+                      >
                         <Paperclip size={16} />
-                        <span className="min-w-0 break-words [overflow-wrap:anywhere] text-sm">{message.attachment_name}</span>
-                      </div>
+                        <span className="min-w-0 break-words [overflow-wrap:anywhere] text-sm underline underline-offset-2">{message.attachment_name}</span>
+                      </a>
                     )}
                     {!isAttachment && (
                       <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm">
@@ -1291,7 +1300,7 @@ export default function SupportChatWidget() {
                 ref={fileInputRef}
                 onChange={handleFileUpload}
                 className="hidden"
-                accept="image/*,.pdf,.doc,.docx"
+                accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.doc,.docx"
               />
               <button
                 type="button"
