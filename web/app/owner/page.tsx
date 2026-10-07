@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Activity, BadgeDollarSign, ChartNoAxesCombined, Headphones, RefreshCw, Search, ShieldCheck, ShoppingBag, Star, TicketPercent, Trash2, TrendingUp, Users } from 'lucide-react'
+import { Activity, BadgeDollarSign, BarChart3, Boxes, ChartNoAxesCombined, Headphones, LayoutDashboard, MessagesSquare, ReceiptText, RefreshCw, ScrollText, Search, Settings2, ShieldCheck, ShoppingBag, Star, Tags, TicketPercent, Trash2, TrendingUp, UserCog, Users } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import AdminSettings from '@/components/admin/admin-settings'
 import OffersManager from '@/components/owner/offers-manager'
+import ControlPanelNav, { type ControlPanelNavItem } from '@/components/control-panel-nav'
 
 type User = { id: string; email: string; full_name: string | null; role: 'owner' | 'admin' | 'staff' | 'client'; created_at: string }
 type Order = { id: string; order_number: string; status: string; client_name: string; client_email: string; service_name: string; price: number; created_at: string }
@@ -33,6 +34,9 @@ export default function OwnerPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [confirmClearAudit, setConfirmClearAudit] = useState(false)
+  const [editingService, setEditingService] = useState<Service | null>(null)
+  const [serviceName, setServiceName] = useState('')
+  const [servicePrice, setServicePrice] = useState('')
   const load = useCallback(async () => { setLoading(true); setError(''); try { setData(await getData()) } catch (cause) { setError(cause instanceof Error ? cause.message : 'Error inesperado') } finally { setLoading(false) } }, [])
   useEffect(() => {
     let active = true
@@ -42,20 +46,19 @@ export default function OwnerPage() {
 
   const changeRole = async (user: User, role: User['role']) => { if (role === 'owner') return; setSaving(user.id); setError(''); setMessage(''); try { const response = await fetch('/api/admin/users/role', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id, role }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error); setData(current => current ? { ...current, users: current.users.map(item => item.id === user.id ? { ...item, role } : item) } : current); setMessage('Rol actualizado correctamente.') } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo cambiar el rol') } finally { setSaving('') } }
   const feature = async (service: Service) => { setSaving(service.id); setError(''); setMessage(''); try { const response = await fetch('/api/admin/services/featured', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serviceId: service.id, isFeatured: !service.is_featured }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error); setData(current => current ? { ...current, services: current.services.map(item => item.id === service.id ? { ...item, is_featured: !item.is_featured } : item).sort((a, b) => Number(b.is_featured) - Number(a.is_featured)) } : current); setMessage(service.is_featured ? 'Se quitó el destacado.' : 'Servicio destacado y colocado primero.') } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar') } finally { setSaving('') } }
-  const editService = async (service: Service) => {
-    const name = window.prompt('Nombre del servicio', service.name)
-    if (name === null) return
-    const priceText = window.prompt('Precio del servicio', String(service.price))
-    if (priceText === null) return
-    const price = Number(priceText)
-    if (!name.trim() || !Number.isFinite(price) || price < 0) { setError('El nombre o el precio no son válidos.'); return }
-    setSaving(service.id); setError(''); setMessage('')
+  const openServiceEditor = (service: Service) => { setEditingService(service); setServiceName(service.name); setServicePrice(String(service.price)); setError('') }
+  const saveServiceEdits = async () => {
+    if (!editingService) return
+    const price = Number(servicePrice)
+    if (!serviceName.trim() || !Number.isFinite(price) || price < 0) { setError('El nombre o el precio no son válidos.'); return }
+    setSaving(editingService.id); setError(''); setMessage('')
     try {
-      const response = await fetch('/api/admin/services', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: service.id, name: name.trim(), price, is_active: service.is_active }) })
+      const response = await fetch('/api/admin/services', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editingService.id, name: serviceName.trim(), price, is_active: editingService.is_active }) })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'No se pudo actualizar el servicio')
-      setData(current => current ? { ...current, services: current.services.map(item => item.id === service.id ? { ...item, name: name.trim(), price } : item) } : current)
+      setData(current => current ? { ...current, services: current.services.map(item => item.id === editingService.id ? { ...item, name: serviceName.trim(), price } : item) } : current)
       setMessage('Servicio actualizado correctamente.')
+      setEditingService(null)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el servicio') } finally { setSaving('') }
   }
   const toggleServiceActive = async (service: Service) => {
@@ -76,22 +79,33 @@ export default function OwnerPage() {
   const orders = data?.orders.filter(x => matches(x.order_number, x.client_name, x.client_email, x.service_name, x.status)) || []
   const chats = data?.chats.filter(x => matches(x.conversation_number, x.clientName, x.subject, x.assignedAgent, x.status)) || []
   const audit = data?.activities.filter(x => matches(x.title, x.description, x.actorName, x.reference)) || []
-  const tabs: [Tab, string][] = [['overview', 'Resumen'], ['analytics', 'Estadísticas'], ['users', 'Usuarios y roles'], ['services', 'Servicios'], ['offers', 'Ofertas'], ['orders', 'Pedidos e ingresos'], ['chats', 'Chats'], ['activity', 'Auditoría'], ['settings', 'Configuración']]
+  const tabs: ControlPanelNavItem<Tab>[] = [
+    { id: 'overview', label: 'Resumen', description: 'Vista general', icon: <LayoutDashboard className="h-4 w-4" /> },
+    { id: 'analytics', label: 'Estadísticas', description: 'Ventas y rendimiento', icon: <BarChart3 className="h-4 w-4" /> },
+    { id: 'users', label: 'Usuarios', description: 'Roles y permisos', icon: <UserCog className="h-4 w-4" />, count: data?.metrics.users },
+    { id: 'services', label: 'Servicios', description: 'Catálogo y precios', icon: <Boxes className="h-4 w-4" />, count: data?.services.length },
+    { id: 'offers', label: 'Ofertas', description: 'Cupones y paquetes', icon: <Tags className="h-4 w-4" /> },
+    { id: 'orders', label: 'Pedidos', description: 'Operación e ingresos', icon: <ReceiptText className="h-4 w-4" />, count: data?.metrics.activeOrders },
+    { id: 'chats', label: 'Chats', description: 'Supervisión de soporte', icon: <MessagesSquare className="h-4 w-4" />, count: data?.metrics.openChats },
+    { id: 'activity', label: 'Auditoría', description: 'Actividad del sistema', icon: <ScrollText className="h-4 w-4" />, count: data?.activities.length },
+    { id: 'settings', label: 'Configuración', description: 'Datos del negocio', icon: <Settings2 className="h-4 w-4" /> },
+  ]
 
   return <div className="min-h-screen bg-background"><Navbar /><main className="px-4 pb-20 pt-28"><div className="container mx-auto max-w-7xl">
     <header className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[.2em] text-violet-300"><ShieldCheck className="h-4 w-4" /> Control exclusivo</div><h1 className="text-4xl font-black md:text-5xl">Centro de operaciones Owner</h1><p className="mt-3 max-w-3xl text-lg text-muted">Control total de usuarios, permisos, catálogo, pedidos, ingresos, soporte y auditoría.</p></div><Button variant="outline" onClick={load} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Actualizar</Button></header>
     {error && <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}{message && <div className="mb-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">{message}</div>}
-    <nav className="mb-7 flex flex-wrap gap-2 border-b border-white/10 pb-5">{tabs.map(([id, label]) => <button key={id} onClick={() => { setTab(id); setQuery('') }} className={`rounded-xl border px-4 py-2.5 text-sm font-semibold ${tab === id ? 'border-primary bg-primary text-white' : 'border-white/10 bg-white/[.03]'}`}>{label}</button>)}</nav>
+    <ControlPanelNav items={tabs} active={tab} onChange={id => { setTab(id); setQuery('') }} />
     {tab === 'overview' && data && <><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Usuarios" value={String(data.metrics.users)} detail={`${data.metrics.clients} clientes`} icon={<Users />} onClick={() => setTab('users')} /><Metric label="Equipo" value={String(data.metrics.team)} detail="Admin y staff" icon={<ShieldCheck />} onClick={() => setTab('users')} /><Metric label="Pedidos" value={String(data.metrics.orders)} detail={`${data.metrics.activeOrders} activos`} icon={<ShoppingBag />} onClick={() => setTab('orders')} /><Metric label="Ingresos" value={money(data.metrics.revenue)} detail="Pagos confirmados" icon={<BadgeDollarSign />} onClick={() => setTab('orders')} /><Metric label="Soportes" value={String(data.metrics.openChats)} detail={`${data.metrics.closedChats} cerrados`} icon={<Headphones />} onClick={() => setTab('chats')} /></section><div className="mt-8 rounded-2xl border border-violet-400/20 bg-violet-400/[.07] p-6"><h2 className="text-xl font-bold">Tu espacio privado de control</h2><p className="mt-2 text-sm text-muted">Roles, destacados, ingresos y supervisión global están aquí. Admin queda enfocado en la operación diaria.</p></div></>}
     {tab === 'analytics' && data && <AnalyticsPanel analytics={data.analytics} />}
     {!['overview', 'analytics'].includes(tab) && <label className="mb-5 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4"><Search className="h-4 w-4 text-muted" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nombre, correo, código o estado..." className="h-11 w-full bg-transparent text-sm outline-none" /></label>}
     {tab === 'users' && <Panel title="Usuarios y permisos" detail={`${users.length} usuarios · control exclusivo del Owner`}>{users.map(user => <Row key={user.id}><div><b>{user.full_name || 'Sin nombre'}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{roles[user.role]}</span><p className="text-sm text-muted">{user.email} · {date(user.created_at)}</p></div>{user.role === 'owner' ? <b className="text-violet-300">Cuenta protegida</b> : <select disabled={saving === user.id} value={user.role} onChange={event => void changeRole(user, event.target.value as User['role'])} className="h-10 rounded-lg border border-white/10 bg-background px-3"><option value="client">Cliente</option><option value="staff">Staff</option><option value="admin">Administrador</option></select>}</Row>)}</Panel>}
-    {tab === 'services' && <Panel title="Gestión de servicios" detail={`${services.length} servicios · edición exclusiva del Owner`}>{services.map(service => <Row key={service.id}><div><div className="flex flex-wrap items-center gap-2"><b>{service.name}</b>{service.is_featured && <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-1 text-xs text-amber-300"><Star className="h-3 w-3 fill-current" />Destacado</span>}{!service.is_active && <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-muted">Inactivo</span>}</div><p className="mt-1 text-sm text-muted">{service.category} · {money(Number(service.price))}</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled={saving === service.id} onClick={() => void editService(service)}>Editar</Button><Button variant="outline" size="sm" disabled={saving === service.id} onClick={() => void toggleServiceActive(service)}>{service.is_active ? 'Desactivar' : 'Activar'}</Button><Button variant="outline" size="sm" disabled={saving === service.id} onClick={() => void feature(service)}>{service.is_featured ? 'Quitar destacado' : 'Destacar'}</Button></div></Row>)}</Panel>}
+    {tab === 'services' && <Panel title="Gestión de servicios" detail={`${services.length} servicios · edición exclusiva del Owner`}>{services.map(service => <Row key={service.id}><div><div className="flex flex-wrap items-center gap-2"><b>{service.name}</b>{service.is_featured && <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-1 text-xs text-amber-300"><Star className="h-3 w-3 fill-current" />Destacado</span>}{!service.is_active && <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-muted">Inactivo</span>}</div><p className="mt-1 text-sm text-muted">{service.category} · {money(Number(service.price))}</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled={saving === service.id} onClick={() => openServiceEditor(service)}>Editar</Button><Button variant="outline" size="sm" disabled={saving === service.id} onClick={() => void toggleServiceActive(service)}>{service.is_active ? 'Desactivar' : 'Activar'}</Button><Button variant="outline" size="sm" disabled={saving === service.id} onClick={() => void feature(service)}>{service.is_featured ? 'Quitar destacado' : 'Destacar'}</Button></div></Row>)}</Panel>}
     {tab === 'offers' && <section className="rounded-3xl border border-white/10 bg-card/75 p-5 md:p-6"><OffersManager /></section>}
     {tab === 'orders' && <Panel title="Pedidos e ingresos" detail={`${orders.length} pedidos · ${money(data?.metrics.revenue || 0)} completados`}>{orders.map(order => <Row key={order.id}><div><b className="font-mono text-primary">{order.order_number}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{statuses[order.status] || order.status}</span><p className="text-sm">{order.client_name} · {order.service_name}</p><p className="text-xs text-muted">{order.client_email} · {date(order.created_at)}</p></div><b className="text-xl text-emerald-300">{money(Number(order.price))}</b></Row>)}</Panel>}
     {tab === 'chats' && <Panel title="Supervisión de chats" detail={`${chats.length} conversaciones visibles`}>{chats.map(chat => <Row key={chat.id}><div><b className="font-mono text-primary">{chat.conversation_number}</b><span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">{statuses[chat.status] || chat.status}</span><p className="text-sm">{chat.clientName} · {chat.subject || 'Soporte web'}</p><p className="text-xs text-muted">Agente: {chat.assignedAgent || 'Sin asignar'} · {date(chat.updated_at)}</p></div><a href="/admin?tab=support" className="rounded-lg border border-white/10 px-3 py-2 text-sm">Abrir soporte</a></Row>)}</Panel>}
     {tab === 'activity' && <Panel title="Auditoría del sistema" detail={`${audit.length} eventos recientes`} action={<Button variant="destructive" size="sm" disabled={!audit.length || saving === 'audit'} onClick={() => setConfirmClearAudit(true)}><Trash2 className="mr-2 h-4 w-4" />{saving === 'audit' ? 'Limpiando...' : 'Eliminar auditoría'}</Button>}>{audit.length ? audit.map(item => <Row key={item.id}><div><b>{item.title}</b>{item.reference && <span className="ml-2 font-mono text-xs text-primary">{item.reference}</span>}<p className="text-sm text-muted">{item.description}</p><p className="text-xs">{item.actorName} · {roles[item.actorRole] || item.actorRole}</p></div><time className="text-xs text-muted">{date(item.createdAt)}</time></Row>) : <div className="p-10 text-center text-sm text-muted">La auditoría está vacía. Los eventos nuevos aparecerán automáticamente.</div>}</Panel>}
     {tab === 'settings' && <section className="rounded-3xl border border-white/10 bg-card/75 p-5 md:p-6"><div className="mb-6"><h2 className="text-2xl font-bold">Configuración del negocio</h2><p className="mt-1 text-sm text-muted">Información pública, redes sociales, formulario y pagos. Solo visible para el Owner.</p></div><AdminSettings /></section>}
+    <Modal isOpen={Boolean(editingService)} onClose={() => setEditingService(null)} onConfirm={() => void saveServiceEdits()} title="Editar servicio" description="Actualiza el nombre y el precio que verán los clientes." confirmText={saving ? 'Guardando…' : 'Guardar cambios'} cancelText="Cancelar"><div className="space-y-4"><label className="block text-sm font-semibold text-white">Nombre del servicio<input value={serviceName} onChange={event => setServiceName(event.target.value)} maxLength={120} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-black/30 px-4 font-normal outline-none focus:border-primary" /></label><label className="block text-sm font-semibold text-white">Precio en USD<input value={servicePrice} onChange={event => setServicePrice(event.target.value)} type="number" min="0" step="0.01" className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-black/30 px-4 font-normal outline-none focus:border-primary" /></label></div></Modal>
     <Modal isOpen={confirmClearAudit} onClose={() => setConfirmClearAudit(false)} onConfirm={() => void clearAudit()} title="¿Eliminar toda la auditoría?" description="Se quitarán los eventos visibles actuales. No se eliminarán usuarios, pedidos, pagos ni conversaciones, y los eventos nuevos volverán a aparecer." confirmText="Sí, eliminar auditoría" cancelText="Cancelar" variant="destructive" />
   </div></main><Footer /></div>
 }

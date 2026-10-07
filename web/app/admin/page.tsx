@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
+import { Archive, Headphones, LayoutDashboard, ListTodo, ShieldCheck, UsersRound } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
 import { useNotificationStore } from '@/lib/notifications-store'
+import ControlPanelNav, { type ControlPanelNavItem } from '@/components/control-panel-nav'
 import * as tus from 'tus-js-client'
 
 interface User {
@@ -99,6 +101,8 @@ interface ChatMessage {
   } | null
 }
 
+type AdminTab = 'overview' | 'orders' | 'support' | 'history'
+
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [supportAgents, setSupportAgents] = useState<SupportAgent[]>([])
@@ -109,7 +113,7 @@ export default function AdminPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [selectedChatImage, setSelectedChatImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'support' | 'history'>('overview')
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -825,6 +829,14 @@ export default function AdminPage() {
 
   const orderHistory = orders.filter(order => ['completed', 'cancelled'].includes(order.status))
   const activeOrders = orders.filter(order => !['completed', 'cancelled'].includes(order.status))
+  const adminTabs: ControlPanelNavItem<AdminTab>[] = userRole === 'staff'
+    ? [{ id: 'support', label: 'Soporte', description: 'Conversaciones activas', icon: <Headphones className="h-4 w-4" />, count: chatSessions.length }]
+    : [
+        { id: 'overview', label: 'Resumen', description: 'Vista general', icon: <LayoutDashboard className="h-4 w-4" /> },
+        { id: 'orders', label: 'Pedidos', description: 'Trabajo pendiente', icon: <ListTodo className="h-4 w-4" />, count: activeOrders.length },
+        { id: 'support', label: 'Soporte', description: 'Conversaciones activas', icon: <Headphones className="h-4 w-4" />, count: chatSessions.length },
+        { id: 'history', label: 'Historial', description: 'Completados y cancelados', icon: <Archive className="h-4 w-4" />, count: orderHistory.length },
+      ]
   const transferTargetBusy = Boolean(
     transferAgentId && chatSessions.some(chat => (
       chat.assigned_agent_id === transferAgentId && chat.status !== 'closed' && chat.id !== selectedChat?.id
@@ -920,8 +932,9 @@ export default function AdminPage() {
       {/* Header */}
       <section className="pt-32 pb-12 px-4">
         <div className="container mx-auto">
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex items-end justify-between gap-5">
             <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[.2em] text-primary"><ShieldCheck className="h-4 w-4" />{userRole === 'staff' ? 'Atención al cliente' : 'Operación diaria'}</div>
               <h1 className="text-4xl md:text-5xl font-bold mb-2 gradient-text-primary animate-fade-in-up">
                 {userRole === 'staff' ? 'Panel de Soporte' : 'Panel de Administración'}
               </h1>
@@ -940,82 +953,38 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Tabs */}
-          <div className="flex flex-wrap gap-3 mb-8 border-b border-border/50 pb-6 relative z-30">
-            {userRole !== 'staff' && <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'overview'
-                  ? 'bg-primary text-white'
-                  : 'border border-border bg-transparent'
-              }`}
-              onClick={() => setActiveTab('overview')}
-            >
-              Resumen
-            </button>}
-            {userRole !== 'staff' && <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'orders'
-                  ? 'bg-primary text-white'
-                  : 'border border-border bg-transparent'
-              }`}
-              onClick={() => setActiveTab('orders')}
-            >
-              Pedidos ({activeOrders.length})
-            </button>}
-            <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'support'
-                  ? 'bg-primary text-white'
-                  : 'border border-border bg-transparent'
-              }`}
-              onClick={() => setActiveTab('support')}
-            >
-              Soporte
-            </button>
-            {userRole !== 'staff' && <button
-              className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6 text-lg pointer-events-auto cursor-pointer ${
-                activeTab === 'history'
-                  ? 'bg-primary text-white'
-                  : 'border border-border bg-transparent'
-              }`}
-              onClick={() => setActiveTab('history')}
-            >
-              Historial ({orderHistory.length})
-            </button>}
-          </div>
+          <ControlPanelNav items={adminTabs} active={activeTab} onChange={setActiveTab} />
 
           {/* Overview Tab */}
           {userRole !== 'staff' && activeTab === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-                <CardHeader>
-                  <CardTitle className="text-xl mb-2">Total Usuarios</CardTitle>
+              <Card className="border-white/10 bg-gradient-to-br from-white/[.06] to-primary/[.04] transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <CardHeader className="flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Usuarios registrados</CardTitle><UsersRound className="h-5 w-5 text-primary" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-4xl font-bold gradient-text-primary">{users.length}</div>
-                  <p className="text-sm text-muted mt-2">Usuarios registrados</p>
+                  <p className="text-sm text-muted mt-2">Directorio de clientes y equipo</p>
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.2s' }} onClick={() => setActiveTab('orders')}>
-                <CardHeader>
-                  <CardTitle className="text-xl mb-2">Total Pedidos</CardTitle>
+              <Card className="cursor-pointer border-white/10 bg-gradient-to-br from-white/[.06] to-violet-500/[.05] transition hover:-translate-y-1 hover:border-primary/30 glass-card animate-fade-in-up" style={{ animationDelay: '0.2s' }} onClick={() => setActiveTab('orders')}>
+                <CardHeader className="flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Pedidos activos</CardTitle><ListTodo className="h-5 w-5 text-violet-300" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-4xl font-bold gradient-text-secondary">{orders.length}</div>
-                  <p className="text-sm text-muted mt-2">Pedidos totales</p>
+                  <div className="text-4xl font-bold gradient-text-secondary">{activeOrders.length}</div>
+                  <p className="text-sm text-muted mt-2">Trabajos que requieren seguimiento</p>
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer transition-all glass-card animate-fade-in-up" style={{ animationDelay: '0.3s' }} onClick={() => setActiveTab('orders')}>
-                <CardHeader>
-                  <CardTitle className="text-xl mb-2">Pedidos Pendientes</CardTitle>
+              <Card className="cursor-pointer border-white/10 bg-gradient-to-br from-white/[.06] to-sky-500/[.05] transition hover:-translate-y-1 hover:border-sky-400/30 glass-card animate-fade-in-up" style={{ animationDelay: '0.3s' }} onClick={() => setActiveTab('support')}>
+                <CardHeader className="flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Soportes abiertos</CardTitle><Headphones className="h-5 w-5 text-sky-300" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-4xl font-bold text-yellow-500">
-                    {orders.filter((order) => order.status === 'pending').length}
-                  </div>
-                  <p className="text-sm text-muted mt-2">Requieren atención</p>
+                  <div className="text-4xl font-bold text-sky-300">{chatSessions.length}</div>
+                  <p className="text-sm text-muted mt-2">Conversaciones por atender</p>
                 </CardContent>
               </Card>
 
