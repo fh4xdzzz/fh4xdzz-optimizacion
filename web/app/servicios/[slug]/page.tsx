@@ -21,7 +21,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       <div className="min-h-screen bg-background">
         <Navbar />
         <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto text-center">
+          <div className="mx-auto w-full text-center">
             <h1 className="text-4xl font-bold mb-4">Servicio no encontrado</h1>
             <p className="text-muted mb-8">El servicio que buscas no existe o ha sido eliminado.</p>
             <Button variant="primary" href="/servicios">
@@ -70,8 +70,8 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       {/* Header */}
       <section className="premium-grid relative overflow-hidden px-4 pb-14 pt-32 md:pt-40">
         <div className="pointer-events-none absolute right-1/4 top-16 h-80 w-80 rounded-full bg-primary/20 blur-[110px]" />
-        <div className="container mx-auto">
-          <div className="relative mx-auto max-w-6xl">
+        <div className="mx-auto w-full">
+          <div className="relative mx-auto w-full">
             <div className="mb-8 flex items-center gap-2 text-sm text-muted">
               <Link href="/servicios" className="transition hover:text-foreground">
                 Servicios
@@ -96,10 +96,10 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
       {/* Main Content */}
       <section className="pb-20 px-4">
-        <div className="container mx-auto">
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+        <div className="mx-auto w-full">
+          <div className="mx-auto grid w-full grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
             {/* Details */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="min-w-0 space-y-8">
               {service.details && (
                 <Card className="rounded-3xl border-white/10 bg-[#11131b]/85">
                   <CardHeader>

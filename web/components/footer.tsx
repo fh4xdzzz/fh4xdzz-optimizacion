@@ -11,7 +11,7 @@ export default function Footer() {
 
   return (
     <footer className="mt-20 border-t border-white/10 bg-[#0d0f17]/92 backdrop-blur-strong">
-      <div className="container mx-auto px-4 py-16">
+      <div className="mx-auto w-full px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-14 grid gap-3 rounded-3xl border border-white/10 bg-white/[.025] p-4 sm:grid-cols-3">
           {[
             { label: 'Pago protegido', icon: CreditCard },

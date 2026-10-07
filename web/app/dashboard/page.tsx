@@ -151,7 +151,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto text-center">
+          <div className="mx-auto w-full text-center">
             <p>Cargando dashboard...</p>
           </div>
         </section>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
 
       {/* Header */}
       <section className="pt-32 pb-12 px-4">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-4xl font-bold mb-2">

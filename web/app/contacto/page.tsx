@@ -517,7 +517,7 @@ function ContactFormContent() {
 
       {/* Header */}
       <section className="pt-32 pb-12 px-4">
-        <div className="container mx-auto text-center">
+        <div className="mx-auto w-full text-center">
           <div className="mb-5 inline-flex rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
             Contratación segura
           </div>
@@ -533,7 +533,7 @@ function ContactFormContent() {
 
       {/* Contact Form */}
       <section className="pb-20 px-4">
-        <div className="container mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="mx-auto grid w-full gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <Card className="border-white/10 bg-card/80 shadow-2xl shadow-primary/5">
             <CardHeader>
               <CardTitle>Formulario de Solicitud</CardTitle>
@@ -1182,7 +1182,7 @@ export default function ContactPage() {
         <div className="min-h-screen bg-background">
           <Navbar />
           <section className="pt-32 pb-20 px-4">
-            <div className="container mx-auto text-center">
+            <div className="mx-auto w-full text-center">
               <p>Cargando...</p>
             </div>
           </section>

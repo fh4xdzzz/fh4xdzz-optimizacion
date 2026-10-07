@@ -259,7 +259,7 @@ export default function ServicesPage() {
         <Navbar />
         {cartMessage && <div role="status" className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-2xl border border-primary/35 bg-[#121522]/95 px-5 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl">✓ {cartMessage}</div>}
         <section className="px-4 pb-20 pt-36">
-          <div className="container mx-auto">
+          <div className="mx-auto w-full">
             <div className="mx-auto mb-12 h-32 max-w-2xl animate-pulse rounded-3xl bg-white/[.04]" />
             <div className="grid gap-7 md:grid-cols-2 lg:grid-cols-3">
               {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="h-96 animate-pulse rounded-3xl border border-white/10 bg-white/[.04]" />)}
@@ -276,7 +276,7 @@ export default function ServicesPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto text-center">
+          <div className="mx-auto w-full text-center">
             <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm mb-4">
               {error}
             </div>
@@ -300,7 +300,7 @@ export default function ServicesPage() {
       {/* Header */}
       <section className="premium-grid relative overflow-hidden px-4 pb-14 pt-36 md:pt-40">
         <div className="pointer-events-none absolute left-1/2 top-20 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/20 blur-[110px]" />
-        <div className="container relative mx-auto text-center">
+        <div className="relative mx-auto w-full text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[.22em] text-primary">Servicios profesionales</p>
           <h1 className="mx-auto mb-5 max-w-4xl text-5xl font-black uppercase tracking-[-.04em] md:text-7xl">La mejora correcta para <span className="gradient-text-primary">cada etapa de tu setup</span></h1>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted md:text-xl">
@@ -314,7 +314,7 @@ export default function ServicesPage() {
 
       {/* Category Filters */}
       <section className="pb-8 px-4 relative z-30">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2 rounded-2xl border border-white/10 bg-[#0d0f17]/75 p-2 backdrop-blur-xl">
             {categories.map((category) => (
               <button
@@ -335,7 +335,7 @@ export default function ServicesPage() {
 
       {/* Services Grid */}
       <section className="pb-20 px-4">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
             {filteredServices.map((service, index) => (
               <Card
@@ -389,7 +389,7 @@ export default function ServicesPage() {
 
       {/* CTA */}
       <section className="py-24 px-4 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10">
-        <div className="container mx-auto text-center">
+        <div className="mx-auto w-full text-center">
           <div className="max-w-3xl mx-auto animate-fade-in-scale">
             <h2 className="text-4xl md:text-5xl font-bold mb-6 uppercase gradient-text-secondary">¿No encuentras lo que buscas?</h2>
             <p className="text-xl text-muted mb-8 max-w-2xl mx-auto text-headline">

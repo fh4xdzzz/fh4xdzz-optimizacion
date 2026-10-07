@@ -206,13 +206,13 @@ export default function OrdersPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="px-4 pb-24 pt-32">
-        <section className="container mx-auto mb-10 max-w-6xl">
+        <section className="mx-auto mb-10 w-full">
           <div className="mb-5 inline-flex rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">Área privada</div>
           <h1 className="text-4xl font-bold uppercase md:text-5xl">Seguimiento de tus pedidos</h1>
           <p className="mt-4 max-w-2xl text-lg text-muted">Consulta cada etapa, la fecha estimada y comunícate con nuestro equipo sin salir de la página.</p>
         </section>
 
-        <section className="container mx-auto max-w-6xl">
+        <section className="mx-auto w-full">
           {loading ? (
             <div className="grid gap-6 lg:grid-cols-[330px_1fr]"><div className="h-64 animate-pulse rounded-2xl bg-white/5" /><div className="h-[520px] animate-pulse rounded-2xl bg-white/5" /></div>
           ) : error ? (

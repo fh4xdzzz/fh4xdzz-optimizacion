@@ -145,7 +145,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto text-center">
+          <div className="mx-auto w-full text-center">
             <p>Cargando perfil...</p>
           </div>
         </section>
@@ -159,7 +159,7 @@ export default function ProfilePage() {
       <Navbar />
 
       <section className="pt-32 pb-20 px-4">
-        <div className="container mx-auto max-w-4xl">
+        <div className="mx-auto w-full max-w-4xl">
           <h1 className="text-4xl font-bold mb-8">Mi Perfil</h1>
 
           {isDemo && (

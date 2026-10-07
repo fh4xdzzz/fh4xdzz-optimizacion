@@ -7,7 +7,7 @@ export default function AboutPage() {
       <Navbar />
 
       <section className="pt-32 pb-20 px-4">
-        <div className="container mx-auto max-w-4xl">
+        <div className="mx-auto w-full max-w-4xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Sobre Nosotros</h1>
           <p className="text-xl text-muted mb-8">
             Conoce al equipo detrás de TheDulcanDesign

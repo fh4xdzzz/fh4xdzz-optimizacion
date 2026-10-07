@@ -49,7 +49,7 @@ export default function ResultadosPage() {
         <main>
           <section className="premium-grid relative overflow-hidden px-4 pb-20 pt-36 md:px-8 md:pb-28 md:pt-44">
             <div className="pointer-events-none absolute left-1/2 top-20 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]" aria-hidden="true" />
-            <div className="container relative mx-auto text-center">
+            <div className="relative mx-auto w-full text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[.18em] text-primary">
                 <BadgeCheck className="h-4 w-4" aria-hidden="true" /> Calidad visible
               </span>
@@ -69,7 +69,7 @@ export default function ResultadosPage() {
           </section>
 
           <section className="px-4 py-24 md:px-8">
-            <div className="container mx-auto space-y-10">
+            <div className="mx-auto w-full space-y-10">
               {samples.map(({ category, title, description, icon: Icon, accent, deliverables }, index) => (
                 <article key={title} className="grid overflow-hidden rounded-[2rem] border border-white/10 bg-[#0e1018]/90 shadow-[0_30px_90px_rgba(0,0,0,.3)] lg:grid-cols-2">
                   <div className={`relative min-h-[320px] overflow-hidden bg-gradient-to-br ${accent} p-6 md:p-10 ${index % 2 ? 'lg:order-2' : ''}`}>
@@ -96,7 +96,7 @@ export default function ResultadosPage() {
           </section>
 
           <section className="border-y border-white/10 bg-primary/[.065] px-4 py-20 md:px-8">
-            <div className="container mx-auto grid gap-6 md:grid-cols-3">
+            <div className="mx-auto grid w-full gap-6 md:grid-cols-3">
               {[
                 { title: 'Alcance definido', description: 'Sabes qué incluye el servicio antes de comenzar.', icon: BadgeCheck },
                 { title: 'Proceso protegido', description: 'La atención y el pago se realizan de forma segura.', icon: ShieldCheck },
@@ -108,7 +108,7 @@ export default function ResultadosPage() {
           </section>
 
           <section className="px-4 py-24 text-center md:px-8">
-            <div className="container mx-auto max-w-3xl">
+            <div className="mx-auto w-full max-w-3xl">
               <h2 className="text-4xl font-black uppercase tracking-[-.04em] gradient-text-primary md:text-5xl">Tu proyecto puede ser el próximo</h2>
               <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted">Cuéntanos qué quieres mejorar y te recomendaremos el punto de partida correcto.</p>
               <SupportChatButton message="Hola, quiero hablar sobre mi proyecto y recibir una recomendación." variant="primary" size="lg" className="premium-button mt-8 h-14 px-10">Hablar sobre mi proyecto <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></SupportChatButton>

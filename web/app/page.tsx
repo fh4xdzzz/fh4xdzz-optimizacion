@@ -294,7 +294,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="premium-grid relative overflow-hidden px-4 pb-16 pt-32 md:pb-24 md:pt-40">
         <div className="pointer-events-none absolute left-1/2 top-24 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="container relative mx-auto grid items-center gap-14 lg:grid-cols-[1.08fr_.92fr]">
+        <div className="relative mx-auto grid w-full items-center gap-14 lg:grid-cols-[1.08fr_.92fr]">
           <div className="animate-fade-in-up text-center lg:text-left">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
               <span className="relative flex h-2 w-2">
@@ -373,7 +373,7 @@ export default function Home() {
       </section>
 
       <section className="border-y border-white/[.07] bg-[#0d0f16]/80 px-4 py-6 backdrop-blur-xl" aria-label="Garantías del servicio">
-        <div className="container mx-auto grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+        <div className="mx-auto grid w-full grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
           {[
             { label: 'Atención', value: 'Personalizada', icon: Headphones },
             { label: 'Pago', value: 'Protegido', icon: CreditCard },
@@ -390,7 +390,7 @@ export default function Home() {
 
       {/* Featured Services */}
       <section className="py-24 px-4 bg-card/30">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <SectionHeading
             eyebrow="Soluciones especializadas"
             title="Servicios creados para rendir más"
@@ -445,7 +445,7 @@ export default function Home() {
 
       {/* How It Works */}
       <section className="px-4 py-24 md:px-8">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <SectionHeading
             eyebrow="Un proceso simple"
             title="Cómo funciona"
@@ -470,7 +470,7 @@ export default function Home() {
 
       {/* Benefits */}
       <section className="bg-card/30 px-4 py-24 md:px-8">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <SectionHeading
             eyebrow="Hecho con cuidado"
             title="¿Por qué elegirnos?"
@@ -491,7 +491,7 @@ export default function Home() {
 
       {/* Before / after */}
       <section className="px-4 py-24 md:px-8">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d0f17]/88 shadow-[0_28px_90px_rgba(0,0,0,.38)]">
             <div className="grid lg:grid-cols-[.78fr_1.22fr]">
               <div className="border-b border-white/10 p-8 md:p-12 lg:border-b-0 lg:border-r">
@@ -523,7 +523,7 @@ export default function Home() {
 
       {/* Work samples */}
       <section className="border-y border-white/[.07] bg-[#0b0d14]/75 px-4 py-24 md:px-8">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <div className="mb-12 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-end">
             <div className="max-w-3xl">
               <p className="mb-3 text-xs font-bold uppercase tracking-[.24em] text-primary">Muestras de trabajo</p>
@@ -557,7 +557,7 @@ export default function Home() {
 
       {/* Testimonials */}
       <section className="py-24 px-4 md:px-8">
-        <div className="container mx-auto">
+        <div className="mx-auto w-full">
           <SectionHeading
             eyebrow="Experiencias compartidas"
             title="Lo que dicen nuestros clientes"
@@ -606,7 +606,7 @@ export default function Home() {
 
       {/* FAQ */}
       <section className="py-24 px-4 md:px-8 bg-card/30">
-        <div className="container mx-auto max-w-4xl">
+        <div className="mx-auto w-full max-w-4xl">
           <SectionHeading
             eyebrow="Todo claro antes de empezar"
             title="Preguntas frecuentes"
@@ -630,7 +630,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="relative overflow-hidden border-y border-primary/15 bg-gradient-to-br from-primary/15 via-[#11131b] to-secondary/10 px-4 py-24">
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[100px]" aria-hidden="true" />
-        <div className="container mx-auto text-center">
+        <div className="mx-auto w-full text-center">
           <div className="relative mx-auto max-w-3xl animate-fade-in-scale">
             <span className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/15 text-primary"><Zap className="h-7 w-7" aria-hidden="true" /></span>
             <h2 className="mb-6 text-4xl font-black uppercase tracking-[-.035em] gradient-text-primary md:text-5xl">¿Listo para optimizar tu setup?</h2>

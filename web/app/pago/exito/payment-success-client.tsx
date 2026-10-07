@@ -73,7 +73,7 @@ export default function PaymentSuccessClient({ sessionId, isCart = false }: { se
     <Navbar />
     <main className="relative overflow-hidden px-4 pb-24 pt-32">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.2),transparent_60%)]" />
-      <section className="container relative mx-auto max-w-4xl">
+      <section className="relative mx-auto w-full max-w-4xl">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15 shadow-2xl shadow-emerald-500/20">
             {checking ? <LoaderCircle className="h-10 w-10 animate-spin text-primary" /> : paid ? <CircleCheck className="h-10 w-10 text-emerald-400" /> : <Clock3 className="h-10 w-10 text-amber-300" />}

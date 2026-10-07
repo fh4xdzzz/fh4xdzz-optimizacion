@@ -61,7 +61,7 @@ function PaymentPageContent() {
   }
 
   return <div className="min-h-screen bg-background"><Navbar /><section className="px-4 pb-20 pt-32">
-    <div className="container mx-auto max-w-2xl"><Card><CardHeader><CardTitle>Pagar pedido</CardTitle>
+    <div className="mx-auto w-full max-w-2xl"><Card><CardHeader><CardTitle>Pagar pedido</CardTitle>
       <CardDescription>Pago seguro con tarjeta procesado por Stripe.</CardDescription></CardHeader>
       <CardContent className="space-y-5">
         {loading && <p>Cargando pedido...</p>}
