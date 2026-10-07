@@ -912,8 +912,8 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <section className="pt-32 pb-20 px-4">
-          <div className="container mx-auto text-center">
+        <section className="px-3 pb-20 pt-32 sm:px-5 lg:px-6 2xl:px-8">
+          <div className="mx-auto w-full max-w-none text-center">
             <p>Cargando dashboard de administración...</p>
           </div>
         </section>
@@ -930,8 +930,8 @@ export default function AdminPage() {
         <Navbar />
 
       {/* Header */}
-      <section className="pt-32 pb-12 px-4">
-        <div className="container mx-auto">
+      <section className="w-full px-3 pb-12 pt-32 sm:px-5 lg:px-6 2xl:px-8">
+        <div className="mx-auto w-full max-w-none">
           <div className="mb-8 flex items-end justify-between gap-5">
             <div>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[.2em] text-primary"><ShieldCheck className="h-4 w-4" />{userRole === 'staff' ? 'Atención al cliente' : 'Operación diaria'}</div>
@@ -953,7 +953,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="lg:grid lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start lg:gap-7">
+          <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[250px_minmax(0,1fr)] xl:gap-7">
           <ControlPanelNav items={adminTabs} active={activeTab} onChange={setActiveTab} />
           <div className="min-w-0">
 
