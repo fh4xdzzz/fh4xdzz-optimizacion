@@ -15,7 +15,7 @@ type Order = { id: string; order_number: string; status: string; client_name: st
 type Service = { id: string; name: string; category: string; price: number; is_active: boolean; is_featured: boolean }
 type Chat = { id: string; conversation_number: string; status: string; subject: string; clientName: string; assignedAgent: string | null; updated_at: string }
 type Audit = { id: string; type: string; title: string; description: string; actorName: string; actorRole: string; reference: string | null; createdAt: string }
-type Analytics = { revenue: number; sales: number; averageTicket: number; discounts: number; monthlyRevenue: Array<{ key: string; label: string; revenue: number; sales: number }>; services: Array<{ name: string; sales: number; revenue: number }>; coupons: Array<{ code: string; uses: number; revenue: number; discount: number }>; statuses: Array<{ status: string; count: number }> }
+type Analytics = { revenue: number; sales: number; payments: number; renewals: number; averageTicket: number; discounts: number; monthlyRevenue: Array<{ key: string; label: string; revenue: number; sales: number }>; services: Array<{ name: string; sales: number; revenue: number }>; coupons: Array<{ code: string; uses: number; revenue: number; discount: number }>; statuses: Array<{ status: string; count: number }> }
 type Data = { generatedAt: string; metrics: { users: number; clients: number; team: number; orders: number; activeOrders: number; revenue: number; openChats: number; closedChats: number }; analytics: Analytics; users: User[]; orders: Order[]; services: Service[]; chats: Chat[]; activities: Audit[] }
 type Tab = 'overview' | 'analytics' | 'users' | 'services' | 'offers' | 'orders' | 'chats' | 'activity' | 'settings'
 const roles: Record<string, string> = { owner: 'Owner', admin: 'Administrador', staff: 'Staff', client: 'Cliente', assistant: 'Dulcan AI', system: 'Sistema' }
@@ -124,8 +124,8 @@ function AnalyticsPanel({ analytics }: { analytics: Analytics }) {
   const totalStatuses = Math.max(analytics.statuses.reduce((sum, item) => sum + item.count, 0), 1)
   return <div className="space-y-6">
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Ingresos reales confirmados" value={money(analytics.revenue)} detail={`${analytics.sales} servicios vendidos en modo real`} icon={<BadgeDollarSign />} />
-      <StatCard label="Ticket promedio" value={money(analytics.averageTicket)} detail="Ingresos reales ÷ servicios vendidos" icon={<TrendingUp />} />
+      <StatCard label="Ingresos reales confirmados" value={money(analytics.revenue)} detail={`${analytics.sales} servicios · ${analytics.renewals} renovaciones`} icon={<BadgeDollarSign />} />
+      <StatCard label="Ticket promedio" value={money(analytics.averageTicket)} detail={`Ingresos reales ÷ ${analytics.payments} pagos`} icon={<TrendingUp />} />
       <StatCard label="Descuentos aplicados" value={money(analytics.discounts)} detail="Paquetes y cupones" icon={<TicketPercent />} />
       <StatCard label="Servicio líder" value={analytics.services[0]?.name || 'Sin ventas'} detail={analytics.services[0] ? `${analytics.services[0].sales} ventas` : 'Aún no hay datos'} icon={<Star />} />
     </section>

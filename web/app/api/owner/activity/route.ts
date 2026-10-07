@@ -19,19 +19,20 @@ export async function GET() {
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { supabase } = auth
-  const [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult, auditSettingsResult] = await Promise.all([
+  const [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult, paymentsResult, auditSettingsResult] = await Promise.all([
     supabase.from('users').select('id, email, full_name, role, created_at').order('created_at', { ascending: false }).limit(1000),
-    supabase.from('orders').select('id, order_number, status, client_name, client_email, price, notes, user_id, assigned_to, created_at, updated_at, services(name)').is('deleted_at', null).order('updated_at', { ascending: false }).limit(1000),
+    supabase.from('orders').select('id, order_number, status, client_name, client_email, price, notes, user_id, assigned_to, created_at, updated_at, stripe_session_id, coupon_id, coupon_discount, services(name), discount_coupons(code)').is('deleted_at', null).order('updated_at', { ascending: false }).limit(1000),
     supabase.from('services').select('id, name, category, price, is_active, is_featured, created_at').order('is_featured', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
     supabase.from('chat_sessions').select('id, conversation_number, status, priority, subject, client_id, assigned_agent_id, created_at, updated_at').order('updated_at', { ascending: false }).limit(1000),
     supabase.from('order_events').select('id, order_id, event_type, description, old_status, new_status, created_by, created_at, orders(order_number, client_name)').order('created_at', { ascending: false }).limit(150),
     supabase.from('chat_audit_logs').select('id, action, actor_id, session_id, metadata, created_at, chat_sessions(conversation_number, subject)').order('created_at', { ascending: false }).limit(150),
     supabase.from('chat_messages').select('id, session_id, sender_id, sender_role, message, message_type, created_at, chat_sessions(conversation_number, subject)').order('created_at', { ascending: false }).limit(120),
     supabase.from('checkout_carts').select('id, total, package_discount, coupon_discount, coupon_id, stripe_session_id, paid_at, created_at, discount_coupons(code)').eq('status', 'paid').order('paid_at', { ascending: false }).limit(1000),
+    supabase.from('payment_transactions').select('id, payment_kind, amount, discount_amount, paid_at, service_id, services(name)').eq('livemode', true).order('paid_at', { ascending: false }).limit(1000),
     supabase.from('business_settings').select('setting_value').eq('setting_key', 'audit_visibility').maybeSingle(),
   ])
 
-  const failed = [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult, auditSettingsResult].find(result => result.error)
+  const failed = [usersResult, ordersResult, servicesResult, sessionsResult, orderEventsResult, chatAuditResult, messagesResult, cartsResult, paymentsResult, auditSettingsResult].find(result => result.error)
   if (failed?.error) {
     console.error('[owner/activity] Error consultando actividad', failed.error)
     return NextResponse.json({ error: 'No se pudo cargar la actividad del sistema.' }, { status: 500 })
@@ -129,14 +130,17 @@ export async function GET() {
   // Stripe Checkout distinguishes live and test sessions in the session id.
   // Only live, confirmed Stripe payments belong in financial analytics.
   const liveStripeOrders = orders.filter(order =>
-    typeof order.notes === 'string' && order.notes.includes('Sesión: cs_live_')
+    (typeof order.stripe_session_id === 'string' && order.stripe_session_id.startsWith('cs_live_'))
+    || (typeof order.notes === 'string' && order.notes.includes('Sesión: cs_live_'))
   )
   const paidOrders = liveStripeOrders.filter(order => !['pending', 'cancelled'].includes(order.status))
   const paidLiveCarts = (cartsResult.data || []).filter(cart =>
     typeof cart.stripe_session_id === 'string' && cart.stripe_session_id.startsWith('cs_live_')
   )
-  const totalRevenue = paidOrders
-    .reduce((sum, order) => sum + Number(order.price || 0), 0)
+  const renewalPayments = (paymentsResult.data || []).filter(payment => payment.payment_kind === 'subscription_renewal')
+  const orderRevenue = paidOrders.reduce((sum, order) => sum + Number(order.price || 0), 0)
+  const renewalRevenue = renewalPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+  const totalRevenue = orderRevenue + renewalRevenue
 
   const monthKeys = Array.from({ length: 6 }, (_, offset) => {
     const value = new Date()
@@ -147,8 +151,15 @@ export async function GET() {
   const monthlyRevenue = monthKeys.map(key => {
     const [year, month] = key.split('-').map(Number)
     const label = new Intl.DateTimeFormat('es-DO', { month: 'short' }).format(new Date(year, month - 1, 1)).replace('.', '')
-    const matching = paidOrders.filter(order => order.created_at.slice(0, 7) === key)
-    return { key, label, revenue: matching.reduce((sum, order) => sum + Number(order.price || 0), 0), sales: matching.length }
+    const matchingOrders = paidOrders.filter(order => order.created_at.slice(0, 7) === key)
+    const matchingRenewals = renewalPayments.filter(payment => payment.paid_at.slice(0, 7) === key)
+    return {
+      key,
+      label,
+      revenue: matchingOrders.reduce((sum, order) => sum + Number(order.price || 0), 0)
+        + matchingRenewals.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+      sales: matchingOrders.length + matchingRenewals.length,
+    }
   })
 
   const serviceMap = new Map<string, { name: string; sales: number; revenue: number }>()
@@ -157,6 +168,13 @@ export async function GET() {
     current.sales += 1
     current.revenue += Number(order.price || 0)
     serviceMap.set(order.service_name, current)
+  }
+  for (const payment of renewalPayments) {
+    const service = Array.isArray(payment.services) ? payment.services[0] : payment.services
+    const name = service?.name || 'Suscripción'
+    const current = serviceMap.get(name) || { name, sales: 0, revenue: 0 }
+    current.revenue += Number(payment.amount || 0)
+    serviceMap.set(name, current)
   }
 
   const couponMap = new Map<string, { code: string; uses: number; revenue: number; discount: number }>()
@@ -167,6 +185,16 @@ export async function GET() {
     current.uses += 1
     current.revenue += Number(cart.total || 0)
     current.discount += Number(cart.coupon_discount || 0)
+    couponMap.set(coupon.code, current)
+  }
+  for (const order of paidOrders) {
+    if (!order.coupon_id || (typeof order.notes === 'string' && order.notes.includes('Carrito:'))) continue
+    const coupon = Array.isArray(order.discount_coupons) ? order.discount_coupons[0] : order.discount_coupons
+    if (!coupon?.code) continue
+    const current = couponMap.get(coupon.code) || { code: coupon.code, uses: 0, revenue: 0, discount: 0 }
+    current.uses += 1
+    current.revenue += Number(order.price || 0)
+    current.discount += Number(order.coupon_discount || 0)
     couponMap.set(coupon.code, current)
   }
 
@@ -190,8 +218,11 @@ export async function GET() {
     analytics: {
       revenue: totalRevenue,
       sales: paidOrders.length,
-      averageTicket: paidOrders.length ? totalRevenue / paidOrders.length : 0,
-      discounts: paidLiveCarts.reduce((sum, cart) => sum + Number(cart.package_discount || 0) + Number(cart.coupon_discount || 0), 0),
+      payments: paidOrders.length + renewalPayments.length,
+      renewals: renewalPayments.length,
+      averageTicket: paidOrders.length + renewalPayments.length ? totalRevenue / (paidOrders.length + renewalPayments.length) : 0,
+      discounts: paidLiveCarts.reduce((sum, cart) => sum + Number(cart.package_discount || 0) + Number(cart.coupon_discount || 0), 0)
+        + paidOrders.reduce((sum, order) => sum + (typeof order.notes === 'string' && order.notes.includes('Carrito:') ? 0 : Number(order.coupon_discount || 0)), 0),
       monthlyRevenue,
       services: [...serviceMap.values()].sort((a, b) => b.sales - a.sales || b.revenue - a.revenue).slice(0, 8),
       coupons: [...couponMap.values()].sort((a, b) => b.uses - a.uses || b.revenue - a.revenue).slice(0, 8),
