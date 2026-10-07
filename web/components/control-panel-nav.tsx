@@ -20,8 +20,8 @@ export default function ControlPanelNav<T extends string>({
   onChange: (id: T) => void
 }) {
   return (
-    <nav aria-label="Secciones del panel" className="sticky top-20 z-30 mb-8 rounded-2xl border border-white/10 bg-[#0c0e15]/95 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
-      <div className="flex gap-2 overflow-x-auto pb-1">
+    <nav aria-label="Secciones del panel" className="z-30 mb-6 rounded-2xl border border-white/10 bg-[#0c0e15]/95 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl lg:sticky lg:top-24 lg:mb-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-col">
         {items.map(item => {
           const selected = active === item.id
           return (
@@ -30,7 +30,7 @@ export default function ControlPanelNav<T extends string>({
               type="button"
               aria-current={selected ? 'page' : undefined}
               onClick={() => onChange(item.id)}
-              className={`group flex min-w-[170px] flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition duration-200 ${selected ? 'border-primary/60 bg-gradient-to-br from-primary to-violet-600 text-white shadow-lg shadow-primary/20' : 'border-transparent bg-white/[.025] text-white/70 hover:border-white/10 hover:bg-white/[.06] hover:text-white'}`}
+              className={`group flex min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-left transition duration-200 lg:w-full ${selected ? 'border-primary/60 bg-gradient-to-br from-primary to-violet-600 text-white shadow-lg shadow-primary/20' : 'border-transparent bg-white/[.025] text-white/70 hover:border-white/10 hover:bg-white/[.06] hover:text-white'}`}
             >
               <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${selected ? 'bg-white/15' : 'bg-primary/10 text-primary group-hover:bg-primary/15'}`}>{item.icon}</span>
               <span className="min-w-0 flex-1">

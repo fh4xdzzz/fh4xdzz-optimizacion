@@ -953,7 +953,9 @@ export default function AdminPage() {
             </div>
           )}
 
+          <div className="lg:grid lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start lg:gap-7">
           <ControlPanelNav items={adminTabs} active={activeTab} onChange={setActiveTab} />
+          <div className="min-w-0">
 
           {/* Overview Tab */}
           {userRole !== 'staff' && activeTab === 'overview' && (
@@ -1638,6 +1640,8 @@ export default function AdminPage() {
 
           {/* Settings Tab */}
 
+          </div>
+          </div>
         </div>
       </section>
 
