@@ -27,7 +27,7 @@ export default function StoreThanksClient({ sessionId }: { sessionId?: string })
         if (!response.ok) throw new Error(payload.error || 'No pudimos verificar la compra.')
         if (!active) return
         setSummary(payload)
-        if (payload.paymentStatus === 'paid') clearStoreCart()
+        if (payload.paymentStatus === 'paid') clearStoreCart('guest')
         if (payload.paymentStatus === 'paid' && payload.status !== 'paid' && attempts < 8) {
           timer = setTimeout(verify, 1500)
           return

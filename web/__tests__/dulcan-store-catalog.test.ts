@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { createElement } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-const mocks = vi.hoisted(() => ({ from: vi.fn(), createCheckout: vi.fn(), ready: vi.fn(), insertOrder: vi.fn(), addProduct: vi.fn() }))
+const mocks = vi.hoisted(() => ({ from: vi.fn(), createCheckout: vi.fn(), ready: vi.fn(), insertOrder: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({ from: mocks.from }) }))
 vi.mock('@/lib/stripe-server', () => ({ getStripe: () => ({ checkout: { sessions: { create: mocks.createCheckout } } }) }))
 vi.mock('@/lib/dulcan-license-crypto', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/dulcan-license-crypto')>(), licenseConfigurationReady: mocks.ready }))
@@ -11,15 +11,15 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/components/navbar', () => ({ default: () => null }))
 vi.mock('@/components/footer', () => ({ default: () => null }))
 vi.mock('next/image', async () => { const { createElement } = await import('react'); return { default: (props: { src: string; alt: string }) => createElement('img', { src: props.src, alt: props.alt }) } })
-vi.mock('@/lib/store-cart', () => ({ getStoreCart: () => [], subscribeStoreCart: () => () => {}, addStoreProduct: mocks.addProduct, updateStoreQuantity: vi.fn() }))
+import {getStoreCart,addStoreProduct,updateStoreQuantity,clearStoreCart} from '@/lib/store-cart'
 import { GET as catalog } from '@/app/api/public/products/route'
 import { POST as guestCheckout } from '@/app/api/stripe/create-store-checkout/route'
 import StorePage from '@/app/tienda/page'
 
 type Product = Record<string, unknown>
-const ordinary = { id: 10, name: 'Fixture overlay', slug: 'fixture-overlay', price: 7, product_type: 'digital', inventory_count: null, is_active: true, image_url: '/fixture.png' }
+const ordinary = { id: 10, name: 'Fixture overlay', slug: 'fixture-overlay', price: 7, product_type: 'digital' as const, inventory_count: null, is_active: true, image_url: '/fixture.png' }
 // The store price is deliberately wrong: licensing must use software_products as its authority.
-const dulcan = { id: 11, name: 'Dulcan Optimizer', slug: 'dulcan-optimizer', price: 1, product_type: 'digital', inventory_count: null, is_active: true, image_url: '/dulcan-optimizer/caja.png' }
+const dulcan = { id: 11, name: 'Dulcan Optimizer', slug: 'dulcan-optimizer', price: 1, product_type: 'digital' as const, inventory_count: null, is_active: true, image_url: '/dulcan-optimizer/caja.png' }
 let products: Product[], software: Product | null, softwareError: { message: string } | null
 function query(table: string) {
  let ids: number[] | undefined
@@ -40,7 +40,7 @@ function request(ids: number[]) {
  return new NextRequest('https://www.thedulcandesign.com/api/stripe/create-store-checkout', { method: 'POST', headers: { origin: 'https://www.thedulcandesign.com', 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Fixture buyer', email: 'fixture@example.invalid', items: ids.map(id => ({ id, quantity: 1 })), purchase_flow: 'guest_store_v1' }) })
 }
 beforeEach(() => {
- vi.clearAllMocks()
+ vi.clearAllMocks(); localStorage.clear()
  vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://fixture.supabase.invalid')
  vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'fixture-never-real')
  vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://www.thedulcandesign.com')
@@ -130,26 +130,64 @@ describe('guest checkout must never collect payment for Dulcan licenses', () => 
   expect(payment.line_items[0].price_data.unit_amount).toBe(700)
  })
 })
-describe('license purchase in the existing store UI', () => {
- it('opens the license checkout endpoint instead of adding Dulcan to the guest cart', async () => {
+describe('license purchase through the vertical store cards and cart', () => {
+ function serveCatalog(includeGuest = false) {
+  const listed = [{ ...dulcan, price: 14.99, category: 'Software', description: 'Permanent license fixture', purchase_flow: 'dulcan_license', purchase_available: true }, ...(includeGuest ? [{ ...ordinary, category: 'Recursos', description: 'Fixture overlay description' }] : [])]
   const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input) === '/api/public/products'
-   ? new Response(JSON.stringify({ products: [{ ...dulcan, price: 14.99, category: 'Software', description: 'Permanent license fixture', purchase_flow: 'dulcan_license', purchase_available: true }] }), { status: 200 })
+   ? new Response(JSON.stringify({ products: listed }), { status: 200 })
    : new Response(JSON.stringify({ error: 'Fixture checkout unavailable' }), { status: 503 }))
   vi.stubGlobal('fetch', fetcher)
+  return fetcher
+ }
+ it('adds Dulcan first, then opens the license checkout only from the cart payment button', async () => {
+  const fetcher = serveCatalog()
   render(createElement(StorePage))
   const title = await screen.findByRole('heading', { name: 'Dulcan Optimizer' })
   const card = title.closest('article')!
   expect(within(card).getByRole('img', { name: /Dulcan Optimizer/ }).getAttribute('src')).toBe('/dulcan-optimizer/caja.png')
-  fireEvent.click(within(card).getByRole('button'))
+  fireEvent.click(within(card).getByRole('button', { name: /Agregar al carrito/ }))
+  await waitFor(() => expect(getStoreCart()).toHaveLength(1))
+  expect(getStoreCart()[0].quantity).toBe(1)
+  expect(fetcher.mock.calls.some(([input]) => String(input) === '/api/dulcan/checkout')).toBe(false)
+  fireEvent.click(await screen.findByRole('button', { name: 'Pagar licencia con Stripe →' }))
   await waitFor(() => expect(fetcher).toHaveBeenCalledWith('/api/dulcan/checkout', expect.objectContaining({ method: 'POST' })))
-  expect(mocks.addProduct).not.toHaveBeenCalled()
   expect(fetcher.mock.calls.some(([input]) => String(input) === '/api/stripe/create-store-checkout')).toBe(false)
  })
- it('disables the license purchase when the server marks it unavailable', async () => {
+ it('disables adding an unavailable license', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ products: [{ ...dulcan, price: 14.99, category: 'Software', description: 'Permanent license fixture', purchase_flow: 'dulcan_license', purchase_available: false }] }), { status: 200 })))
   render(createElement(StorePage))
   const title = await screen.findByRole('heading', { name: 'Dulcan Optimizer' })
   expect((within(title.closest('article')!).getByRole('button') as HTMLButtonElement).disabled).toBe(true)
-  expect(mocks.addProduct).not.toHaveBeenCalled()
+  expect(getStoreCart()).toHaveLength(0)
+ })
+ it('never submits the license as part of a guest cart payment', async () => {
+  const fetcher = serveCatalog(true)
+  render(createElement(StorePage))
+  for (const name of ['Dulcan Optimizer', 'Fixture overlay']) {
+   const title = await screen.findByRole('heading', { name })
+   fireEvent.click(within(title.closest('article')!).getByRole('button', { name: /Agregar al carrito/ }))
+  }
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Nombre completo' }), { target: { value: 'Fixture buyer' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Correo electrónico' }), { target: { value: 'fixture@example.invalid' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Pagar otros productos →' }))
+  await waitFor(() => expect(fetcher).toHaveBeenCalledWith('/api/stripe/create-store-checkout', expect.anything()))
+  const call = fetcher.mock.calls.find(([input]) => String(input) === '/api/stripe/create-store-checkout') as unknown as [string, RequestInit]
+  expect(JSON.parse(String(call[1].body)).items).toEqual([{ id: ordinary.id, quantity: 1 }])
+  expect(getStoreCart()).toHaveLength(2)
+ })
+})
+
+describe('license cart quantity and completed payment cleanup', () => {
+ it('keeps a single license when adding repeatedly or changing its quantity', () => {
+  const product = { ...dulcan, price: 14.99, purchase_flow: 'dulcan_license' as const, category: 'Software', description: 'Fixture', is_featured: true, sort_order: 0 }
+  addStoreProduct(product); addStoreProduct(product); updateStoreQuantity(product.id, 8)
+  expect(getStoreCart()).toEqual([expect.objectContaining({ id: product.id, quantity: 1 })])
+ })
+ it.each(['guest', 'license'] as const)('removes only paid %s items and keeps the other checkout pending', flow => {
+  const product = { ...dulcan, price: 14.99, purchase_flow: 'dulcan_license' as const, category: 'Software', description: 'Fixture', is_featured: true, sort_order: 0 }
+  addStoreProduct(product)
+  addStoreProduct({ ...ordinary, category: 'Recursos', description: 'Fixture', is_featured: false, sort_order: 1 })
+  clearStoreCart(flow)
+  expect(getStoreCart().map(item => item.id)).toEqual([flow === 'license' ? ordinary.id : dulcan.id])
  })
 })
