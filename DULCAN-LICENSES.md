@@ -50,3 +50,8 @@ Pruebas unitarias y de rutas con Stripe/Resend simulados; SQL real en PostgreSQL
 
 La entrega del correo, emisión tras un pago efectivo y activación posterior del comprador requieren todavía una transacción completa de validación; no se confunden con los controles HTTP ni con las pruebas aisladas. El catálogo histórico de actualización de 0.4.5 se conserva; 0.5.0 se distribuye desde la compra y Mis licencias.
 
+
+
+## Pago conjunto publicado
+
+El 22 de octubre de 2026 se publicó b1fcfc8 en dpl_CbfUK3n7NeKpkz2pY8R9fusJXSta y se promovió a producción. Verificación visual en www.thedulcandesign.com/carrito: Dulcan Optimizer 14.99 USD + Configuración de Streaming 49.99 USD = 64.98 USD, un único botón Pagar todo con Stripe y Quitar visible en ambas filas. Se retiró el servicio usado en la comprobación y se conservó la app seleccionada originalmente. Evidencia: I:/CODEX AI/Cache/Temp/dulcan-licensing/carrito-pago-unico.png. Las 178 pruebas web, TypeScript y ESLint pasaron. No se efectuaron cargos ni una transacción real de validación de entrega.
