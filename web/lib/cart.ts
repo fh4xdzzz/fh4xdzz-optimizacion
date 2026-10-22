@@ -38,6 +38,11 @@ export function clearCart() {
   setCart([])
 }
 
+export function removePaidCartItems(ids: string[]) {
+  const paid = new Set(ids)
+  setCart(getCart().filter(item => !paid.has(item.id)))
+}
+
 export function subscribeCart(listener: () => void) {
   window.addEventListener(EVENT, listener)
   window.addEventListener('storage', listener)

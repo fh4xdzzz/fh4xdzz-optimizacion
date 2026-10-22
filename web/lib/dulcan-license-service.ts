@@ -41,11 +41,18 @@ export async function fulfillSoftwareCheckout(db:SupabaseClient,eventCheckout:St
   // Re-read the payment: older completion events must not re-grant a refunded purchase.
   const checkout=await stripe.checkout.sessions.retrieve(eventCheckout.id,{expand:['payment_intent.latest_charge']})
   const purchaseId=checkout.metadata?.purchase_id
-  if(checkout.metadata?.checkout_flow!=='dulcan_license_v1'||!purchaseId||checkout.mode!=='payment'||checkout.payment_status!=='paid')return null
+  const mixed = checkout.metadata?.checkout_flow === 'cart_v1'
+  if((checkout.metadata?.checkout_flow!=='dulcan_license_v1'&&!mixed)||!purchaseId||checkout.mode!=='payment'||checkout.payment_status!=='paid')return null
   if(eventLive!==licenseLiveMode()||checkout.livemode!==eventLive)throw new Error('Entorno del pago no coincide')
   const {data:purchase,error}=await db.from('software_purchases').select('*').eq('id',purchaseId).maybeSingle()
   if(error||!purchase)throw new Error('Compra de software no encontrada')
-  if(purchase.user_id!==checkout.metadata?.user_id||purchase.stripe_session_id!==checkout.id||purchase.product_id!==DULCAN_PRODUCT||purchase.amount_cents!==checkout.amount_total||purchase.currency!==checkout.currency||purchase.livemode!==eventLive)throw new Error('El pago no coincide con la compra')
+  if(purchase.user_id!==checkout.metadata?.user_id||purchase.stripe_session_id!==checkout.id||purchase.product_id!==DULCAN_PRODUCT||purchase.currency!==checkout.currency||purchase.livemode!==eventLive)throw new Error('El pago no coincide con la compra')
+  if (mixed) {
+    if (!checkout.metadata?.cart_id) throw new Error('Carrito de licencia no encontrado')
+    const { data: cart, error: cartError } = await db.from('checkout_carts').select('user_id,stripe_session_id,total,items').eq('id', checkout.metadata.cart_id).maybeSingle()
+    const licenseItems = Array.isArray(cart?.items) ? cart.items.filter((item: { kind?: string }) => item.kind === 'license') : []
+    if (cartError || !cart || cart.user_id !== purchase.user_id || cart.stripe_session_id !== checkout.id || Math.round(Number(cart.total) * 100) !== checkout.amount_total || Number(checkout.amount_total) < purchase.amount_cents || licenseItems.length !== 1 || licenseItems[0].id !== DULCAN_PRODUCT || Math.round(Number(licenseItems[0].price) * 100) !== purchase.amount_cents) throw new Error('El pago no coincide con el carrito de licencia')
+  } else if (purchase.amount_cents !== checkout.amount_total) throw new Error('El pago no coincide con la compra')
   const intent=checkout.payment_intent
   if(!intent||typeof intent==='string'||intent.status!=='succeeded')throw new Error('No se confirmó el pago de software')
   const charge=intent.latest_charge
@@ -54,7 +61,7 @@ export async function fulfillSoftwareCheckout(db:SupabaseClient,eventCheckout:St
   }
   const key=generateLicenseKey()
   const {data:issued,error:issueError}=await db.rpc('issue_dulcan_license',{
-    p_purchase_id:purchase.id,p_session_id:checkout.id,p_payment_intent:intent.id,p_paid_amount:checkout.amount_total,p_currency:checkout.currency,p_live:eventLive,
+    p_purchase_id:purchase.id,p_session_id:checkout.id,p_payment_intent:intent.id,p_paid_amount:purchase.amount_cents,p_currency:checkout.currency,p_live:eventLive,
     p_key_hash:hashLicenseKey(key),p_key_ciphertext:encryptLicenseKey(key),
   })
   if(issueError)throw new Error('No se pudo emitir la licencia de software')

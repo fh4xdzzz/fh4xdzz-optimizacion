@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/auth-server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe-server'
+import { licenseAdmin } from '@/lib/dulcan-license-service'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession()
@@ -22,6 +23,21 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createClient()
+    const isCart = checkout.metadata?.checkout_flow === 'cart_v1'
+    let cart: { status: string; items: { id: string; kind?: string; name: string }[] } | null = null
+    if (isCart) {
+      const found = await supabase.from('checkout_carts').select('status,items').eq('id', checkout.metadata!.cart_id).eq('user_id', session.user.id).eq('stripe_session_id', checkout.id).maybeSingle()
+      if (found.error || !found.data) throw new Error('Carrito de pago no encontrado')
+      cart = found.data
+    }
+    const serviceItems = cart && Array.isArray(cart.items) ? cart.items.filter(item => item.kind !== 'license') : []
+    const hasLicense = Boolean(isCart && checkout.metadata?.purchase_id)
+    let licenseReady = false
+    if (hasLicense) {
+      const found = await licenseAdmin().from('software_licenses').select('id').eq('purchase_id', checkout.metadata!.purchase_id).eq('user_id', session.user.id).eq('status', 'active').maybeSingle()
+      if (found.error) throw new Error('No se pudo consultar la licencia')
+      licenseReady = Boolean(found.data)
+    }
     const orderQuery = supabase
       .from('orders')
       .select('id, order_number, status, services(name)')
@@ -44,6 +60,9 @@ export async function GET(request: NextRequest) {
         .maybeSingle()
       serviceName = service?.name || serviceName
     }
+    if (hasLicense) serviceName = serviceItems.length ? `Dulcan Optimizer + ${serviceItems.length} ${serviceItems.length === 1 ? 'servicio' : 'servicios'}` : 'Dulcan Optimizer'
+    const hasServices = isCart ? serviceItems.length > 0 : true
+    const fulfillmentReady = isCart ? cart?.status === 'paid' && (!hasLicense || licenseReady) && (!hasServices || Boolean(order)) : Boolean(order)
 
     return NextResponse.json({
       paymentStatus: checkout.payment_status,
@@ -51,6 +70,11 @@ export async function GET(request: NextRequest) {
       amount: Number(checkout.amount_total || 0) / 100,
       currency: (checkout.currency || 'usd').toUpperCase(),
       serviceName,
+      hasLicense,
+      hasServices,
+      licenseReady,
+      fulfillmentReady,
+      serviceIds: serviceItems.map(item => item.id),
       order: order ? {
         id: order.id,
         orderNumber: order.order_number,

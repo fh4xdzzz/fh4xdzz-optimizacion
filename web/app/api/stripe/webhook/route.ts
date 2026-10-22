@@ -69,6 +69,12 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
   }
 
   const metadata = checkout.metadata
+  let mixedLicenseCents = 0
+  if (metadata.checkout_flow === 'cart_v1' && metadata.purchase_id) {
+    const purchase = await fulfillSoftwareCheckout(supabase, checkout, event.livemode)
+    if (!purchase) return
+    mixedLicenseCents = purchase.amount_cents
+  }
   let orderId = metadata.order_id || null
   let serviceId = metadata.service_id || null
   let cartId: string | null = null
@@ -83,6 +89,9 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
     const { data: cart, error: cartError } = await supabase.from('checkout_carts')
       .select('*').eq('id', cartId).eq('user_id', metadata.user_id).maybeSingle()
     if (cartError || !cart) throw new Error('No se encontró el carrito pagado.')
+    if (cart.stripe_session_id !== checkout.id || Math.round(Number(cart.total) * 100) !== checkout.amount_total || checkout.currency !== 'usd') throw new Error('El pago no coincide con el carrito.')
+    const hasLicense = Array.isArray(cart.items) && cart.items.some((item: { kind?: string }) => item.kind === 'license')
+    if (hasLicense !== Boolean(metadata.purchase_id)) throw new Error('La licencia no coincide con el carrito.')
 
     couponId = cart.coupon_id || null
     couponDiscount = Number(cart.coupon_discount || 0)
@@ -94,9 +103,9 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
       orderId = existingOrders[0].id
       serviceId = existingOrders[0].service_id
     } else {
-      const items = Array.isArray(cart.items) ? cart.items : []
-      const subtotal = Number(cart.subtotal) || 1
-      const totalCents = Number(checkout.amount_total || 0)
+      const items = Array.isArray(cart.items) ? cart.items.filter((item: { kind?: string }) => item.kind !== 'license') : []
+      const subtotal = items.reduce((sum: number, item: { price: number }) => sum + Number(item.price), 0) || 1
+      const totalCents = Number(checkout.amount_total || 0) - mixedLicenseCents
       let allocatedCents = 0
       const rows = items.map((item: { id: string; name: string; price: number }, index: number) => {
         const cents = index === items.length - 1 ? totalCents - allocatedCents : Math.round(totalCents * Number(item.price) / subtotal)
@@ -118,11 +127,13 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
           coupon_discount: index === 0 ? couponDiscount : 0,
         }
       })
-      const { data: createdOrders, error: createError } = await supabase.from('orders').insert(rows).select('id, service_id')
-      if (createError || !createdOrders?.length) throw new Error(`No se pudieron crear los pedidos del carrito: ${createError?.message || 'sin filas'}`)
-      orderId = createdOrders[0].id
-      serviceId = createdOrders[0].service_id
-      shouldNotify = true
+      if (rows.length) {
+        const { data: createdOrders, error: createError } = await supabase.from('orders').insert(rows).select('id, service_id')
+        if (createError || !createdOrders?.length) throw new Error(`No se pudieron crear los pedidos del carrito: ${createError?.message || 'sin filas'}`)
+        orderId = createdOrders[0].id
+        serviceId = createdOrders[0].service_id
+        shouldNotify = true
+      }
     }
 
     const { error: paidError } = await supabase.from('checkout_carts')

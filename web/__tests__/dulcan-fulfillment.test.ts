@@ -8,13 +8,20 @@ vi.mock('@/lib/stripe-server', () => ({ getStripe: () => ({ checkout: { sessions
 import { encryptLicenseKey, generateLicenseKey } from '@/lib/dulcan-license-crypto'
 import { fulfillSoftwareCheckout, revokeRefundedSoftware } from '@/lib/dulcan-license-service'
 const purchase = { id: 'purchase', user_id: 'buyer', product_id: 'dulcan-optimizer', email: 'buyer@example.invalid', customer_name: '<Buyer>', stripe_session_id: 'cs_fixture', payment_intent_id: null, amount_cents: 1499, currency: 'usd', livemode: true, status: 'pending' }
+let mixedCart: Record<string, unknown> | null
 let checkout: Record<string, unknown>
 let rpc: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn>, fetcher: ReturnType<typeof vi.fn>, storedKey: string
 function db() {
- return { from: (table: string) => table === 'software_purchases' ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: purchase, error: null }) }) }) } : { update }, rpc } as unknown as SupabaseClient
+ function row(data: unknown) {
+  let matches = true
+  const chain = { select: () => chain, eq: (column: string, value: unknown) => { matches = matches && !!data && (data as Record<string, unknown>)[column] === value; return chain }, maybeSingle: async () => ({ data: matches ? data : null, error: null }), single: async () => ({ data: matches ? data : null, error: null }) }
+  return chain
+ }
+ return { from: (table: string) => table === 'software_purchases' ? row(purchase) : table === 'checkout_carts' ? row(mixedCart) : { update }, rpc } as unknown as SupabaseClient
 }
 beforeEach(() => {
  vi.clearAllMocks()
+ mixedCart = null
  process.env.DULCAN_LICENSE_MODE = 'live'
  process.env.DULCAN_LICENSE_ENCRYPTION_KEY = randomBytes(32).toString('base64')
  process.env.RESEND_API_KEY = 'fixture'
@@ -77,5 +84,75 @@ describe('paid software fulfillment', () => {
   expect(rpc).not.toHaveBeenCalled()
   await revokeRefundedSoftware(db(), { refunded: true, amount: 1499, amount_refunded: 1499, payment_intent: 'pi_fixture' } as Stripe.Charge)
   expect(rpc).toHaveBeenCalledWith('revoke_dulcan_payment', { p_payment_intent: 'pi_fixture' })
+ })
+})
+
+function mixed() {
+ checkout.metadata = { checkout_flow: 'cart_v1', cart_id: 'cart-fixture', purchase_id: 'purchase', user_id: 'buyer' }
+ checkout.amount_total = 5499
+ mixedCart = { id: 'cart-fixture', user_id: 'buyer', stripe_session_id: 'cs_fixture', total: '54.99', items: [{ id: 'service-fixture', kind: 'service', price: 40 }, { id: 'dulcan-optimizer', kind: 'license', price: 14.99 }] }
+}
+describe('mixed service and software fulfillment', () => {
+ it('validates the full paid cart but issues only the canonical license portion', async () => {
+  mixed()
+  expect((await fulfill())?.payment_intent_id).toBe('pi_fixture')
+  expect(rpc).toHaveBeenCalledWith('issue_dulcan_license', expect.objectContaining({ p_purchase_id: 'purchase', p_session_id: 'cs_fixture', p_payment_intent: 'pi_fixture', p_paid_amount: 1499, p_currency: 'usd', p_live: true }))
+  expect(fetcher).toHaveBeenCalledOnce()
+ })
+ it.each([
+  { label: 'another buyer', patch: { user_id: 'other' } },
+  { label: 'another Stripe session', patch: { stripe_session_id: 'cs_other' } },
+  { label: 'another cart identifier', patch: { id: 'other-cart' } },
+  { label: 'underpaid cart', patch: { total: '55.00' } },
+  { label: 'overpaid cart', patch: { total: '54.98' } },
+  { label: 'invalid total', patch: { total: 'not-money' } },
+ ])('rejects $label before issuing a license or email', async ({ patch }) => {
+  mixed(); Object.assign(mixedCart!, patch)
+  await expect(fulfill()).rejects.toThrow()
+  expect(rpc).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled()
+ })
+ it.each([
+  { label: 'missing license item', items: [{ id: 'service-fixture', kind: 'service', price: 40 }] },
+  { label: 'duplicate license item', items: [{ id: 'dulcan-optimizer', kind: 'license', price: 14.99 }, { id: 'dulcan-optimizer', kind: 'license', price: 14.99 }] },
+  { label: 'wrong software identifier', items: [{ id: 'other-software', kind: 'license', price: 14.99 }] },
+  { label: 'wrong license amount', items: [{ id: 'dulcan-optimizer', kind: 'license', price: 1 }] },
+ ])('rejects $label in the stored mixed cart', async ({ items }) => {
+  mixed(); mixedCart!.items = items
+  await expect(fulfill()).rejects.toThrow()
+  expect(rpc).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled()
+ })
+ it('requires the referenced checkout cart to exist', async () => {
+  mixed(); mixedCart = null
+  await expect(fulfill()).rejects.toThrow()
+  expect(rpc).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled()
+ })
+ it('rejects a combined payment smaller than its license portion', async () => {
+  mixed(); checkout.amount_total = 1000; mixedCart!.total = '10.00'
+  await expect(fulfill()).rejects.toThrow()
+  expect(rpc).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled()
+ })
+ it('cannot grant a mixed license by replacing the paid purchase owner in metadata', async () => {
+  mixed(); checkout.metadata = { checkout_flow: 'cart_v1', cart_id: 'cart-fixture', purchase_id: 'purchase', user_id: 'other' }
+  await expect(fulfill()).rejects.toThrow()
+  expect(rpc).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled()
+ })
+ it('does not grant the software portion while the mixed payment is unpaid', async () => {
+  mixed(); checkout.payment_status = 'unpaid'
+  expect(await fulfill()).toBeNull()
+  expect(rpc).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled()
+ })
+ it('reuses the stored license and delivery idempotency key on a mixed event retry', async () => {
+  mixed(); await fulfill(); await fulfill()
+  expect(rpc.mock.calls.filter(([name]) => name === 'issue_dulcan_license')).toHaveLength(2)
+  const attempts = fetcher.mock.calls.map(call => call[1].headers['Idempotency-Key'])
+  expect(attempts).toEqual(['dulcan-license-license', 'dulcan-license-license'])
+ })
+ it('revokes the shared mixed payment intent before processing an old completion', async () => {
+  mixed(); checkout.payment_intent = { id: 'pi_fixture', status: 'succeeded', latest_charge: { refunded: true } }
+  rpc.mockResolvedValue({ data: [], error: null })
+  expect(await fulfill()).toBeNull()
+  expect(rpc.mock.calls.map(call => call[0])).toEqual(['revoke_dulcan_payment', 'issue_dulcan_license'])
+  expect(rpc).toHaveBeenCalledWith('revoke_dulcan_payment', { p_payment_intent: 'pi_fixture' })
+  expect(fetcher).not.toHaveBeenCalled()
  })
 })

@@ -6,7 +6,8 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { clearCart } from '@/lib/cart'
+import { removePaidCartItems } from '@/lib/cart'
+import { clearStoreCart } from '@/lib/store-cart'
 
 interface PaymentSummary {
   paymentStatus: string
@@ -14,6 +15,11 @@ interface PaymentSummary {
   amount: number
   currency: string
   serviceName: string
+  hasLicense?: boolean
+  hasServices?: boolean
+  licenseReady?: boolean
+  fulfillmentReady?: boolean
+  serviceIds?: string[]
   order: { id: string; orderNumber: string; status: string } | null
 }
 
@@ -37,8 +43,12 @@ export default function PaymentSuccessClient({ sessionId, isCart = false }: { se
         if (cancelled) return
         setSummary(payload)
         setError('')
-        if (isCart && payload.paymentStatus === 'paid' && payload.order) clearCart()
-        if (payload.paymentStatus === 'paid' && !payload.order && attempts < 8) {
+        const ready = payload.fulfillmentReady ?? Boolean(payload.order)
+        if (isCart && payload.paymentStatus === 'paid' && ready) {
+          removePaidCartItems(payload.serviceIds || [])
+          if (payload.hasLicense && payload.licenseReady) clearStoreCart('license')
+        }
+        if (payload.paymentStatus === 'paid' && !ready && attempts < 8) {
           timer = setTimeout(verify, 1500)
           return
         }
@@ -58,7 +68,7 @@ export default function PaymentSuccessClient({ sessionId, isCart = false }: { se
   }, [sessionId, isCart])
 
   const paid = summary?.paymentStatus === 'paid'
-  const orderReady = Boolean(summary?.order)
+  const orderReady = summary?.fulfillmentReady ?? Boolean(summary?.order)
   const formattedAmount = summary
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: summary.currency }).format(summary.amount)
     : ''
@@ -80,7 +90,7 @@ export default function PaymentSuccessClient({ sessionId, isCart = false }: { se
           </div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Pago seguro con Stripe</p>
           <h1 className="mt-3 text-4xl font-bold md:text-5xl">{checking ? 'Confirmando tu pedido…' : paid ? '¡Pago confirmado!' : 'Estamos verificando el pago'}</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted">{paid ? 'Gracias por confiar en TheDulcanDesign. Tu solicitud ya está protegida y nuestro equipo fue notificado.' : 'No cierres esta página mientras revisamos la confirmación.'}</p>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted">{paid ? 'Gracias por confiar en TheDulcanDesign. Tu pago ya está protegido y estamos preparando tu compra.' : 'No cierres esta página mientras revisamos la confirmación.'}</p>
         </div>
 
         {error ? <Card className="border-red-500/35 bg-red-500/5"><CardContent className="p-6 text-center"><p className="text-red-200">{error}</p><div className="mt-5 flex justify-center gap-3"><Button href="/pedidos">Ver mis pedidos</Button><Button variant="outline" onClick={openSupport}>Contactar soporte</Button></div></CardContent></Card> : <div className="grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
@@ -91,11 +101,11 @@ export default function PaymentSuccessClient({ sessionId, isCart = false }: { se
                 {summary && <p className="shrink-0 text-xl font-bold text-primary">{formattedAmount}</p>}
               </div>
               <div className="space-y-5 py-6">
-                <div className="flex gap-4"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-5 w-5" /></div><div><h3 className="font-semibold">Pago recibido</h3><p className="mt-1 text-sm text-muted">Stripe confirmó la transacción de forma segura.</p></div></div>
-                <div className="flex gap-4"><div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${orderReady ? 'bg-emerald-500 text-white' : 'bg-primary/20 text-primary'}`}>{orderReady ? <Check className="h-5 w-5" /> : <LoaderCircle className="h-5 w-5 animate-spin" />}</div><div><h3 className="font-semibold">Pedido creado</h3><p className="mt-1 text-sm text-muted">{orderReady ? `Referencia ${summary?.order?.orderNumber}` : 'Sincronizando el pago con tu área privada…'}</p></div></div>
-                <div className="flex gap-4"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-muted">3</div><div><h3 className="font-semibold">Revisión del especialista</h3><p className="mt-1 text-sm text-muted">Te avisaremos cuando el equipo comience a trabajar.</p></div></div>
+                <div className="flex gap-4"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-5 w-5" /></div><div><h3 className="font-semibold">{paid ? 'Pago recibido' : 'Verificando el pago'}</h3><p className="mt-1 text-sm text-muted">{paid ? 'Stripe confirmó la transacción de forma segura.' : 'Esperando la confirmación de Stripe.'}</p></div></div>
+                <div className="flex gap-4"><div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${orderReady ? 'bg-emerald-500 text-white' : 'bg-primary/20 text-primary'}`}>{orderReady ? <Check className="h-5 w-5" /> : <LoaderCircle className="h-5 w-5 animate-spin" />}</div><div><h3 className="font-semibold">{summary?.hasLicense ? 'Pedido y licencia' : 'Pedido creado'}</h3><p className="mt-1 text-sm text-muted">{orderReady ? summary?.order ? `Referencia ${summary.order.orderNumber}` : 'Tu licencia está disponible en Mis keys.' : 'Sincronizando el pago con tu área privada…'}</p></div></div>
+                {summary?.hasServices !== false && <div className="flex gap-4"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-muted">3</div><div><h3 className="font-semibold">Revisión del especialista</h3><p className="mt-1 text-sm text-muted">Te avisaremos cuando el equipo comience a trabajar.</p></div></div>}
               </div>
-              <div className="flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row"><Button href="/pedidos" size="lg" className="flex-1"><PackageCheck className="mr-2 h-5 w-5" />Ver seguimiento privado</Button><Button variant="outline" size="lg" onClick={openSupport}><MessageCircle className="mr-2 h-5 w-5" />Soporte</Button></div>
+              <div className="flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row"><>{summary?.hasServices !== false && <Button href="/dashboard/pedidos" size="lg" className="flex-1"><PackageCheck className="mr-2 h-5 w-5" />Ver mis pedidos</Button>}{summary?.hasLicense && <Button href={`/dashboard/keys?session_id=${encodeURIComponent(sessionId || '')}`} size="lg" className="flex-1">Ver mi key</Button>}</><Button variant="outline" size="lg" onClick={openSupport}><MessageCircle className="mr-2 h-5 w-5" />Soporte</Button></div>
             </CardContent>
           </Card>
 
