@@ -12,7 +12,8 @@ Se recuperaron 246 archivos de la producción F1H2R9EcT73fTGsLCfKFrauBjYmm (comm
 
 - /tienda: producto destacado en Software con la caja suministrada por el propietario; precio canónico de software_products y Checkout de licencias, separado del carrito invitado.
 - /dulcan-optimizer: detalles del programa y Checkout autenticado; acceso desde la ficha de Tienda.
-- /mis-licencias: recuperación privada de las keys del comprador.
+- /dashboard: área privada con Resumen, Mis pedidos (/dashboard/pedidos) y Mis keys (/dashboard/keys).
+- /mis-licencias y /pedidos: enlaces compatibles que redirigen a Dashboard conservando las referencias de compra y pedido; el ejecutable y los correos anteriores siguen funcionando.
 - /api/dulcan/activate: activación independiente de cookies para el ejecutable.
 - supabase/migrations/20261022000100_dulcan_software_licenses.sql: cinco tablas privadas y cuatro operaciones atómicas; RLS y acceso solo de servicio.
 - Webhook existente de Stripe: entrega tras comprobar pago firmado, coincidencia del importe/moneda/usuario/sesión y estado actual en Stripe; reintentos idempotentes y revocación ante reembolso completo.
