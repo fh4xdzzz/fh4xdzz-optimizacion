@@ -10,7 +10,8 @@ Se recuperaron 246 archivos de la producción F1H2R9EcT73fTGsLCfKFrauBjYmm (comm
 
 ## Componentes
 
-- /dulcan-optimizer: página de venta y Checkout autenticado.
+- /tienda: producto destacado en Software con la caja suministrada por el propietario; precio canónico de software_products y Checkout de licencias, separado del carrito invitado.
+- /dulcan-optimizer: detalles del programa y Checkout autenticado; acceso desde la ficha de Tienda.
 - /mis-licencias: recuperación privada de las keys del comprador.
 - /api/dulcan/activate: activación independiente de cookies para el ejecutable.
 - supabase/migrations/20261022000100_dulcan_software_licenses.sql: cinco tablas privadas y cuatro operaciones atómicas; RLS y acceso solo de servicio.
@@ -38,6 +39,8 @@ Key aleatoria de 128 bits, guardada cifrada y por hash. Primera activación vinc
 La recuperación de cambios del PC permanece disponible sin licencia. Un equipo sin conexión puede seguir usando una prueba válida hasta su vencimiento: la revocación no es instantánea durante ese intervalo. No existe una protección absoluta contra modificaciones de un ejecutable local.
 
 ## Validación
+
+105 pruebas web correctas, incluidas 14 de catálogo y compra desde Tienda; TypeScript y revisión de estilo sin errores. El producto se incorpora al catálogo desde software_products sin duplicarlo en store_products. El checkout invitado rechaza cualquier fila Dulcan antigua, incluso dentro de un carrito mixto.
 
 Pruebas unitarias y de rutas con Stripe/Resend simulados; SQL real en PostgreSQL embebido PGlite, sin acceder a producción. Verificación RSA entre Node y C#. Se requiere todavía una prueba real del flujo en un entorno de Stripe de prueba, entrega del remitente de correo y activación de un equipo tras el despliegue.
 
