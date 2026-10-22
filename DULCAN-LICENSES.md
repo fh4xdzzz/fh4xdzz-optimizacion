@@ -55,3 +55,8 @@ La entrega del correo, emisión tras un pago efectivo y activación posterior de
 ## Pago conjunto publicado
 
 El 22 de octubre de 2026 se publicó b1fcfc8 en dpl_CbfUK3n7NeKpkz2pY8R9fusJXSta y se promovió a producción. Verificación visual en www.thedulcandesign.com/carrito: Dulcan Optimizer 14.99 USD + Configuración de Streaming 49.99 USD = 64.98 USD, un único botón Pagar todo con Stripe y Quitar visible en ambas filas. Se retiró el servicio usado en la comprobación y se conservó la app seleccionada originalmente. Evidencia: I:/CODEX AI/Cache/Temp/dulcan-licensing/carrito-pago-unico.png. Las 178 pruebas web, TypeScript y ESLint pasaron. No se efectuaron cargos ni una transacción real de validación de entrega.
+
+## Incidencia de despliegue posterior
+
+Una publicación posterior dpl_62wjtwPNSXuyYjWjoot4ZL4LwKjA (22 oct 2026 14:03 GMT-4) sustituyó el servidor mixto por una versión cuyo endpoint ignoraba includeLicense. Se detectó comparando POST sin Origin (dominio401 frente a versión corregida403) y alias de Vercel. Se volvió a promover dpl_CbfUK3n7NeKpkz2pY8R9fusJXSta. Confirmados ambos dominios en ese despliegue y endpoint público403. Verificación real hasta Stripe, sin cobro: Configuración de Streaming49.99 menos cupón15%=42.49, licencia14.99, total57.48USD, ambos conceptos visibles. No se introdujo tarjeta ni se completó el pago. Evidencia local I:/CODEX AI/Cache/Temp/dulcan-licensing/stripe-app-servicio-verificado.png. No se modificó main ni se cambiaron ajustes de despliegue automático. No volver a publicar una fuente antigua sin integrar estas rutas de backend.
+
