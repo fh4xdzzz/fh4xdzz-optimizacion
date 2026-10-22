@@ -12,6 +12,7 @@ Se recuperaron 246 archivos de la producción F1H2R9EcT73fTGsLCfKFrauBjYmm (comm
 
 - /tienda: tarjetas verticales con la caja suministrada por el propietario y Agregar al carrito; precio canónico de software_products. La licencia se limita a una unidad por compra y conserva su Checkout autenticado. Si el carrito incluye otros productos, se muestran pagos separados y solo se retiran los artículos del flujo confirmado.
 - /dulcan-optimizer: detalles del programa y Checkout autenticado; acceso desde la ficha de Tienda.
+- /carrito: vista común para programas y servicios con contador y total conjuntos. Los flujos de pago permanecen separados y conservan los artículos aún no pagados.
 - /dashboard: área privada con Resumen, Mis pedidos (/dashboard/pedidos) y Mis keys (/dashboard/keys).
 - /mis-licencias y /pedidos: enlaces compatibles que redirigen a Dashboard conservando las referencias de compra y pedido; el ejecutable y los correos anteriores siguen funcionando.
 - /api/dulcan/activate: activación independiente de cookies para el ejecutable.
@@ -41,7 +42,7 @@ La recuperación de cambios del PC permanece disponible sin licencia. Un equipo 
 
 ## Validación
 
-112 pruebas web correctas, incluidas 18 de catálogo y carrito de Tienda; TypeScript y revisión de estilo sin errores. El producto se incorpora al catálogo desde software_products sin duplicarlo en store_products. El checkout invitado rechaza cualquier fila Dulcan antigua, incluso dentro de un carrito mixto. Las pruebas verifican que el pago invitado nunca recibe la licencia y que el carrito conserva los artículos pendientes del otro flujo.
+116 pruebas web correctas, incluidas 18 de catálogo y carrito de Tienda; TypeScript y revisión de estilo sin errores. El producto se incorpora al catálogo desde software_products sin duplicarlo en store_products. El checkout invitado rechaza cualquier fila Dulcan antigua, incluso dentro de un carrito mixto. Las pruebas verifican que el pago invitado nunca recibe la licencia y que el carrito conserva los artículos pendientes del otro flujo. Cuatro pruebas adicionales cubren programas y servicios juntos, los dos órdenes de agregado, el total compartido y la eliminación independiente.
 
 10 comprobaciones HTTP correctas antes de promover y otras 10 en el dominio público: producto y catálogo disponibles a 14.99 USD; keys privadas protegidas; compra autenticada; rechazo de origen extranjero, key desconocida y firma Stripe inválida; tienda, caja e instalador accesibles. El botón real lleva al inicio de sesión con retorno a Tienda cuando no hay sesión. El despliegue verificó que la clave pública incorporada en el ejecutable corresponde a la firma del servidor.
 
