@@ -51,7 +51,7 @@ export async function proxy(request: NextRequest) {
 
   if (isProtectedPath && !userId) {
     const loginUrl = new URL('/auth/login', request.url)
-    loginUrl.searchParams.set('redirect', pathname)
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
     return copySessionCookies(supabaseResponse, NextResponse.redirect(loginUrl))
   }
 

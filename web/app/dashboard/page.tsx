@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
+import DashboardNavigation from '@/components/dashboard-navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSession, isDemoMode } from '@/lib/auth-hybrid'
 import { createClient } from '@/lib/supabase/client'
-import { useNotificationStore } from '@/lib/notifications-store'
 
 interface Order {
   id: string
@@ -33,12 +33,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const isDemo = isDemoMode()
-  const supabase = createClient()
-  const { success: notifySuccess, error: notifyError, warning: notifyWarning, info: notifyInfo } = useNotificationStore()
+  const supabase = useMemo(() => createClient(), [])
 
   // CAMBIO CRÍTICO: Envolver loadOrders en useCallback
-  const loadOrders = useCallback(async () => {
-    if (!session?.user?.id) {
+  const loadOrders = useCallback(async (userId: string) => {
+    if (!userId) {
       return
     }
 
@@ -46,7 +45,7 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from('orders')
       .select('*, services(name)')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .neq('status', 'pending')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -54,16 +53,17 @@ export default function DashboardPage() {
     if (error) {
       setOrders([])
     } else {
-      const ordersMapped = (data || []).map((order: any) => ({
+      const rows = (data || []) as unknown as (Omit<Order, 'service_name'> & { services: { name: string } | { name: string }[] | null })[]
+      const ordersMapped = rows.map(order => ({
         id: order.id,
         order_number: order.order_number,
-        service_name: order.services?.name || 'Servicio desconocido',
+        service_name: (Array.isArray(order.services) ? order.services[0]?.name : order.services?.name) || 'Servicio desconocido',
         status: order.status,
         created_at: order.created_at,
       }))
       setOrders(ordersMapped)
     }
-  }, [session?.user?.id])
+  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -80,7 +80,7 @@ export default function DashboardPage() {
         localStorage.removeItem('orders')
       }
 
-      await loadOrders()
+      await loadOrders(session.user.id)
       setLoading(false)
     }
 
@@ -101,7 +101,7 @@ export default function DashboardPage() {
         table: 'orders',
         filter: `user_id=eq.${session.user.id}`
       }, () => {
-        loadOrders()
+        loadOrders(session.user.id)
       })
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -111,9 +111,9 @@ export default function DashboardPage() {
       }, (payload) => {
         // Recargar si cambia deleted_at (soft delete)
         if (payload.new?.deleted_at !== payload.old?.deleted_at) {
-          loadOrders()
+          loadOrders(session.user.id)
         } else {
-          loadOrders()
+          loadOrders(session.user.id)
         }
       })
       .on('postgres_changes', {
@@ -124,11 +124,10 @@ export default function DashboardPage() {
         // Filtrar en el cliente usando el payload.old
         // Esto es necesario porque REPLICA IDENTITY puede no incluir user_id
         if (payload.old?.user_id === session.user.id) {
-          loadOrders()
+          loadOrders(session.user.id)
         }
       })
-      .subscribe((status) => {
-      })
+      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
@@ -166,14 +165,14 @@ export default function DashboardPage() {
 
       {/* Header */}
       <section className="pt-32 pb-12 px-4">
-        <div className="mx-auto w-full">
+        <div className="mx-auto w-full max-w-7xl">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-4xl font-bold mb-2">
                 Bienvenido, {session?.user?.full_name || session?.user?.email}
               </h1>
               <p className="text-muted">
-                Gestiona tus servicios y solicitudes
+                Gestiona tus pedidos, entregas y keys desde un solo lugar.
                 {isDemo && ' (Modo Demo)'}
               </p>
             </div>
@@ -187,6 +186,8 @@ export default function DashboardPage() {
               ⚠️ Modo demo activo - Usando localStorage (no es autenticación real)
             </div>
           )}
+
+          <DashboardNavigation />
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -238,7 +239,7 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Pedidos Recientes</CardTitle>
-                <Button variant="outline" size="sm" href="/pedidos">
+                <Button variant="outline" size="sm" href="/dashboard/pedidos">
                   Ver Todos
                 </Button>
               </div>
@@ -263,7 +264,7 @@ export default function DashboardPage() {
                         <div className="text-sm text-muted">{order.service_name}</div>
                         <div className="text-xs text-muted mt-1">{formatDate(order.created_at)}</div>
                       </div>
-                      <Button variant="outline" size="sm" href="/pedidos">
+                      <Button variant="outline" size="sm" href="/dashboard/pedidos">
                         Ver Detalles
                       </Button>
                     </div>

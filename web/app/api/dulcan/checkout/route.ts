@@ -25,7 +25,7 @@ export async function POST(request:NextRequest){
       mode:'payment',payment_method_types:['card'],customer_email:session.user.email,client_reference_id:session.user.id,
       metadata:{checkout_flow:'dulcan_license_v1',purchase_id:purchaseId,user_id:session.user.id},
       line_items:[{quantity:1,price_data:{currency:product.currency,unit_amount:product.amount_cents,product_data:{name:product.name,description:'Pago único. Licencia permanente para 1 PC. Activación y verificación online cada 30 días; sin cuotas.'}}}],
-      success_url:`${origin}/mis-licencias?session_id={CHECKOUT_SESSION_ID}`,cancel_url:`${origin}/tienda?cancelled=1`,
+      success_url:`${origin}/dashboard/keys?session_id={CHECKOUT_SESSION_ID}`,cancel_url:`${origin}/tienda?cancelled=1`,
     },{idempotencyKey:`dulcan-purchase-${purchaseId}`})
     const {error:bindError}=await db.from('software_purchases').update({stripe_session_id:checkout.id}).eq('id',purchaseId).is('stripe_session_id',null)
     if(bindError||!checkout.url)throw new Error('No se pudo preparar el enlace de pago')
