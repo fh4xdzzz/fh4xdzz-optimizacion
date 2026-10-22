@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle, BellRing } from 'lucide-react'
 import { useNotificationStore, Notification as AppNotification } from '@/lib/notifications-store'
 
@@ -45,16 +46,18 @@ const NotificationItem = ({ notification }: NotificationItemProps) => {
 }
 
 export const Notifications = () => {
+  const pathname = usePathname()
+  const licenseFlow = pathname === '/dulcan-optimizer' || pathname === '/mis-licencias'
   const notifications = useNotificationStore((state) => state.notifications)
   const success = useNotificationStore((state) => state.success)
   const warning = useNotificationStore((state) => state.warning)
   const [showPermission, setShowPermission] = useState(false)
 
   useEffect(() => {
-    if (!('Notification' in window) || window.Notification.permission !== 'default' || localStorage.getItem('tdd-notification-prompt-dismissed') === '1') return
+    if (licenseFlow || !('Notification' in window) || window.Notification.permission !== 'default' || localStorage.getItem('tdd-notification-prompt-dismissed') === '1') return
     const timer = window.setTimeout(() => setShowPermission(true), 2500)
     return () => window.clearTimeout(timer)
-  }, [])
+  }, [licenseFlow])
 
   const requestDesktopNotifications = async () => {
     const permission = await window.Notification.requestPermission()
@@ -77,7 +80,8 @@ export const Notifications = () => {
       {notifications.map((notification) => (
         <div key={notification.id} className="pointer-events-auto"><NotificationItem notification={notification} /></div>
       ))}
-      {showPermission && <div className="pointer-events-auto overflow-hidden rounded-2xl border border-primary/35 bg-[#141622]/95 p-4 shadow-2xl shadow-black/50 backdrop-blur-xl"><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><BellRing className="h-5 w-5" /></span><div className="min-w-0 flex-1"><p className="font-bold text-white">Activa las notificaciones</p><p className="mt-1 text-xs leading-relaxed text-white/60">Recibe avisos importantes de pedidos y soporte en el escritorio.</p></div><button onClick={dismissPermission} aria-label="Cerrar solicitud de notificaciones" className="rounded-lg p-1 text-white/40 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button></div><div className="mt-4 flex gap-2"><button onClick={dismissPermission} className="h-10 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-white/70 hover:bg-white/5">Ahora no</button><button onClick={() => void requestDesktopNotifications()} className="h-10 flex-1 rounded-xl bg-primary text-sm font-semibold text-white hover:brightness-110">Activar</button></div></div>}
+      {showPermission && !licenseFlow && <div className="pointer-events-auto overflow-hidden rounded-2xl border border-primary/35 bg-[#141622]/95 p-4 shadow-2xl shadow-black/50 backdrop-blur-xl"><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><BellRing className="h-5 w-5" /></span><div className="min-w-0 flex-1"><p className="font-bold text-white">Activa las notificaciones</p><p className="mt-1 text-xs leading-relaxed text-white/60">Recibe avisos importantes de pedidos y soporte en el escritorio.</p></div><button onClick={dismissPermission} aria-label="Cerrar solicitud de notificaciones" className="rounded-lg p-1 text-white/40 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button></div><div className="mt-4 flex gap-2"><button onClick={dismissPermission} className="h-10 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-white/70 hover:bg-white/5">Ahora no</button><button onClick={() => void requestDesktopNotifications()} className="h-10 flex-1 rounded-xl bg-primary text-sm font-semibold text-white hover:brightness-110">Activar</button></div></div>}
     </div>
   )
 }
+

@@ -109,6 +109,7 @@ export async function getSession(): Promise<Session | null> {
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
+      if (error.name === 'AuthSessionMissingError') return null
       console.error('Error obteniendo usuario:', error)
       return null
     }
