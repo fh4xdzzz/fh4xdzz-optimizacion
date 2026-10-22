@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         '/dashboard',
         '/perfil',
         '/pedidos',
+        '/mis-licencias',
         '/carrito',
         '/pago',
         '/auth',

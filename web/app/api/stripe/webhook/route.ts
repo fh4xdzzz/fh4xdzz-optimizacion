@@ -5,6 +5,7 @@ import { getStripe } from '@/lib/stripe-server'
 import { getDiscordService } from '@/lib/discord-integration'
 import { sendOrderNotificationEmail } from '@/lib/order-notifications'
 import { isSubscriptionRenewalInvoice } from '@/lib/stripe-payment'
+import { fulfillSoftwareCheckout, revokeRefundedSoftware } from '@/lib/dulcan-license-service'
 
 type AdminClient = SupabaseClient
 
@@ -19,6 +20,11 @@ async function recordPayment(supabase: AdminClient, values: Record<string, strin
     const eventId = String(values.stripe_event_id || '')
     const { data: existing, error: lookupError } = await supabase.from('payment_transactions')
       .select('id').eq('stripe_event_id', eventId).maybeSingle()
+    if (!lookupError && !existing && values.stripe_session_id) {
+      const lookup = await supabase.from('payment_transactions').select('id').eq('stripe_session_id', String(values.stripe_session_id)).maybeSingle()
+      if (lookup.error || !lookup.data) throw new Error('No se pudo recuperar la transacción para completar el reintento.')
+      return lookup.data.id
+    }
     if (lookupError || !existing) throw new Error('No se pudo recuperar la transacción para completar el reintento.')
     return existing.id
   }
@@ -51,6 +57,16 @@ async function processCheckout(supabase: AdminClient, event: Stripe.Event, check
     return
   }
   if (!checkout.metadata?.user_id) return
+
+  if (checkout.metadata.checkout_flow === 'dulcan_license_v1') {
+    const purchase = await fulfillSoftwareCheckout(supabase, checkout, event.livemode)
+    if (purchase) await recordPayment(supabase, {
+      stripe_event_id: event.id, stripe_session_id: checkout.id, stripe_invoice_id: null, stripe_payment_intent_id: purchase.payment_intent_id, stripe_subscription_id: null,
+      user_id: purchase.user_id, service_id: null, order_id: null, checkout_cart_id: null, coupon_id: null, affiliate_creator_id: null, affiliate_commission_rate: null,
+      payment_kind: 'one_time', livemode: event.livemode, amount: purchase.amount_cents / 100, discount_amount: 0, currency: purchase.currency, paid_at: new Date(event.created * 1000).toISOString(),
+    })
+    return
+  }
 
   const metadata = checkout.metadata
   let orderId = metadata.order_id || null
@@ -265,6 +281,8 @@ async function processSubscription(supabase: AdminClient, subscription: Stripe.S
 async function processEvent(supabase: AdminClient, event: Stripe.Event) {
   if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
     await processCheckout(supabase, event, event.data.object as Stripe.Checkout.Session)
+  } else if (event.type === 'charge.refunded') {
+    await revokeRefundedSoftware(supabase, event.data.object as Stripe.Charge)
   } else if (event.type === 'invoice.paid') {
     await processInvoicePaid(supabase, event, event.data.object as Stripe.Invoice)
   } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {

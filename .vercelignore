@@ -1,0 +1,14 @@
+bot/
+database/
+desktop/
+logs/
+output/
+supabase/
+tools/
+.git/
+.env*
+**/.env*
+**/node_modules/
+**/.next/
+**/.vercel/
+**/*.tsbuildinfo

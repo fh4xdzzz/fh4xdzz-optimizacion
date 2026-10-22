@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isDemoMode, isSupabaseMode } from './lib/auth-hybrid'
 
-const protectedPaths = ['/dashboard', '/perfil', '/pedidos', '/admin', '/owner']
+const protectedPaths = ['/dashboard', '/perfil', '/pedidos', '/admin', '/owner', '/mis-licencias']
 
 function copySessionCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach(cookie => target.cookies.set(cookie))
@@ -14,6 +14,7 @@ function copySessionCookies(source: NextResponse, target: NextResponse) {
 }
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === '/api/dulcan/activate') return NextResponse.next()
   // Keep authentication on one canonical host. Cookies created on `www` are
   // not sent to the apex domain, so normalize old email links before checking
   // the protected route or starting Discord OAuth.

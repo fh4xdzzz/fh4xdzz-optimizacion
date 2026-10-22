@@ -79,12 +79,14 @@ export default function Navbar() {
     { href: '/', label: 'Inicio' },
     { href: '/servicios', label: 'Servicios' },
     { href: '/tienda', label: 'Tienda' },
+    { href: '/dulcan-optimizer', label: 'Dulcan Optimizer' },
     { href: '/resultados', label: 'Resultados' },
     ...(session
       ? [
           { href: '/dashboard', label: 'Dashboard' },
           { href: '/pedidos', label: 'Mis pedidos' },
           { href: '/perfil', label: 'Perfil' },
+          { href: '/mis-licencias', label: 'Mis keys' },
           ...(['staff', 'admin', 'owner'].includes(session.user.role || '')
             ? [{ href: '/admin', label: session.user.role === 'staff' ? 'Soporte' : 'Admin', emphasized: true }]
             : []),
@@ -101,13 +103,16 @@ export default function Navbar() {
     const active = isActive(item.href)
     return [
       'relative rounded-xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-      mobile ? 'flex min-h-12 items-center px-4 text-base' : 'px-3 py-2 text-sm',
+      mobile ? 'flex min-h-12 items-center px-4 text-base' : 'whitespace-nowrap px-3 py-2 text-sm',
       active
         ? 'border border-white/10 bg-white/[.08] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.06)]'
         : 'border border-transparent text-foreground/70 hover:border-white/[.06] hover:bg-white/[.04] hover:text-white',
       item.emphasized ? 'font-semibold text-primary' : '',
     ].join(' ')
   }
+
+  const desktopNavigation = session ? 'min-[1900px]:flex' : 'xl:flex'
+  const menuThreshold = session ? 'min-[1900px]:hidden' : 'xl:hidden'
 
   return (
     <nav className={`fixed inset-x-0 top-0 z-50 px-3 transition-all duration-300 ${isScrolled ? 'pt-2' : 'pt-3'}`} aria-label="Navegación principal">
@@ -118,11 +123,11 @@ export default function Navbar() {
             <span className="truncate text-lg font-bold gradient-text-primary sm:text-xl">TheDulcanDesign</span>
           </Link>
 
-          <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex">
+          <div className={`hidden min-w-0 flex-1 items-center justify-center gap-1 ${desktopNavigation}`}>
             {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)} className={linkClass(item)} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</Link>)}
           </div>
 
-          <div className="hidden shrink-0 items-center gap-2 xl:flex">
+          <div className={`hidden shrink-0 items-center gap-2 ${desktopNavigation}`}>
             <CartLink />
             <a
               href={discordInviteUrl}
@@ -141,7 +146,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setIsOpen((open) => !open)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-foreground transition hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary xl:hidden"
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-foreground transition hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${menuThreshold}`}
             aria-expanded={isOpen}
             aria-controls="mobile-navigation"
             aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
@@ -155,8 +160,8 @@ export default function Navbar() {
 
       {isOpen && (
         <>
-          <button type="button" className="fixed inset-0 top-20 -z-10 bg-black/65 backdrop-blur-sm xl:hidden" onClick={() => setIsOpen(false)} aria-label="Cerrar menú" />
-          <div id="mobile-navigation" className="absolute inset-x-3 top-[calc(100%+.5rem)] max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-3xl border border-white/10 bg-[#10121a]/98 p-3 shadow-[0_28px_80px_rgba(0,0,0,.6)] xl:hidden">
+          <button type="button" className={`fixed inset-0 top-20 -z-10 bg-black/65 backdrop-blur-sm ${menuThreshold}`} onClick={() => setIsOpen(false)} aria-label="Cerrar menú" />
+          <div id="mobile-navigation" className={`absolute inset-x-3 top-[calc(100%+.5rem)] max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-3xl border border-white/10 bg-[#10121a]/98 p-3 shadow-[0_28px_80px_rgba(0,0,0,.6)] ${menuThreshold}`}>
             <div className="mb-2 flex items-center justify-between rounded-2xl bg-white/[.035] px-4 py-3">
               <div>
                 <p className="text-xs uppercase tracking-[.16em] text-muted">Navegación</p>

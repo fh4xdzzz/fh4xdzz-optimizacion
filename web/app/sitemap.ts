@@ -20,6 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${siteUrl}/`, changeFrequency: 'weekly', priority: 1 },
     { url: `${siteUrl}/servicios`, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${siteUrl}/tienda`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${siteUrl}/dulcan-optimizer`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${siteUrl}/resultados`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${siteUrl}/about`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${siteUrl}/contacto`, changeFrequency: 'monthly', priority: 0.7 },

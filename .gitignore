@@ -63,3 +63,4 @@ thedulcandesign-discord-bot/
 
 # OS
 Thumbs.db
+.env*
