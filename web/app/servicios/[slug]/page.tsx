@@ -3,18 +3,16 @@ import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { DiscordInviteButton } from '@/components/discord-invite-button'
+import { getPublicServiceBySlug } from '@/lib/public-services'
+import { getSubscriptionFeatureLabel, getSubscriptionLabel, getSubscriptionRenewalText } from '@/lib/service-billing'
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const supabase = await createClient()
-  const { data: service } = await supabase
-    .from('services')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .single()
+  const service = await getPublicServiceBySlug(slug).catch((error) => {
+    console.error('[service-detail] No se pudo cargar el servicio', error)
+    return null
+  })
 
   if (!service) {
     return (
@@ -59,6 +57,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       ]
 
   const isSubscription = service.billing_type === 'subscription' && service.recurring_price != null
+  const hasSetupFee = Number(service.price) > 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -176,12 +175,14 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
               <Card className="overflow-hidden rounded-3xl border-primary/35 bg-[#11131b]/95 shadow-[0_25px_80px_rgba(0,0,0,.4)] backdrop-blur-xl">
                 <div className="h-1 bg-gradient-to-r from-primary via-secondary to-primary" />
                 <CardHeader>
-                  <p className="text-sm text-muted">{isSubscription ? 'Creación inicial' : 'Inversión desde'}</p>
-                  <CardTitle className="text-4xl">${Number(service.price).toFixed(2)} <span className="text-sm font-normal text-muted">USD</span></CardTitle>
-                  {isSubscription && <p className="text-lg font-bold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de {service.slug === 'pagina-web-profesional' ? 'dominio y hosting' : 'hosting'}</p>}
+                  <p className="text-sm text-muted">{isSubscription && !hasSetupFee ? 'Suscripción mensual' : isSubscription ? 'Creación inicial' : 'Inversión desde'}</p>
+                  <CardTitle className="text-4xl">${Number(isSubscription && !hasSetupFee ? service.recurring_price : service.price).toFixed(2)} <span className="text-sm font-normal text-muted">{isSubscription && !hasSetupFee ? 'USD/mes' : 'USD'}</span></CardTitle>
+                  {isSubscription && hasSetupFee && <p className="text-lg font-bold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de {getSubscriptionLabel(service.slug)}</p>}
                   <CardDescription>
                     {isSubscription
-                      ? `Primer pago: $${(Number(service.price) + Number(service.recurring_price)).toFixed(2)}. Después, ${service.slug === 'pagina-web-profesional' ? 'el dominio y hosting se renuevan' : 'el hosting se renueva'} automáticamente por $${Number(service.recurring_price).toFixed(2)} al mes hasta cancelar.`
+                      ? hasSetupFee
+                        ? `Primer pago: $${(Number(service.price) + Number(service.recurring_price)).toFixed(2)}. Después, ${getSubscriptionRenewalText(service.slug).toLowerCase()} automáticamente por $${Number(service.recurring_price).toFixed(2)} al mes hasta cancelar.`
+                        : `Primer pago y renovación mensual: $${Number(service.recurring_price).toFixed(2)}. Puedes cancelar la suscripción cuando quieras.`
                       : 'Pago seguro. No aparecerá como pedido confirmado hasta completar el pago.'}
                   </CardDescription>
                 </CardHeader>
@@ -199,7 +200,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                       <span className="text-muted">Soporte posterior</span>
                       <span className="font-semibold text-emerald-400">Incluido</span>
                     </div>
-                    {isSubscription && <div className="flex justify-between items-center py-2 border-b border-border"><span className="text-muted">{service.slug === 'pagina-web-profesional' ? 'Dominio y hosting' : 'Alojamiento'}</span><span className="font-semibold text-primary">Suscripción mensual</span></div>}
+                    {isSubscription && <div className="flex justify-between items-center py-2 border-b border-border"><span className="text-muted">{getSubscriptionFeatureLabel(service.slug)}</span><span className="font-semibold text-primary">Suscripción mensual</span></div>}
                     <Button variant="primary" size="lg" className="premium-button h-14 w-full" href={`/contacto?service=${service.id}`}>
                       Contratar servicio →
                     </Button>

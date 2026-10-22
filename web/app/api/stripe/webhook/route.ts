@@ -30,8 +30,27 @@ async function finalizePaymentAttribution(supabase: AdminClient, paymentTransact
   if (error) throw new Error(`No se pudo completar la atribución del pago: ${error.message}`)
 }
 
+async function processStoreCheckout(supabase: AdminClient, event: Stripe.Event, checkout: Stripe.Checkout.Session) {
+  const orderId = checkout.metadata?.store_order_id
+  if (!orderId) throw new Error('La compra de tienda no contiene una orden válida.')
+  const { error } = await supabase.rpc('finalize_store_order', {
+    p_order_id: orderId,
+    p_stripe_session_id: checkout.id,
+    p_payment_intent_id: stripeId(checkout.payment_intent),
+    p_livemode: event.livemode,
+    p_shipping_details: checkout.collected_information?.shipping_details || null,
+    p_paid_at: new Date(event.created * 1000).toISOString(),
+  })
+  if (error) throw new Error(`No se pudo confirmar la compra de tienda: ${error.message}`)
+}
+
 async function processCheckout(supabase: AdminClient, event: Stripe.Event, checkout: Stripe.Checkout.Session) {
-  if (checkout.payment_status !== 'paid' || !checkout.metadata?.user_id) return
+  if (checkout.payment_status !== 'paid') return
+  if (checkout.metadata?.checkout_flow === 'guest_store_v1') {
+    await processStoreCheckout(supabase, event, checkout)
+    return
+  }
+  if (!checkout.metadata?.user_id) return
 
   const metadata = checkout.metadata
   let orderId = metadata.order_id || null

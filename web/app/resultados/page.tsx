@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { ArrowRight, BadgeCheck, Check, Gauge, MonitorCheck, PanelsTopLeft, ShieldCheck } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
@@ -69,6 +70,68 @@ export default function ResultadosPage() {
           </section>
 
           <section className="px-4 py-24 md:px-8">
+            <div className="mx-auto w-full">
+              <div className="mb-10 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+                <div className="max-w-3xl">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-xs font-bold uppercase tracking-[.18em] text-emerald-300">
+                    <BadgeCheck className="h-4 w-4" aria-hidden="true" /> Caso real
+                  </span>
+                  <h2 className="mt-6 text-4xl font-black uppercase tracking-[-.045em] md:text-6xl">
+                    De una transmisión básica a una <span className="gradient-text-primary">presencia profesional</span>
+                  </h2>
+                  <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+                    Reorganizamos la presentación visual del canal para que la cámara, el gameplay y la identidad del creador se sientan parte de una misma experiencia.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[.035] px-5 py-4 text-sm text-muted">
+                  <p className="font-bold text-foreground">Configuración de streaming</p>
+                  <p className="mt-1">Identidad del cliente protegida</p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <article className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#0e1018]/90 shadow-[0_30px_90px_rgba(0,0,0,.3)]">
+                  <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+                    <div><p className="text-xs font-bold uppercase tracking-[.2em] text-amber-300">Antes</p><h3 className="mt-1 text-xl font-bold">Setup sin identidad unificada</h3></div>
+                    <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs text-amber-200">Punto de partida</span>
+                  </div>
+                  <div className="relative aspect-[946/1663] bg-black/40">
+                    <Image
+                      src="/results/elpatronrd13-before-blurred.png"
+                      alt="Antes de la configuración: setup y transmisión del cliente con el rostro protegido"
+                      fill
+                      sizes="(min-width: 1024px) 50vw, 100vw"
+                      className="object-contain"
+                    />
+                  </div>
+                </article>
+
+                <article className="overflow-hidden rounded-[2rem] border border-primary/30 bg-[#0e1018]/90 shadow-[0_30px_100px_rgba(103,80,255,.16)]">
+                  <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+                    <div><p className="text-xs font-bold uppercase tracking-[.2em] text-emerald-300">Después</p><h3 className="mt-1 text-xl font-bold">Experiencia visual personalizada</h3></div>
+                    <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-200">Entrega final</span>
+                  </div>
+                  <div className="relative aspect-[935/1683] bg-black/40">
+                    <Image
+                      src="/results/elpatronrd13-after-blurred.png"
+                      alt="Después de la configuración: transmisión profesional con overlay y el rostro del cliente protegido"
+                      fill
+                      sizes="(min-width: 1024px) 50vw, 100vw"
+                      className="object-contain"
+                    />
+                  </div>
+                </article>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {['Overlay y branding integrados', 'Cámara y gameplay organizados', 'Escena lista para transmitir'].map((result) => (
+                  <div key={result} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] px-5 py-4 text-sm font-semibold"><Check className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />{result}</div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="border-t border-white/10 px-4 py-24 md:px-8">
             <div className="mx-auto w-full space-y-10">
               {samples.map(({ category, title, description, icon: Icon, accent, deliverables }, index) => (
                 <article key={title} className="grid overflow-hidden rounded-[2rem] border border-white/10 bg-[#0e1018]/90 shadow-[0_30px_90px_rgba(0,0,0,.3)] lg:grid-cols-2">

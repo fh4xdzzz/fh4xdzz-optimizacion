@@ -12,9 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { createClient } from '@/lib/supabase/client'
 import { getSession } from '@/lib/auth-hybrid'
 import { Modal } from '@/components/ui/modal'
+import { getSubscriptionFeatureLabel } from '@/lib/service-billing'
 
 interface CheckoutInvoice {
   code: string
@@ -38,6 +38,29 @@ type Questionnaire = {
   mainIssue: string
   expectedResult: string
   availability: string
+}
+
+type QuestionSet = {
+  objectiveLabel: string
+  objectives: readonly string[]
+  platformLabel: string
+  platforms: readonly string[]
+  setupPlaceholder: string
+  issuePlaceholder: string
+  resultPlaceholder: string
+  setupLabel?: string
+  issueLabel?: string
+  resultLabel?: string
+  availabilityLabel?: string
+}
+
+type ServiceOption = {
+  id: string
+  name: string
+  slug: string
+  price: number
+  billing_type: 'one_time' | 'subscription'
+  recurring_price: number | null
 }
 
 const EMPTY_QUESTIONNAIRE: Questionnaire = {
@@ -122,6 +145,66 @@ const QUESTION_SETS = {
     issuePlaceholder:
       'Cuéntanos qué materiales tienes actualmente y qué deseas reemplazar.',
     resultPlaceholder: 'Describe cómo quieres que se vea el resultado final.',
+  },
+  videoEditing: {
+    objectiveLabel: '¿Qué tipo de video necesitas editar?',
+    objectives: [
+      'Video para YouTube',
+      'Reel, TikTok o Short',
+      'Podcast o entrevista',
+      'Gameplay',
+      'Video promocional',
+      'Otro formato',
+    ],
+    platformLabel: '¿Dónde publicarás el video?',
+    platforms: [
+      'YouTube',
+      'TikTok',
+      'Instagram Reels',
+      'Facebook',
+      'Twitch',
+      'Varias plataformas',
+    ],
+    setupLabel: 'Material disponible y duración original',
+    setupPlaceholder:
+      'Ej.: grabación de 45 min en Google Drive, logotipo, música y guía de marca.',
+    issueLabel: '¿Cómo quieres la edición?',
+    issuePlaceholder:
+      'Describe ritmo, cortes, subtítulos, efectos, referencias y momentos importantes.',
+    resultLabel: 'Formato y duración final',
+    resultPlaceholder:
+      'Ej.: video final de 8 min en 1080p, dinámico y listo para YouTube.',
+    availabilityLabel: '¿Cuándo necesitas la entrega?',
+  },
+  videoSubscription: {
+    objectiveLabel: '¿Qué contenido editarás cada mes?',
+    objectives: [
+      'Videos para YouTube',
+      'Videos verticales para redes',
+      'Podcasts o entrevistas',
+      'Contenido gaming',
+      'Contenido para una marca',
+      'Contenido variado',
+    ],
+    platformLabel: 'Plataforma principal',
+    platforms: [
+      'YouTube',
+      'TikTok',
+      'Instagram',
+      'Facebook',
+      'Twitch',
+      'Varias plataformas',
+    ],
+    setupLabel: 'Material y flujo de entrega mensual',
+    setupPlaceholder:
+      'Ej.: enviaré 4 grabaciones al mes por Drive, con logo y guía visual.',
+    issueLabel: 'Estilo y frecuencia que necesitas',
+    issuePlaceholder:
+      'Describe el estilo, calendario, subtítulos, referencias y prioridades de cada mes.',
+    resultLabel: 'Objetivo mensual',
+    resultPlaceholder:
+      'Ej.: recibir 4 videos consistentes, listos para publicar cada semana.',
+    availabilityLabel: '¿Cuándo quieres comenzar?',
   },
   support: {
     objectiveLabel: '¿Qué tipo de ayuda necesitas?',
@@ -226,10 +309,14 @@ const QUESTION_SETS = {
     resultPlaceholder:
       'Ej.: una página moderna, rápida y lista para compartir con mis clientes.',
   },
-} as const
+} as const satisfies Record<string, QuestionSet>
 
-function getQuestionSet(service?: { name: string; slug: string }) {
+function getQuestionSet(service?: { name: string; slug: string }): QuestionSet {
   const value = `${service?.name || ''} ${service?.slug || ''}`.toLowerCase()
+  if (value.includes('editor-de-video-mensual'))
+    return QUESTION_SETS.videoSubscription
+  if (value.includes('edicion-de-video') || value.includes('edición de video'))
+    return QUESTION_SETS.videoEditing
   if (value.includes('bot')) return QUESTION_SETS.discordBot
   if (value.includes('pagina-web') || value.includes('página web'))
     return QUESTION_SETS.web
@@ -253,14 +340,14 @@ function getQuestionSet(service?: { name: string; slug: string }) {
   return QUESTION_SETS.support
 }
 
-function buildRequestDescription(answers: Questionnaire) {
+function buildRequestDescription(answers: Questionnaire, questionSet: QuestionSet) {
   return [
     `Objetivo: ${answers.objective}`,
-    `Plataforma/uso: ${answers.platform}`,
-    `Equipo actual: ${answers.currentSetup.trim()}`,
-    `Situación: ${answers.mainIssue.trim()}`,
-    `Resultado esperado: ${answers.expectedResult.trim()}`,
-    `Disponibilidad: ${answers.availability}`,
+    `${questionSet.platformLabel}: ${answers.platform}`,
+    `${questionSet.setupLabel || 'Equipo o configuración actual'}: ${answers.currentSetup.trim()}`,
+    `${questionSet.issueLabel || 'Situación actual'}: ${answers.mainIssue.trim()}`,
+    `${questionSet.resultLabel || 'Resultado esperado'}: ${answers.expectedResult.trim()}`,
+    `${questionSet.availabilityLabel || 'Disponibilidad'}: ${answers.availability}`,
   ].join('\n')
 }
 
@@ -275,16 +362,7 @@ function ContactFormContent() {
     useState<Questionnaire>(EMPTY_QUESTIONNAIRE)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [services, setServices] = useState<
-    Array<{
-      id: string
-      name: string
-      slug: string
-      price: number
-      billing_type: 'one_time' | 'subscription'
-      recurring_price: number | null
-    }>
-  >([])
+  const [services, setServices] = useState<ServiceOption[]>([])
   const [checkoutPreview, setCheckoutPreview] = useState<{
     url: string
     invoice: CheckoutInvoice
@@ -295,32 +373,54 @@ function ContactFormContent() {
   const [validatingCoupon, setValidatingCoupon] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const requestedServiceId = searchParams.get('service')
   const cancelled = searchParams.get('cancelled') === '1'
   const selectedService = services.find(
     (item) => item.name === formData.service,
   )
   const questionSet = getQuestionSet(selectedService)
 
-  // Cargar servicios desde Supabase
+  // Cargar el catálogo público mediante la ruta segura del servidor.
   useEffect(() => {
+    let isActive = true
     const loadServices = async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('services')
-        .select('id, name, slug, price, billing_type, recurring_price')
-        .eq('is_active', true)
-        .order('is_featured', { ascending: false })
-        .order('sort_order', { ascending: true })
-      if (data) {
-        setServices(data)
+      try {
+        const response = await fetch('/api/public/services', { cache: 'no-store' })
+        const payload = (await response.json()) as {
+          services?: ServiceOption[]
+          error?: string
+        }
+        if (!response.ok || !payload.services) {
+          throw new Error(payload.error || 'No se pudo cargar el catálogo.')
+        }
+        if (!isActive) return
+        setServices(payload.services)
+        setErrors((previous) => {
+          if (!previous.service) return previous
+          const next = { ...previous }
+          delete next.service
+          return next
+        })
 
-        // Pre-llenar servicio si se pasó en URL
-        const serviceId = searchParams.get('service')
-        if (serviceId) {
-          const selectedService = data.find((s) => s.id === serviceId)
-          if (selectedService) {
-            setFormData((prev) => ({ ...prev, service: selectedService.name }))
+        if (requestedServiceId) {
+          const requestedService = payload.services.find(
+            (service) => service.id === requestedServiceId,
+          )
+          if (requestedService) {
+            setFormData((previous) => ({
+              ...previous,
+              service: requestedService.name,
+            }))
+            setQuestionnaire(EMPTY_QUESTIONNAIRE)
           }
+        }
+      } catch (error) {
+        console.error('[contacto] No se pudo cargar el catálogo', error)
+        if (isActive) {
+          setErrors((previous) => ({
+            ...previous,
+            service: 'No pudimos cargar los servicios. Actualiza la página e inténtalo de nuevo.',
+          }))
         }
       }
     }
@@ -338,7 +438,11 @@ function ContactFormContent() {
       }
     }
     loadUserProfile()
-  }, [searchParams])
+
+    return () => {
+      isActive = false
+    }
+  }, [requestedServiceId])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -394,22 +498,24 @@ function ContactFormContent() {
       if (!validCoupon) return
     }
 
-    // Verificar autenticación
+    const service = services.find((item) => item.name === formData.service)
+    if (!service) {
+      setErrors({ service: 'Servicio no encontrado. Selecciónalo nuevamente.' })
+      return
+    }
+
+    // Verificar autenticación y conservar el servicio al volver del inicio de sesión.
     const session = await getSession()
     if (!session) {
-      router.push('/auth/login?redirect=/contacto')
+      const returnUrl = `/contacto?service=${encodeURIComponent(service.id)}`
+      router.push(`/auth/login?redirect=${encodeURIComponent(returnUrl)}`)
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      const service = services.find((s) => s.name === formData.service)
-      if (!service) {
-        throw new Error('Servicio no encontrado')
-      }
-
-      const description = buildRequestDescription(questionnaire)
+      const description = buildRequestDescription(questionnaire, questionSet)
       const response = await fetch('/api/stripe/create-service-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -655,9 +761,9 @@ function ContactFormContent() {
                       2
                     </span>
                     <div>
-                      <h3 className="font-semibold">Servicio y diagnóstico</h3>
+                      <h3 className="font-semibold">Servicio y detalles del proyecto</h3>
                       <p className="text-xs text-muted">
-                        Las preguntas cambian según el servicio seleccionado.
+                        Las preguntas se adaptan al servicio seleccionado.
                       </p>
                     </div>
                   </div>
@@ -684,10 +790,16 @@ function ContactFormContent() {
                         <option value="">Selecciona un servicio</option>
                         {services.map((service) => (
                           <option key={service.id} value={service.name}>
-                            {service.name} - ${service.price}
+                            {service.name} —{' '}
                             {service.billing_type === 'subscription' &&
+                            Number(service.price) <= 0 &&
                             service.recurring_price != null
-                              ? ` + $${service.recurring_price}/mes${service.slug === 'pagina-web-profesional' ? ' dominio y hosting' : ''}`
+                              ? `$${Number(service.recurring_price).toFixed(2)}/mes`
+                              : `$${Number(service.price).toFixed(2)}`}
+                            {service.billing_type === 'subscription' &&
+                            Number(service.price) > 0 &&
+                            service.recurring_price != null
+                              ? ` + $${Number(service.recurring_price).toFixed(2)}/mes`
                               : ''}
                           </option>
                         ))}
@@ -768,13 +880,13 @@ function ContactFormContent() {
                             htmlFor="currentSetup"
                             className="mb-2 block text-sm font-medium"
                           >
-                            {questionSet === QUESTION_SETS.discordBot
+                            {questionSet.setupLabel || (questionSet === QUESTION_SETS.discordBot
                               ? 'Servidor, bot o código actual'
                               : questionSet === QUESTION_SETS.discord
                               ? 'Servidor actual o punto de partida'
                               : questionSet === QUESTION_SETS.web
                               ? 'Materiales y servicios que ya tienes'
-                              : 'Equipo o configuración actual'}{' '}
+                              : 'Equipo o configuración actual')}{' '}
                             *
                           </label>
                           <input
@@ -804,13 +916,13 @@ function ContactFormContent() {
                             htmlFor="mainIssue"
                             className="mb-2 block text-sm font-medium"
                           >
-                            {questionSet === QUESTION_SETS.discordBot
+                            {questionSet.issueLabel || (questionSet === QUESTION_SETS.discordBot
                               ? '¿Qué funciones debe tener el bot?'
                               : questionSet === QUESTION_SETS.discord
                               ? '¿Qué estructura y funciones necesitas?'
                               : questionSet === QUESTION_SETS.web
                               ? '¿Qué secciones y funciones debe incluir?'
-                              : '¿Qué está ocurriendo actualmente?'}{' '}
+                              : '¿Qué está ocurriendo actualmente?')}{' '}
                             *
                           </label>
                           <textarea
@@ -841,7 +953,7 @@ function ContactFormContent() {
                             htmlFor="expectedResult"
                             className="mb-2 block text-sm font-medium"
                           >
-                            Resultado que esperas obtener *
+                            {questionSet.resultLabel || 'Resultado que esperas obtener'} *
                           </label>
                           <textarea
                             id="expectedResult"
@@ -868,14 +980,13 @@ function ContactFormContent() {
                         </div>
                         <fieldset className="sm:col-span-2">
                           <legend className="mb-3 text-sm font-medium">
-                            ¿Cuándo puedes recibir el servicio? *
+                            {questionSet.availabilityLabel || '¿Cuándo puedes recibir el servicio?'} *
                           </legend>
                           <div className="grid gap-2 sm:grid-cols-3">
-                            {[
-                              'Lo antes posible',
-                              'Esta semana',
-                              'Fecha flexible',
-                            ].map((option) => (
+                            {(questionSet === QUESTION_SETS.videoSubscription
+                              ? ['Este mes', 'El próximo mes', 'Fecha flexible']
+                              : ['Lo antes posible', 'Esta semana', 'Fecha flexible']
+                            ).map((option) => (
                               <label
                                 key={option}
                                 className={`cursor-pointer rounded-xl border px-3 py-3 text-center text-sm transition ${questionnaire.availability === option ? 'border-primary bg-primary/15 text-white' : 'border-white/10 bg-black/10 text-muted hover:border-primary/50'}`}
@@ -909,7 +1020,7 @@ function ContactFormContent() {
                     ) : (
                       <div className="rounded-xl border border-dashed border-white/15 bg-black/10 px-5 py-8 text-center text-sm text-muted">
                         Selecciona un servicio para ver las preguntas
-                        específicas de diagnóstico.
+                        específicas del proyecto.
                       </div>
                     )}
                   </div>
@@ -980,17 +1091,15 @@ function ContactFormContent() {
                     {selectedService.billing_type === 'subscription' &&
                     selectedService.recurring_price != null ? (
                       <div className="space-y-3 border-t border-white/10 pt-4 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted">Creación inicial</span>
-                          <span>
-                            ${Number(selectedService.price).toFixed(2)}
-                          </span>
-                        </div>
+                        {Number(selectedService.price) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted">Creación inicial</span>
+                            <span>${Number(selectedService.price).toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-muted">
-                            {selectedService.slug === 'pagina-web-profesional'
-                              ? 'Dominio y hosting mensual'
-                              : 'Hosting mensual'}
+                            {getSubscriptionFeatureLabel(selectedService.slug)} mensual
                           </span>
                           <span>
                             $
@@ -999,7 +1108,9 @@ function ContactFormContent() {
                           </span>
                         </div>
                         <div className="flex items-end justify-between border-t border-white/10 pt-3">
-                          <span className="font-semibold">Primer pago</span>
+                          <span className="font-semibold">
+                            {Number(selectedService.price) > 0 ? 'Primer pago' : 'Total mensual'}
+                          </span>
                           <span className="text-3xl font-bold text-primary">
                             $
                             {(

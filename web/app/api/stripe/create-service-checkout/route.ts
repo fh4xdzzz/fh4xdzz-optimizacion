@@ -7,6 +7,7 @@ import { getStripe } from '@/lib/stripe-server'
 import { randomBytes } from 'node:crypto'
 import { calculateCouponDiscount } from '@/lib/store-pricing'
 import { AFFILIATE_COOKIE, normalizeAffiliateCode } from '@/lib/affiliate-program'
+import { getSubscriptionLabel, getSubscriptionProductDescription } from '@/lib/service-billing'
 
 const checkoutSchema = z.object({
   serviceId: z.string().uuid(),
@@ -91,7 +92,9 @@ export async function POST(request: NextRequest) {
       coupon = couponRecord
       couponDiscount = calculateCouponDiscount(setupPrice, coupon.discount_type as 'percent' | 'fixed', coupon.discount_value)
     }
-    const discountedSetupPrice = Number(Math.max(0.5, setupPrice - couponDiscount).toFixed(2))
+    const discountedSetupPrice = isSubscription && setupPrice <= 0
+      ? 0
+      : Number(Math.max(0.5, setupPrice - couponDiscount).toFixed(2))
     let affiliateCreatorId = ''
     let affiliateCommissionRate = ''
     const referralCode = normalizeAffiliateCode(request.cookies.get(AFFILIATE_COOKIE)?.value || '')
@@ -127,7 +130,7 @@ export async function POST(request: NextRequest) {
       affiliate_creator_id: affiliateCreatorId,
       affiliate_commission_rate: affiliateCommissionRate,
     }
-    const lineItems = [{
+    const setupLineItems = discountedSetupPrice > 0 ? [{
       quantity: 1,
       price_data: {
         currency: 'usd',
@@ -139,7 +142,8 @@ export async function POST(request: NextRequest) {
             : 'Servicio profesional TheDulcanDesign',
         },
       },
-    }, ...(isSubscription && recurringPrice ? [{
+    }] : []
+    const lineItems = [...setupLineItems, ...(isSubscription && recurringPrice ? [{
       quantity: 1,
       price_data: {
         currency: 'usd',
@@ -147,9 +151,7 @@ export async function POST(request: NextRequest) {
         recurring: { interval: 'month' as const },
         product_data: {
           name: `${service.name} · plan mensual`,
-          description: service.slug === 'pagina-web-profesional'
-            ? 'Dominio, hosting y mantenimiento técnico básico, con renovación automática mensual hasta cancelar.'
-            : 'Hosting administrado del bot, con renovación automática mensual hasta cancelar.',
+          description: getSubscriptionProductDescription(service.slug),
         },
       },
     }] : [])]
@@ -165,7 +167,9 @@ export async function POST(request: NextRequest) {
       ...(isSubscription ? {
         custom_text: {
           submit: {
-            message: `El primer cobro incluye la creación ($${setupPrice.toFixed(2)}) y el primer mes de ${service.slug === 'pagina-web-profesional' ? 'dominio y hosting' : 'hosting'} ($${recurringPrice!.toFixed(2)}). Después se cobrarán $${recurringPrice!.toFixed(2)} al mes hasta cancelar.`,
+            message: setupPrice > 0
+              ? `El primer cobro incluye la creación ($${setupPrice.toFixed(2)}) y el primer mes de ${getSubscriptionLabel(service.slug)} ($${recurringPrice!.toFixed(2)}). Después se cobrarán $${recurringPrice!.toFixed(2)} al mes hasta cancelar.`
+              : `Se cobrarán $${recurringPrice!.toFixed(2)} al mes por ${getSubscriptionLabel(service.slug)} hasta cancelar.`,
           },
         },
       } : {}),

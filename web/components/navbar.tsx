@@ -78,6 +78,7 @@ export default function Navbar() {
   const navItems: NavItem[] = [
     { href: '/', label: 'Inicio' },
     { href: '/servicios', label: 'Servicios' },
+    { href: '/tienda', label: 'Tienda' },
     { href: '/resultados', label: 'Resultados' },
     ...(session
       ? [

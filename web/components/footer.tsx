@@ -99,6 +99,11 @@ export default function Footer() {
                 </SupportChatLink>
               </li>
               <li>
+                <Link href="/tienda" className="inline-block transition-colors hover:text-foreground">
+                  Tienda
+                </Link>
+              </li>
+              <li>
                 <Link href="/terms" className="inline-block transition-colors hover:text-foreground">
                   Términos de servicio
                 </Link>

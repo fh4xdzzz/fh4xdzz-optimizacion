@@ -6,10 +6,10 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { createClient } from '@/lib/supabase/client'
 import { isDemoMode, getSession } from '@/lib/auth-hybrid'
 import { SupportChatButton } from '@/components/support-chat-trigger'
 import { addToCart } from '@/lib/cart'
+import { getSubscriptionLabel } from '@/lib/service-billing'
 
 interface Service {
   id: string
@@ -36,6 +36,7 @@ const serviceIcons: Record<string, string> = {
   discord: '◈',
   support: '?',
   custom: '◆',
+  design: '◉',
 }
 
 export default function ServicesPage() {
@@ -193,18 +194,13 @@ export default function ServicesPage() {
         return
       }
 
-      // Modo Supabase: cargar desde la base de datos
+      // El catálogo público se consulta desde el servidor para no exponer
+      // credenciales privadas ni depender de permisos anónimos de la base.
       try {
-        const supabase = createClient()
-        const { data, error } = await supabase
-          .from('services')
-          .select('*')
-          .eq('is_active', true)
-          .order('is_featured', { ascending: false })
-          .order('sort_order', { ascending: true })
-
-        if (error) throw error
-        setServices(data || [])
+        const response = await fetch('/api/public/services', { cache: 'no-store' })
+        const body = await response.json() as { services?: Service[] }
+        if (!response.ok) throw new Error('No se pudo cargar el catálogo.')
+        setServices(body.services || [])
       } catch (err) {
         setError('Error al cargar servicios. Por favor, intenta nuevamente.')
         console.error('Error loading services:', err)
@@ -366,10 +362,14 @@ export default function ServicesPage() {
                   <div className="mt-auto border-t border-white/10 pt-6">
                     <div className="mb-5 flex items-end justify-between">
                       <div>
-                        <p className="text-xs uppercase tracking-wider text-muted">{service.billing_type === 'subscription' ? 'Creación' : 'Desde'}</p>
-                        <p className="mt-1 text-3xl font-bold text-foreground">${Number(service.price).toFixed(2)}</p>
-                        {service.billing_type === 'subscription' && service.recurring_price != null && (
-                          <p className="mt-1 text-sm font-semibold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de {service.slug === 'pagina-web-profesional' ? 'dominio y hosting' : 'hosting'}</p>
+                        <p className="text-xs uppercase tracking-wider text-muted">{service.billing_type === 'subscription' && Number(service.price) <= 0 ? 'Suscripción mensual' : service.billing_type === 'subscription' ? 'Creación' : 'Desde'}</p>
+                        {service.billing_type === 'subscription' && Number(service.price) <= 0 && service.recurring_price != null ? (
+                          <p className="mt-1 text-3xl font-bold text-foreground">${Number(service.recurring_price).toFixed(2)}<span className="text-sm font-semibold text-muted">/mes</span></p>
+                        ) : (
+                          <p className="mt-1 text-3xl font-bold text-foreground">${Number(service.price).toFixed(2)}</p>
+                        )}
+                        {service.billing_type === 'subscription' && Number(service.price) > 0 && service.recurring_price != null && (
+                          <p className="mt-1 text-sm font-semibold text-primary">+ ${Number(service.recurring_price).toFixed(2)}/mes de {getSubscriptionLabel(service.slug)}</p>
                         )}
                       </div>
                       <div className="text-right"><p className="text-xs uppercase tracking-wider text-muted">Entrega</p><p className="mt-1 text-sm font-medium">{service.duration_estimate}</p></div>

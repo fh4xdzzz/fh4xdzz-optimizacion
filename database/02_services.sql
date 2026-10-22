@@ -62,45 +62,56 @@ DROP POLICY IF EXISTS "Admins can delete services" ON public.services;
 -- Todos pueden ver servicios activos
 CREATE POLICY "Anyone can view active services"
     ON public.services FOR SELECT
+    TO anon, authenticated
     USING (is_active = true);
 
 -- Los admins pueden ver todos los servicios
 CREATE POLICY "Admins can view all services"
     ON public.services FOR SELECT
+    TO authenticated
     USING (
         EXISTS (
             SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = (SELECT auth.uid()) AND role IN ('admin', 'owner')
         )
     );
 
 -- Solo admins pueden crear servicios
 CREATE POLICY "Admins can create services"
     ON public.services FOR INSERT
+    TO authenticated
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = (SELECT auth.uid()) AND role IN ('admin', 'owner')
         )
     );
 
 -- Solo admins pueden actualizar servicios
 CREATE POLICY "Admins can update services"
     ON public.services FOR UPDATE
+    TO authenticated
     USING (
         EXISTS (
             SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = (SELECT auth.uid()) AND role IN ('admin', 'owner')
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.users
+            WHERE id = (SELECT auth.uid()) AND role IN ('admin', 'owner')
         )
     );
 
 -- Solo admins pueden eliminar servicios
 CREATE POLICY "Admins can delete services"
     ON public.services FOR DELETE
+    TO authenticated
     USING (
         EXISTS (
             SELECT 1 FROM public.users
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = (SELECT auth.uid()) AND role IN ('admin', 'owner')
         )
     );
 
