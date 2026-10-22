@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Check, Clapperboard, Layers3, LoaderCircle, Minus, Package, Plus, ShieldCheck, ShoppingBag, Sparkles, Trash2, WandSparkles } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
@@ -18,6 +20,7 @@ const upcomingPacks = [
 ]
 
 export default function StorePage() {
+  const router = useRouter()
   const [products, setProducts] = useState<StoreProduct[]>([])
   const [cart, setCart] = useState<StoreCartItem[]>([])
   const [category, setCategory] = useState('Todos')
@@ -25,6 +28,8 @@ export default function StorePage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
+  const [payingLicense, setPayingLicense] = useState(false)
+  const [licenseError, setLicenseError] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -52,8 +57,30 @@ export default function StorePage() {
   const total = cart.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
 
   const add = (product: StoreProduct) => {
+    if (product.purchase_flow === 'dulcan_license') return
     addStoreProduct(product)
     setError('')
+  }
+
+  const buyLicense = async () => {
+    setPayingLicense(true)
+    setLicenseError('')
+    try {
+      const response = await fetch('/api/dulcan/checkout', { method: 'POST' })
+      if (response.status === 401) {
+        router.push('/auth/login?redirect=%2Ftienda')
+        setPayingLicense(false)
+        return
+      }
+      const payload = await response.json()
+      if (!response.ok || !payload.url) throw new Error(payload.error || 'No se pudo preparar la compra.')
+      const destination = new URL(payload.url)
+      if (destination.protocol !== 'https:' || destination.hostname !== 'checkout.stripe.com') throw new Error('Enlace de pago no válido.')
+      window.location.assign(destination.href)
+    } catch (cause) {
+      setLicenseError(cause instanceof Error ? cause.message : 'No se pudo iniciar la compra.')
+      setPayingLicense(false)
+    }
   }
 
   const checkout = async () => {
@@ -84,9 +111,9 @@ export default function StorePage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,.22),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(168,85,247,.16),transparent_35%)]" />
         <div className="relative mx-auto w-full max-w-7xl">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[.2em] text-primary"><Sparkles className="h-4 w-4" /> Tienda TheDulcanDesign</span>
-          <h1 className="mt-6 max-w-4xl text-4xl font-black sm:text-6xl">Productos para creadores, listos para comprar</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">Compra sin crear una cuenta. Solo necesitamos tu nombre y correo para enviarte la confirmación.</p>
-          <div className="mt-7 flex flex-wrap gap-3 text-sm text-muted"><span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-400" /> Pago protegido por Stripe</span><span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Sin inicio de sesión obligatorio</span></div>
+          <h1 className="mt-6 max-w-4xl text-4xl font-black sm:text-6xl">Tu equipo. Tu mejor versión.</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">Software y recursos para llevar tu setup al siguiente nivel. Descubre Dulcan Optimizer y nuestros productos para creadores.</p>
+          <div className="mt-7 flex flex-wrap gap-3 text-sm text-muted"><span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-400" /> Pago protegido por Stripe</span><span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Productos digitales</span></div>
         </div>
       </section>
 
@@ -94,6 +121,23 @@ export default function StorePage() {
         <div>
           <div className="mb-7 flex flex-wrap gap-2">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${category === item ? 'border-primary bg-primary text-white' : 'border-white/10 bg-white/[.03] text-muted hover:border-primary/40 hover:text-white'}`}>{item}</button>)}</div>
           {loading ? <div className="flex min-h-72 items-center justify-center"><LoaderCircle className="h-9 w-9 animate-spin text-primary" /></div> : visibleProducts.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{visibleProducts.map((product) => {
+            if (product.purchase_flow === 'dulcan_license') return <article key={product.id} id="dulcan-optimizer" className="relative overflow-hidden rounded-3xl border border-violet-400/30 bg-gradient-to-br from-[#10132b] via-[#090d1d] to-[#17102b] shadow-2xl shadow-violet-600/10 sm:col-span-2 lg:col-span-3">
+              <div className="grid items-center md:grid-cols-[minmax(0,.9fr)_minmax(0,1fr)]">
+                <div className="relative p-5 sm:p-8"><div className="absolute inset-10 rounded-full bg-blue-600/15 blur-3xl" /><Image src={product.image_url || '/dulcan-optimizer/caja.png'} alt="Caja de Dulcan Optimizer Neon" width={1024} height={1536} sizes="(max-width: 768px) 85vw, 420px" className="relative mx-auto h-auto max-h-[570px] w-auto max-w-full rounded-xl object-contain" /></div>
+                <div className="px-6 pb-8 sm:px-8 md:py-8">
+                  <span className="inline-flex rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-xs font-bold uppercase tracking-[.16em] text-cyan-300">Software · Windows</span>
+                  <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">Dulcan <span className="text-violet-400">Optimizer</span></h2>
+                  <p className="mt-4 text-sm leading-7 text-slate-300">{product.description}</p>
+                  <ul className="mt-6 space-y-3 text-sm text-slate-200">{['Licencia permanente para 1 PC', 'Un solo pago, sin suscripción', 'Key en tu cuenta y por correo', 'Diagnóstico, perfiles y mantenimiento'].map(feature => <li key={feature} className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-cyan-300" />{feature}</li>)}</ul>
+                  <div className="mt-7 border-t border-white/10 pt-6"><div className="flex items-baseline gap-2"><strong className="text-4xl font-black">{money(Number(product.price))}</strong><span className="text-sm text-slate-400">USD · pago único</span></div>
+                    <Button size="lg" className="mt-5 w-full" disabled={payingLicense || !product.purchase_available} onClick={() => void buyLicense()}>{payingLicense ? <><LoaderCircle className="mr-2 h-4 w-4 animate-spin" />Preparando compra…</> : product.purchase_available ? 'Comprar licencia' : 'Próximamente'}</Button>
+                    <Link href="/dulcan-optimizer" className="mt-4 block text-center text-sm font-semibold text-violet-300 hover:text-white">Ver detalles del programa →</Link>
+                    <p className="mt-4 text-xs leading-5 text-slate-400">Inicia sesión para guardar tu licencia. Requiere conexión para activarse y verificarla al menos cada 30 días.</p>
+                    {licenseError && <p role="alert" className="mt-3 text-sm text-red-300">{licenseError}</p>}
+                  </div>
+                </div>
+              </div>
+            </article>
             const soldOut = product.inventory_count === 0
             return <article key={product.id} className="group overflow-hidden rounded-3xl border border-white/10 bg-card/80 transition hover:-translate-y-1 hover:border-primary/35">
               <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/20 to-violet-500/5">

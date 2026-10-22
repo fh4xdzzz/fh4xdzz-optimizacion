@@ -47,7 +47,7 @@ const NotificationItem = ({ notification }: NotificationItemProps) => {
 
 export const Notifications = () => {
   const pathname = usePathname()
-  const licenseFlow = pathname === '/dulcan-optimizer' || pathname === '/mis-licencias'
+  const licenseFlow = pathname === '/dulcan-optimizer' || pathname === '/mis-licencias' || pathname === '/tienda'
   const notifications = useNotificationStore((state) => state.notifications)
   const success = useNotificationStore((state) => state.success)
   const warning = useNotificationStore((state) => state.warning)

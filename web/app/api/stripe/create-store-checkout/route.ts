@@ -27,10 +27,14 @@ export async function POST(request: NextRequest) {
   for (const item of parsed.data.items) quantities.set(item.id, Math.min(10, (quantities.get(item.id) || 0) + item.quantity))
   const ids = [...quantities.keys()]
   const { data: products, error } = await supabase.from('store_products')
-    .select('id, name, description, price, image_url, product_type, inventory_count')
+    .select('id, slug, name, description, price, image_url, product_type, inventory_count')
     .in('id', ids).eq('is_active', true)
   if (error || !products || products.length !== ids.length) {
     return NextResponse.json({ error: 'Uno de los productos ya no está disponible.' }, { status: 400 })
+  }
+
+  if (products.some(product => product.slug === 'dulcan-optimizer')) {
+    return NextResponse.json({ code: 'license_checkout_required', error: 'Compra Dulcan Optimizer desde su botón Comprar licencia para recibir tu key.' }, { status: 400 })
   }
 
   const unavailable = products.find((product) => {

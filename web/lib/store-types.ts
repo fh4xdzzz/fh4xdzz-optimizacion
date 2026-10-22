@@ -12,6 +12,8 @@ export type StoreProduct = {
   is_featured: boolean
   sort_order: number
   created_at?: string
+  purchase_flow?: 'dulcan_license'
+  purchase_available?: boolean
 }
 
 export type StoreCartItem = StoreProduct & { quantity: number }

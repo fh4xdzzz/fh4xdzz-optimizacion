@@ -79,7 +79,6 @@ export default function Navbar() {
     { href: '/', label: 'Inicio' },
     { href: '/servicios', label: 'Servicios' },
     { href: '/tienda', label: 'Tienda' },
-    { href: '/dulcan-optimizer', label: 'Dulcan Optimizer' },
     { href: '/resultados', label: 'Resultados' },
     ...(session
       ? [
