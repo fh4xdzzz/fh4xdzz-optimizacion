@@ -55,6 +55,7 @@ export default function StorePage() {
   const categories = useMemo(() => ['Todos', ...new Set(products.map((product) => product.category))], [products])
   const visibleProducts = category === 'Todos' ? products : products.filter((product) => product.category === category)
   const total = cart.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+  const showCart = cart.length > 0 || products.some(product => product.purchase_flow !== 'dulcan_license')
 
   const add = (product: StoreProduct) => {
     if (product.purchase_flow === 'dulcan_license') return
@@ -117,7 +118,7 @@ export default function StorePage() {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 xl:grid-cols-[minmax(0,1fr)_390px]">
+      <section className={`mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 ${showCart ? 'xl:grid-cols-[minmax(0,1fr)_390px]' : ''}`}>
         <div>
           <div className="mb-7 flex flex-wrap gap-2">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${category === item ? 'border-primary bg-primary text-white' : 'border-white/10 bg-white/[.03] text-muted hover:border-primary/40 hover:text-white'}`}>{item}</button>)}</div>
           {loading ? <div className="flex min-h-72 items-center justify-center"><LoaderCircle className="h-9 w-9 animate-spin text-primary" /></div> : visibleProducts.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{visibleProducts.map((product) => {
@@ -164,11 +165,11 @@ export default function StorePage() {
           </div>}
         </div>
 
-        <aside className="h-fit rounded-3xl border border-primary/25 bg-card/90 p-5 shadow-2xl shadow-primary/10 xl:sticky xl:top-24">
+        {showCart && <aside className="h-fit rounded-3xl border border-primary/25 bg-card/90 p-5 shadow-2xl shadow-primary/10 xl:sticky xl:top-24">
           <div className="flex items-center justify-between"><div><p className="text-sm font-semibold uppercase tracking-[.14em] text-primary">Compra como invitado</p><h2 className="mt-1 text-2xl font-black">Tu carrito</h2></div><ShoppingBag className="h-7 w-7 text-primary" /></div>
           <div className="mt-5 space-y-3">{cart.length ? cart.map((item) => <div key={item.id} className="rounded-2xl border border-white/10 bg-black/15 p-3"><div className="flex items-start justify-between gap-3"><div><b>{item.name}</b><p className="mt-1 text-sm text-muted">{money(Number(item.price))} cada uno</p></div><button onClick={() => updateStoreQuantity(item.id, 0)} aria-label={`Quitar ${item.name}`} className="rounded-lg p-2 text-muted hover:bg-red-500/10 hover:text-red-300"><Trash2 className="h-4 w-4" /></button></div><div className="mt-3 flex items-center justify-between"><div className="flex items-center rounded-xl border border-white/10"><button onClick={() => updateStoreQuantity(item.id, item.quantity - 1)} className="p-2" aria-label="Reducir cantidad"><Minus className="h-4 w-4" /></button><span className="min-w-9 text-center font-bold">{item.quantity}</span><button onClick={() => updateStoreQuantity(item.id, item.quantity + 1)} className="p-2" aria-label="Aumentar cantidad"><Plus className="h-4 w-4" /></button></div><b>{money(Number(item.price) * item.quantity)}</b></div></div>) : <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-muted">Agrega productos para comenzar.</div>}</div>
           <div className="mt-5 border-t border-white/10 pt-5"><div className="flex items-center justify-between"><span className="text-muted">Total</span><strong className="text-3xl">{money(total)}</strong></div><div className="mt-5 space-y-3"><label className="block text-sm font-semibold">Nombre completo<input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={120} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-black/25 px-4 font-normal outline-none focus:border-primary" placeholder="Nombre y apellido" /></label><label className="block text-sm font-semibold">Correo electrónico<input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" type="email" maxLength={320} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-black/25 px-4 font-normal outline-none focus:border-primary" placeholder="tu@email.com" /></label></div>{error && <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}<Button size="lg" className="mt-5 w-full" disabled={paying || !cart.length} onClick={() => void checkout()}>{paying ? <><LoaderCircle className="mr-2 h-5 w-5 animate-spin" />Preparando pago…</> : 'Pagar con Stripe →'}</Button><p className="mt-3 text-center text-xs leading-5 text-muted">No necesitas iniciar sesión. Stripe procesa la tarjeta de forma segura.</p></div>
-        </aside>
+        </aside>}
       </section>
     </main>
     <Footer />
