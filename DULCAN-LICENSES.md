@@ -4,7 +4,7 @@ Precio inicial: 14.99 USD. Pago único, licencia permanente para un PC.
 
 ## Estado de esta copia
 
-Implementación combinada con la fuente actual de producción. Migración aplicada en Supabase y privacidad verificada para las cinco tablas. Claves privadas configuradas como secretos de producción con autorización del propietario. Ventas desactivadas hasta validar y promover el despliegue. No se han enviado correos ni procesado pagos reales durante este trabajo.
+Publicada en www.thedulcandesign.com/tienda el 22 de octubre de 2026, con autorización expresa del propietario para habilitar compras reales a 14.99 USD. Despliegue dpl_HDj6ge7C1Tyse9ZU1fQ8c6gpv2QL, fuente c1806a32d79f9bf3ffb3f6ca7561f17b03041310. Migración aplicada en Supabase y privacidad verificada para las cinco tablas. Claves privadas configuradas como secretos de producción. No se han enviado correos ni procesado pagos reales durante este trabajo.
 
 Se recuperaron 246 archivos de la producción F1H2R9EcT73fTGsLCfKFrauBjYmm (commit original 00a53dea165fe5280945f1a629a23a1cc490548d), verificando cada SHA1. El punto de recuperación local es db6180c. La tienda, sus pedidos y su flujo guest_store_v1 se han conservado; el flujo de licencias se añade por separado.
 
@@ -42,7 +42,9 @@ La recuperación de cambios del PC permanece disponible sin licencia. Un equipo 
 
 105 pruebas web correctas, incluidas 14 de catálogo y compra desde Tienda; TypeScript y revisión de estilo sin errores. El producto se incorpora al catálogo desde software_products sin duplicarlo en store_products. El checkout invitado rechaza cualquier fila Dulcan antigua, incluso dentro de un carrito mixto.
 
+10 comprobaciones HTTP correctas antes de promover y otras 10 en el dominio público: producto y catálogo disponibles a 14.99 USD; keys privadas protegidas; compra autenticada; rechazo de origen extranjero, key desconocida y firma Stripe inválida; tienda, caja e instalador accesibles. El botón real lleva al inicio de sesión con retorno a Tienda cuando no hay sesión. El despliegue verificó que la clave pública incorporada en el ejecutable corresponde a la firma del servidor.
+
 Pruebas unitarias y de rutas con Stripe/Resend simulados; SQL real en PostgreSQL embebido PGlite, sin acceder a producción. Verificación RSA entre Node y C#. Se requiere todavía una prueba real del flujo en un entorno de Stripe de prueba, entrega del remitente de correo y activación de un equipo tras el despliegue.
 
-Antes de publicar: recuperar la fuente actual, combinar cambios, revisar migración y secretos, probar en un despliegue previo, configurar eventos, publicar el instalador compatible y solo entonces habilitar ventas. No reemplazar silenciosamente 0.4.5 por el cliente que requiere licencia mientras el backend siga sin activar.
+La entrega del correo, emisión tras un pago efectivo y activación posterior del comprador requieren todavía una transacción completa de validación; no se confunden con los controles HTTP ni con las pruebas aisladas. El catálogo histórico de actualización de 0.4.5 se conserva; 0.5.0 se distribuye desde la compra y Mis licencias.
 
